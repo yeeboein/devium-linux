@@ -41,8 +41,20 @@ brand_bootloader() {
         else
             echo 'GRUB_DISTRIBUTOR="Devium"' >> /etc/default/grub
         fi
-        [[ -f /boot/grub/grub.cfg ]] && grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
     fi
+    # Animated boot screen: plymouth hook + "quiet splash".
+    if [[ -f /etc/mkinitcpio.conf ]] && ! grep -q '^HOOKS=.*plymouth' /etc/mkinitcpio.conf; then
+        sed -i -E '/^HOOKS=/ { /plymouth/! s/(udev|systemd)/\1 plymouth/ }' /etc/mkinitcpio.conf
+    fi
+    for f in /boot/loader/entries/*.conf /efi/loader/entries/*.conf; do
+        [[ -f $f ]] || continue
+        grep -q '^options.*splash' "$f" || sed -i '/^options/ s/$/ quiet splash/' "$f"
+    done
+    if [[ -f /etc/default/grub ]] && ! grep -q 'GRUB_CMDLINE_LINUX_DEFAULT=.*splash' /etc/default/grub; then
+        sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 splash"/' /etc/default/grub
+    fi
+    command -v plymouth >/dev/null && mkinitcpio -P >/dev/null 2>&1
+    [[ -f /boot/grub/grub.cfg ]] && grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 }
 
 enable_services() {
@@ -90,7 +102,7 @@ setup_pacman() {
 live_user() {
     if ! id devium >/dev/null 2>&1; then
         # /etc/skel already contains Devium's files (airootfs is copied before packages).
-        useradd -m -c "Devium Live" -G wheel -s /bin/bash devium
+        useradd -m -c "Devium Live" -G wheel -s /usr/bin/zsh devium
         echo 'devium:devium' | chpasswd
         for g in audio video storage network lp sys input; do
             getent group "$g" >/dev/null && usermod -aG "$g" devium
@@ -128,7 +140,7 @@ case "${1:-}" in
             --exclude=./etc/mkinitcpio.conf.d --exclude=./etc/sudoers.d \
             --exclude=./etc/polkit-1/rules.d/49-devium-live.rules \
             --exclude=./etc/sddm.conf.d/20-devium-live-autologin.conf \
-            --exclude=./etc/systemd/journald.conf.d --exclude=./etc/systemd/logind.conf.d \
+            --exclude=./etc/systemd/journald.conf.d/volatile-storage.conf --exclude=./etc/systemd/logind.conf.d \
             --exclude=./etc/systemd/system --exclude=./root \
             --exclude=./etc/pacman.d/hooks/zz-devium-live-setup.hook \
             --exclude=./etc/pacman.d/hooks/zzzz99-remove-custom-hooks-from-airootfs.hook \
@@ -149,6 +161,8 @@ case "${1:-}" in
             [[ -d $home ]] || continue
             owner="$(stat -c %U "$home")"
             cp -rn /etc/skel/. "$home"/ && chown -R "$owner:" "$home"
+            # zsh by default (users can pick fish or bash in the Setup wizard)
+            [[ -x /usr/bin/zsh ]] && chsh -s /usr/bin/zsh "$owner" >/dev/null 2>&1
         done
         systemctl set-default graphical.target >/dev/null 2>&1
         say "done"

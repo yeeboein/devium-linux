@@ -1,0 +1,13 @@
+# Keep only the 2 newest versions of each package in the cache (saves GBs over time).
+[Trigger]
+Operation = Upgrade
+Operation = Install
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Cleaning old packages from the cache...
+When = PostTransaction
+Depends = pacman-contrib
+Exec = /usr/bin/paccache -rqk2

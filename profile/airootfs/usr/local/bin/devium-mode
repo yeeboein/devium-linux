@@ -28,7 +28,7 @@ case "${1:-status}" in
         kw --file kwinrc --group Windows --key ElectricBorderTiling true
         # Quiet: no update pop-ups (run "update" or the Update Manager yourself)
         touch "$CFG/devium/no-update-notify"
-        panel_height 36
+        panel_height 44
         echo "Pro mode on. Open a new terminal for the Starship prompt and git aliases."
         ;;
     beginner)
@@ -40,7 +40,7 @@ case "${1:-status}" in
         kw --file ~/.local/share/dolphin/view_properties/global/.directory --group Dolphin --key HiddenFilesShown false
         kw --file ~/.local/share/dolphin/view_properties/global/.directory --group Dolphin --key ViewMode 0
         rm -f "$CFG/devium/no-update-notify"
-        panel_height 52
+        panel_height 64
         echo "Beginner mode on."
         ;;
     status)

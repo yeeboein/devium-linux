@@ -1,0 +1,4 @@
+# Warn when the disk is nearly full.
+[General]
+enableNotification=true
+minimumSpacePercentage=10

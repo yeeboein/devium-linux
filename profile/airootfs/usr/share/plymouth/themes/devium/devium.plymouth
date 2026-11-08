@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Devium
+Description=Glowing Devium logo
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/devium
+ScriptFile=/usr/share/plymouth/themes/devium/devium.script

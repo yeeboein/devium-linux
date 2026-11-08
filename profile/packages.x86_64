@@ -1,5 +1,8 @@
 # Devium package list. One package per line; lines starting with # are ignored.
 # build.sh skips (with a warning) any package that no longer exists in the repos.
+#
+# Packages marked "#live" are only on the live ISO (so people can try them).
+# Installed systems don't get them: users pick them in the Devium Setup wizard.
 
 # --- Base system & live ISO ---
 base
@@ -34,6 +37,8 @@ pciutils
 zram-generator
 pacman-contrib
 reflector
+pv
+plymouth
 
 # --- Networking, sound, bluetooth, printing, power ---
 networkmanager
@@ -49,7 +54,6 @@ pipewire-jack
 wireplumber
 alsa-utils
 cups
-cups-pdf
 system-config-printer
 print-manager
 tlp
@@ -62,7 +66,6 @@ virtualbox-guest-utils
 open-vm-tools
 qemu-guest-agent
 spice-vdagent
-hyperv
 
 # --- Graphics ---
 mesa
@@ -89,7 +92,6 @@ kinfocenter
 plasma-systemmonitor
 xdg-desktop-portal-kde
 qt6-wayland
-kwalletmanager
 kwallet-pam
 polkit-kde-agent
 kdeplasma-addons
@@ -109,30 +111,33 @@ gwenview
 okular
 ark
 kcalc
-firefox
-mpv
+firefox #live
+mpv #live
 gst-plugins-good
-gst-plugins-bad
 gst-libav
 ffmpeg
 timeshift
 noto-fonts
 noto-fonts-emoji
 ttf-jetbrains-mono
-ttf-fira-code
 ttf-jetbrains-mono-nerd
 
-# --- Coding ---
-code
+# --- Shell ---
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+zsh-completions
+
+# --- Coding (base; more in the Setup wizard) ---
+code #live
 base-devel
 git
-github-cli
-nodejs
-npm
+github-cli #live
+nodejs #live
+npm #live
 neovim
 fastfetch
 btop
-htop
 starship
 wget
 curl
@@ -148,23 +153,23 @@ python
 python-pip
 python-pipx
 python-virtualenv
-python-numpy
-python-pandas
-python-matplotlib
+python-numpy #live
+python-pandas #live
+python-matplotlib #live
 python-requests
-python-flask
-python-beautifulsoup4
-python-pytest
-python-black
-ruff
+python-flask #live
+python-beautifulsoup4 #live
+python-pytest #live
+python-black #live
+ruff #live
 python-pillow
 python-yaml
 python-rich
-ipython
+ipython #live
 python-pyqt6
 
 # --- ArchPill (Dynamic-Island-style pill) ---
-quickshell
+quickshell #live
 qt6-svg
 qt6-declarative
 upower
