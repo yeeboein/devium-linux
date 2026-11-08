@@ -55,8 +55,11 @@ for must in base linux mkinitcpio-archiso plasma-desktop sddm; do
 done
 
 # Package list for installed systems (live-ISO-only packages removed).
-grep -vxE 'mkinitcpio-archiso|syslinux|memtest86\+|memtest86\+-efi|edk2-shell|archinstall' \
-    "$STAGE/packages.x86_64" > "$STAGE/airootfs/usr/share/devium/install-packages.txt"
+# Lines tagged "#live" are left out: users pick those in the Devium Setup wizard.
+sed -n '/#live/!{s/#.*//;s/[[:space:]]//g;/./p}' "$HERE/profile/packages.x86_64" \
+    | grep -vxE 'mkinitcpio-archiso|syslinux|memtest86\+|memtest86\+-efi|edk2-shell|archinstall' \
+    | grep -Fxf "$STAGE/packages.x86_64" > "$STAGE/airootfs/usr/share/devium/install-packages.txt"
+say "Installed systems get $(wc -l < "$STAGE/airootfs/usr/share/devium/install-packages.txt") packages (live ISO: $(wc -l < "$STAGE/packages.x86_64"))"
 
 # 3. Bundle ArchPill (https://github.com/yeeboein/archpill).
 say "Downloading ArchPill"

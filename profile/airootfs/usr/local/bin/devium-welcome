@@ -8,7 +8,8 @@ import sys
 
 sys.path.insert(0, "/usr/lib/devium")
 
-from PyQt6.QtCore import QProcess, Qt
+from PyQt6.QtCore import QProcess, QSize, Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QGridLayout, QHBoxLayout,
                              QInputDialog, QLabel, QListWidget, QListWidgetItem, QMessageBox,
                              QPushButton, QRadioButton, QScrollArea, QStackedWidget,
@@ -35,7 +36,10 @@ def para(text):
 
 
 def tile(title, desc, on_click, icon=""):
-    b = QPushButton(f"{icon}  {title}\n{desc}" if icon else f"{title}\n{desc}")
+    b = QPushButton(f"{title}\n{desc}")
+    if icon:
+        b.setIcon(QIcon.fromTheme(icon))
+        b.setIconSize(QSize(32, 32))
     b.setObjectName("tile")
     b.setMinimumHeight(64)
     b.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -144,15 +148,17 @@ class Welcome(QWidget):
         self.stack = QStackedWidget()
         root.addWidget(self.stack, 1)
 
-        pages = [("🏠  Home", self.home_page()),
-                 ("🎚  Beginner / Pro", self.mode_page()),
-                 ("💻  Coding", self.coding_page()),
-                 ("🛍  Apps", self.apps_page()),
-                 ("🔧  Drivers", self.drivers_page()),
-                 ("⚙  System", self.system_page()),
-                 ("⌨  Shortcuts", self.shortcuts_page())]
-        for name, w in pages:
-            QListWidgetItem(name, self.nav)
+        pages = [("Home", "go-home", self.home_page()),
+                 ("Setup wizard", "tools-wizard", self.wizard_page()),
+                 ("Beginner / Pro", "configure", self.mode_page()),
+                 ("Coding", "applications-development", self.coding_page()),
+                 ("Apps", "plasmadiscover", self.apps_page()),
+                 ("Drivers", "hwinfo", self.drivers_page()),
+                 ("System", "preferences-system", self.system_page()),
+                 ("Shortcuts", "input-keyboard", self.shortcuts_page())]
+        self.nav.setIconSize(QSize(22, 22))
+        for name, icon, w in pages:
+            QListWidgetItem(QIcon.fromTheme(icon), name, self.nav)
             self.stack.addWidget(w)
         self.nav.currentRowChanged.connect(self.stack.setCurrentIndex)
         self.nav.setCurrentRow(0)
@@ -174,20 +180,20 @@ class Welcome(QWidget):
         items = []
         if ui.is_live():
             items.append(tile("Install Devium", "Put Devium on this computer's disk",
-                              lambda: self.go("devium-install"), "💿"))
+                              lambda: self.go("devium-install"), "drive-optical"))
         items += [
             tile("Update Manager", "Get the latest updates (Meta+U)",
-                 lambda: self.go("devium-update-manager"), "⬆"),
+                 lambda: self.go("devium-update-manager"), "system-software-update"),
             tile("Discover", "Find and install apps",
-                 lambda: self.go("plasma-discover", name="Discover"), "🛍"),
+                 lambda: self.go("plasma-discover", name="Discover"), "plasmadiscover"),
             tile("New Python project", "Folder, venv, git and VS Code in one click",
-                 self.new_project, "🐍"),
+                 self.new_project, "text-x-python"),
             tile("Snip", "Screenshot an area: Meta+Shift+S",
-                 lambda: self.go("spectacle", "--region", name="Snip"), "✂"),
+                 lambda: self.go("spectacle", "--region", name="Snip"), "spectacle"),
             tile("ArchPill settings", "Customise the pill at the top of the screen",
-                 self.archpill_settings, "💊"),
+                 self.archpill_settings, "preferences-desktop-theme"),
             tile("System Settings", "Wi-Fi, display, sound, look and more",
-                 lambda: self.go("systemsettings"), "⚙"),
+                 lambda: self.go("systemsettings"), "preferences-system"),
         ]
         live = ("<p>You are running the <b>live</b> version. Nothing is saved after a restart "
                 "until you install Devium. The live password is <b>devium</b>.</p>") if ui.is_live() else ""
@@ -196,6 +202,14 @@ class Welcome(QWidget):
                     para(live + "<p>Start here. Everything is a click away, and you can come "
                          "back any time from the app menu (or press <b>Meta+F1</b>).</p>"),
                     tiles(items))
+
+    def wizard_page(self):
+        return page(h2("Devium Setup"),
+                    para("Pick your browser, code editor, languages, tools and apps. "
+                         "Devium only installs what you choose, so it stays light. "
+                         "You can run it again any time to add or remove things."),
+                    tile("Open Devium Setup", "Choose what to install",
+                         lambda: self.go("devium-setup-wizard", name="Devium Setup"), "tools-wizard"))
 
     def mode_page(self):
         current = subprocess.run(["devium-mode", "status"], capture_output=True,
@@ -240,17 +254,17 @@ class Welcome(QWidget):
             h2("Start coding"),
             tiles([
                 tile("New Python project", "Creates ~/Projects/<name> and opens VS Code",
-                     self.new_project, "🐍"),
+                     self.new_project, "text-x-python"),
                 tile("VS Code", "Python extension and formatter ready",
-                     lambda: self.go("code", name="VS Code"), "📝"),
+                     lambda: self.go("code", name="VS Code"), "code-oss"),
                 tile("Terminal", "Konsole (F12 in Dolphin opens one too)",
-                     lambda: self.go("konsole"), "⌨"),
+                     lambda: self.go("konsole"), "utilities-terminal"),
                 tile("Kate", "Light, fast text editor",
-                     lambda: self.go("kate"), "✏"),
+                     lambda: self.go("kate"), "kate"),
                 tile("Python shell", "IPython, a friendlier Python prompt",
-                     lambda: self.go("konsole", "-e", "ipython", name="IPython"), "🐍"),
+                     lambda: self.go("konsole", "-e", "ipython", name="IPython"), "text-x-python"),
                 tile("Projects folder", "Open ~/Projects in Dolphin",
-                     lambda: self.go("dolphin", os.path.expanduser("~/Projects")), "📁"),
+                     lambda: self.go("dolphin", os.path.expanduser("~/Projects")), "folder-development"),
             ]),
             h2("What's installed"),
             para(f"<b>Python libraries:</b> {libs}<br>"
@@ -263,20 +277,20 @@ class Welcome(QWidget):
         def store(app_id):
             return lambda: self.go("plasma-discover", f"appstream://{app_id}", name="Discover")
 
-        popular = [("Discord", "Chat and voice", "com.discordapp.Discord", "💬"),
-                   ("Spotify", "Music", "com.spotify.Client", "🎵"),
-                   ("Steam", "Games", "com.valvesoftware.Steam", "🎮"),
-                   ("LibreOffice", "Documents, sheets, slides", "org.libreoffice.LibreOffice", "📄"),
-                   ("GIMP", "Photo editing", "org.gimp.GIMP", "🎨"),
-                   ("OBS Studio", "Record and stream", "com.obsproject.Studio", "🎥"),
-                   ("Thunderbird", "Email", "org.mozilla.Thunderbird", "✉"),
-                   ("VLC", "Plays every video", "org.videolan.VLC", "▶")]
+        popular = [("Discord", "Chat and voice", "com.discordapp.Discord", "internet-chat"),
+                   ("Spotify", "Music", "com.spotify.Client", "audio-x-generic"),
+                   ("Steam", "Games", "com.valvesoftware.Steam", "input-gaming"),
+                   ("LibreOffice", "Documents, sheets, slides", "org.libreoffice.LibreOffice", "x-office-document"),
+                   ("GIMP", "Photo editing", "org.gimp.GIMP", "applications-graphics"),
+                   ("OBS Studio", "Record and stream", "com.obsproject.Studio", "camera-video"),
+                   ("Thunderbird", "Email", "org.mozilla.Thunderbird", "internet-mail"),
+                   ("VLC", "Plays every video", "org.videolan.VLC", "media-playback-start")]
         return page(
             h2("Get apps"),
             para("Discover is Devium's app store. Apps come from Flathub and run in a sandbox, "
                  "so they can't break your system. Click one to open it in Discover."),
             tile("Open Discover", "Browse thousands of apps",
-                 lambda: self.go("plasma-discover", name="Discover"), "🛍"),
+                 lambda: self.go("plasma-discover", name="Discover"), "plasmadiscover"),
             h2("Popular"),
             tiles([tile(n, d, store(i), e) for n, d, i, e in popular]))
 
@@ -327,23 +341,23 @@ class Welcome(QWidget):
             h2("System"),
             tiles([
                 tile("Update Manager", "Updates, plus free up disk space",
-                     lambda: self.go("devium-update-manager"), "⬆"),
+                     lambda: self.go("devium-update-manager"), "system-software-update"),
                 tile("Restore points", "Set up Timeshift: undo a bad update in two clicks",
-                     lambda: self.go("timeshift-launcher", name="Timeshift"), "⏪"),
+                     lambda: self.go("timeshift-launcher", name="Timeshift"), "timeshift"),
                 tile("Firewall on", "Block incoming connections (recommended)",
-                     lambda: firewall(True), "🛡"),
+                     lambda: firewall(True), "security-high"),
                 tile("Firewall off", "Allow everything in",
-                     lambda: firewall(False), "🔓"),
-                tile("Dark theme", "Easy on the eyes", lambda: theme(True), "🌙"),
-                tile("Light theme", "Bright and clean", lambda: theme(False), "☀"),
+                     lambda: firewall(False), "security-low"),
+                tile("Dark theme", "Easy on the eyes", lambda: theme(True), "weather-clear-night"),
+                tile("Light theme", "Bright and clean", lambda: theme(False), "weather-clear"),
                 tile("Printers", "Add or manage printers",
-                     lambda: self.go("systemsettings", "kcm_printer_manager"), "🖨"),
+                     lambda: self.go("systemsettings", "kcm_printer_manager"), "printer"),
                 tile("System Monitor", "See what's using CPU and memory",
-                     lambda: self.go("plasma-systemmonitor"), "📊"),
+                     lambda: self.go("plasma-systemmonitor"), "utilities-system-monitor"),
                 tile("Wi-Fi & network", "Connect to a network",
-                     lambda: self.go("systemsettings", "kcm_networkmanagement"), "📶"),
+                     lambda: self.go("systemsettings", "kcm_networkmanagement"), "network-wireless"),
                 tile("Battery & power", "Battery saver is on (TLP)",
-                     lambda: self.go("systemsettings", "kcm_powerdevilprofilesconfig"), "🔋"),
+                     lambda: self.go("systemsettings", "kcm_powerdevilprofilesconfig"), "battery-good"),
             ]))
 
     def shortcuts_page(self):
