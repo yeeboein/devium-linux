@@ -50,6 +50,7 @@ import json, sys
 cfg, repo, ref = sys.argv[1:]
 pkgs = [l.strip() for l in open("/usr/share/devium/install-packages.txt") if l.strip()]
 json.dump({
+    "hostname": "devium",
     "packages": pkgs,
     "network_config": {"type": "nm"},
     "audio_config": {"audio": "pipewire"},
