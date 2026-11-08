@@ -73,6 +73,7 @@ def scroll(inner):
     s = QScrollArea()
     s.setWidgetResizable(True)
     s.setFrameShape(QFrame.Shape.NoFrame)
+    s.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
     s.setWidget(inner)
     return s
 
@@ -277,13 +278,13 @@ class Wizard(QWidget):
         radios("Mode", [("mode-beginner", "Beginner   —   big dock, tips, simple file manager"),
                         ("mode-pro", "Pro   —   slim dock, Starship prompt, git aliases, split-view files")],
                "mode-beginner")
-        radios("Theme", [("theme-dark", "Dark"), ("theme-light", "Light")], "theme-dark")
+        radios("Brightness", [("theme-dark", "Dark"), ("theme-light", "Light")], "theme-dark")
         radios("Terminal shell", [(f"shell-{s['id']}", f"{s['name']}   —   {s['desc']}") for s in cat.SHELLS],
                "shell-zsh")
 
         l.addWidget(label("Extras", "h2"))
-        ap = QCheckBox(f"ArchPill   —   a Dynamic-Island-style pill at the top of the screen with time, "
-                       f"music, volume and battery ({fmt_mb(cat.ARCHPILL['mb'])}, about 40 MB RAM)")
+        ap = QCheckBox(f"ArchPill   —   Dynamic-Island-style pill: time, music, battery "
+                       f"({fmt_mb(cat.ARCHPILL['mb'])}, ~40 MB RAM)")
         ap.setChecked(True)
         ap.toggled.connect(self.update_total)
         self.inputs["archpill"] = ap
@@ -293,6 +294,11 @@ class Wizard(QWidget):
         for b in (ap, dock):
             b.setStyleSheet("padding: 5px;")
             l.addWidget(b)
+
+        radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey with pale accents"),
+                         ("style-kde", "Base KDE   —   KDE's standard Breeze look "
+                                       "(recommended if you want to customise)")],
+               "style-devium")
         l.addStretch(1)
         return scroll(inner)
 
@@ -414,7 +420,8 @@ class Wizard(QWidget):
         rows = "".join(f"<tr><td>{it['name']}</td><td align='right'>{fmt_mb(it.get('mb', 0))}</td></tr>"
                        for it in p["items"])
         look = [("Beginner" if self.checked("mode-beginner") else "Pro") + " mode",
-                ("Dark" if self.checked("theme-dark") else "Light") + " theme",
+                ("Devium" if self.checked("style-devium") else "Base KDE") + " theme, " +
+                ("dark" if self.checked("theme-dark") else "light"),
                 f"{p['shell']['name']} shell",
                 "ArchPill on" if self.checked("archpill") else "ArchPill off"]
         left = free - p["mb"]
@@ -500,10 +507,16 @@ class Wizard(QWidget):
                      f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
         # mode + theme
         lines.append("devium-mode " + ("pro" if self.checked("mode-pro") else "beginner"))
-        if self.checked("theme-light"):
-            lines.append("plasma-apply-colorscheme DeviumLight; plasma-apply-desktoptheme breeze-light")
+        light = self.checked("theme-light")
+        if self.checked("style-kde"):
+            # KDE's stock Breeze: the easiest starting point for your own customising
+            scheme = "BreezeLight" if light else "BreezeDark"
+            lines.append("kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile ''")
+            lines.append("kwriteconfig6 --file kdeglobals --group General --key AccentColor 61,174,233")
         else:
-            lines.append("plasma-apply-colorscheme Devium; plasma-apply-desktoptheme breeze-dark")
+            scheme = "DeviumLight" if light else "Devium"
+        lines.append(f"plasma-apply-colorscheme {scheme}; "
+                     f"plasma-apply-desktoptheme {'breeze-light' if light else 'breeze-dark'}")
         # ArchPill
         if self.checked("archpill"):
             lines.append("if command -v qs >/dev/null && [ -d /opt/archpill ]; then "
