@@ -76,7 +76,12 @@ EOF
 
 # 5. Build.
 say "Building the ISO (this takes a while)"
-mkarchiso -v -r -w "$WORK/build" -o "$OUT" "$STAGE"
+# Retry once: a mirror hiccup shouldn't waste a whole build (mkarchiso resumes where it stopped).
+mkarchiso -v -r -w "$WORK/build" -o "$OUT" "$STAGE" || {
+    warn "Build step failed - retrying once in 20 seconds"
+    sleep 20
+    mkarchiso -v -r -w "$WORK/build" -o "$OUT" "$STAGE"
+}
 
 iso="$(ls -t "$OUT"/devium-*.iso | head -n1)"
 say "Done: $iso ($(du -h "$iso" | cut -f1))"
