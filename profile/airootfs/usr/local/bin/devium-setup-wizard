@@ -499,9 +499,9 @@ class Wizard(QWidget):
         # mode + theme
         lines.append("devium-mode " + ("pro" if self.checked("mode-pro") else "beginner"))
         if self.checked("theme-light"):
-            lines.append("plasma-apply-colorscheme BreezeLight; plasma-apply-desktoptheme breeze-light")
+            lines.append("plasma-apply-colorscheme DeviumLight; plasma-apply-desktoptheme breeze-light")
         else:
-            lines.append("plasma-apply-colorscheme BreezeDark; plasma-apply-desktoptheme breeze-dark")
+            lines.append("plasma-apply-colorscheme Devium; plasma-apply-desktoptheme breeze-dark")
         # ArchPill
         if self.checked("archpill"):
             lines.append("if command -v qs >/dev/null && [ -d /opt/archpill ]; then "

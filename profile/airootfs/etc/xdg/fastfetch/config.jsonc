@@ -4,12 +4,12 @@
   "logo": {
     "type": "file",
     "source": "/usr/share/devium/fastfetch-logo.txt",
-    "color": { "1": "cyan" },
+    "color": { "1": "38;2;184;206;228", "2": "38;2;150;178;208", "3": "38;2;122;146;176" },
     "padding": { "top": 1, "right": 2 }
   },
   "display": {
     "separator": "  ",
-    "color": { "keys": "cyan", "title": "magenta" }
+    "color": { "keys": "38;2;150;178;208", "title": "38;2;180;184;224", "separator": "38;2;92;104;120" }
   },
   "modules": [
     "title",
