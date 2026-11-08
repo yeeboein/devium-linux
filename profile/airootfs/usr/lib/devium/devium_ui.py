@@ -8,8 +8,8 @@ from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 LOGO = "/usr/share/devium/logo.png"
-ACCENT = "#22d3ee"
-ACCENT2 = "#8b5cf6"
+ACCENT = "#8fb4d8"
+ACCENT2 = "#b4b8e0"
 
 STYLE = f"""
 QWidget {{ font-size: 10.5pt; }}
@@ -19,7 +19,7 @@ QLabel#h2 {{ font-size: 13pt; font-weight: 600; margin-top: 6px; }}
 QPushButton {{ padding: 7px 14px; border-radius: 8px; }}
 QPushButton#primary {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {ACCENT}, stop:1 {ACCENT2});
-    color: white; font-weight: 600; border: none;
+    color: #1b2026; font-weight: 600; border: none;
 }}
 QPushButton#primary:disabled {{ background: palette(mid); color: #8a93a6; }}
 QPushButton#tile {{
@@ -31,7 +31,7 @@ QListWidget#nav {{ border: none; background: transparent; font-size: 11pt; }}
 QListWidget#nav::item {{ padding: 9px 12px; border-radius: 8px; margin: 1px 4px; }}
 QListWidget#nav::item:selected {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {ACCENT}, stop:1 {ACCENT2});
-    color: white;
+    color: #1b2026;
 }}
 QProgressBar {{ border-radius: 6px; height: 12px; text-align: center; }}
 QProgressBar::chunk {{

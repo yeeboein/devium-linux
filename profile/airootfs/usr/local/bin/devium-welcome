@@ -334,7 +334,7 @@ class Welcome(QWidget):
                            if c == 0 else "Nothing changed."))
 
         def theme(dark):
-            ui.launch("plasma-apply-colorscheme", "BreezeDark" if dark else "BreezeLight")
+            ui.launch("plasma-apply-colorscheme", "Devium" if dark else "DeviumLight")
             ui.launch("plasma-apply-desktoptheme", "breeze-dark" if dark else "breeze-light")
 
         return page(
