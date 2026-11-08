@@ -98,13 +98,14 @@ class Wizard(QWidget):
 
         # left: list of steps
         side = QWidget()
-        side.setFixedWidth(220)
+        side.setFixedWidth(250)
         sl = QVBoxLayout(side)
         sl.setContentsMargins(12, 16, 6, 12)
         sl.addWidget(ui.header("Setup", "", size=36))
         self.steps = QListWidget()
         self.steps.setObjectName("nav")
         self.steps.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.steps.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.steps.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.steps.itemClicked.connect(self.step_clicked)
         sl.addWidget(self.steps, 1)
@@ -136,7 +137,8 @@ class Wizard(QWidget):
         # pages
         self.add_page("Welcome", self.welcome_page())
         for page in cat.PAGES:
-            self.add_page(page["title"].split(" and ")[0], self.choice_page(page), page)
+            self.add_page(page["title"].split(" and ")[0].replace("Programming languages", "Languages"),
+                          self.choice_page(page), page)
         self.add_page("Look and feel", self.look_page())
         self.add_page("Summary", self.summary_page())
         self.add_page("Installing", self.install_page())
