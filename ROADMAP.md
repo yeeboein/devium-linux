@@ -1,0 +1,41 @@
+# Devium roadmap
+
+Status of the "next update" (v2). Tick items as they land.
+
+## Look and feel
+- [ ] Mountain wallpaper as default (desktop, login, lock screen)
+- [ ] Dock: centred, big icons, floating, hides when a window covers it ("dodge windows")
+- [ ] White Devium logo as the dock's app-menu button
+- [ ] Animated Devium boot screen (Plymouth)
+- [ ] No emojis in Devium apps (theme icons instead)
+- [ ] Beginner mode = big dock, Pro mode = slim dock
+
+## Installer
+- [ ] Point-and-click installer (Calamares), Devium-branded, beginner instructions on every page
+
+## "Welcome to Devium" setup wizard (first boot after install)
+Pages: Welcome, Browser, Everyday apps (file manager + terminal), Code editor, Languages /
+compilers, Python libraries, Developer tools, Apps (Flathub), Look and feel (mode, theme,
+shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
+- Browsers: Brave, Brave Origin (verify package source), Firefox, Chrome, Chromium, LibreWolf, Vivaldi, none
+- File managers: Dolphin, Thunar, PCManFM-Qt, Nemo, Nautilus, yazi
+- Terminals: Konsole, Kitty, Alacritty, WezTerm, Ghostty, Foot
+- Editors: VSCodium, VS Code, PyCharm, IntelliJ, Zed, Neovim, Vim, Kate
+- Languages: Python, C/C++ (gcc, clang, cmake, make, ninja, meson, gdb, lldb, valgrind), Rust,
+  Go, Java (+Maven/Gradle), Kotlin, C#/.NET, Zig, Fortran, Haskell, Lua (+LuaRocks), Node.js
+- Python sets: Basics, Data science, Web, Testing, AI/ML
+- Dev tools: git + gh, glab, Docker, Ollama, AI chat app, AI coding extension, SQLite browser, lazygit
+- Apps: Discord, Spotify, Steam, LibreOffice, GIMP, OBS, Thunderbird, VLC
+- ArchPill optional (ticked by default)
+
+## Light on storage and RAM
+- [ ] Extras only installed when picked in the wizard (target: ~5-6 GB disk, ~450-600 MB RAM idle, ISO < 2 GB)
+- [ ] Package cache auto-clean, journal capped at 50 MB, on-demand services
+- [ ] Storage info: sizes in wizard, disk breakdown + "Free up space" in Update Manager, low-space warning
+
+## Other
+- [ ] zsh by default (autosuggestions + syntax highlighting); fish/bash in the wizard
+- [ ] Devium Updater app: checks GitHub Releases for new Devium versions, updates Devium's own files, downloads new ISOs
+- [ ] ISOs published as GitHub Releases per edition ("KDE Plasma")
+- [ ] Remove network-boot (PXE) options from the ISO
+- [x] Rename "Arch Linux" boot entries to Devium on installed systems
