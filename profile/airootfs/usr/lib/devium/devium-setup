@@ -74,8 +74,11 @@ setup_pacman() {
 live_user() {
     if ! id devium >/dev/null 2>&1; then
         # /etc/skel already contains Devium's files (airootfs is copied before packages).
-        useradd -m -c "Devium Live" -G wheel,audio,video,storage,network,lp,sys -s /bin/bash devium
+        useradd -m -c "Devium Live" -G wheel -s /bin/bash devium
         echo 'devium:devium' | chpasswd
+        for g in audio video storage network lp sys input; do
+            getent group "$g" >/dev/null && usermod -aG "$g" devium
+        done
         say "created live user 'devium' (password: devium)"
     fi
     mkdir -p /home/devium/Desktop
