@@ -1,0 +1,12 @@
+# Light on old laptops: no blur/translucency, fast animations.
+[Plugins]
+blurEnabled=false
+contrastEnabled=false
+slidingpopupsEnabled=false
+wobblywindowsEnabled=false
+
+[Compositing]
+LatencyPolicy=Low
+
+[Windows]
+BorderlessMaximizedWindows=false

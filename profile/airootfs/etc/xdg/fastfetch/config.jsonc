@@ -1,0 +1,34 @@
+// Devium fastfetch config. Copy to ~/.config/fastfetch/config.jsonc to customise.
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "type": "file",
+    "source": "/usr/share/devium/fastfetch-logo.txt",
+    "color": { "1": "cyan" },
+    "padding": { "top": 1, "right": 2 }
+  },
+  "display": {
+    "separator": "  ",
+    "color": { "keys": "cyan", "title": "magenta" }
+  },
+  "modules": [
+    "title",
+    "separator",
+    { "type": "os", "key": "OS" },
+    { "type": "kernel", "key": "Kernel" },
+    { "type": "uptime", "key": "Uptime" },
+    { "type": "packages", "key": "Packages" },
+    { "type": "shell", "key": "Shell" },
+    { "type": "de", "key": "Desktop" },
+    { "type": "wm", "key": "WM" },
+    { "type": "terminal", "key": "Terminal" },
+    { "type": "cpu", "key": "CPU" },
+    { "type": "gpu", "key": "GPU" },
+    { "type": "memory", "key": "Memory" },
+    { "type": "disk", "key": "Disk" },
+    { "type": "battery", "key": "Battery" },
+    { "type": "localip", "key": "Local IP" },
+    "break",
+    "colors"
+  ]
+}

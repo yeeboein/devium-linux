@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [ { "Name": "Devium" } ],
+        "Category": "",
+        "Description": "Devium: dark, light and simple",
+        "Id": "org.devium.desktop",
+        "License": "GPLv2+",
+        "Name": "Devium",
+        "Website": "https://github.com/yeeboein/devium-linux"
+    },
+    "X-Plasma-APIVersion": "2",
+    "X-Plasma-MainScript": "defaults"
+}
