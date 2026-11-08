@@ -150,6 +150,11 @@ case "${1:-}" in
         chmod 755 /usr/local/bin/devium-* /usr/lib/devium/devium-* 2>/dev/null
         [[ -f $src/.devium-release ]] && cp "$src/.devium-release" /etc/devium-release
         write_os_release
+        # archinstall's default computer name is "archlinux": use "devium" instead.
+        if [[ ! -s /etc/hostname || $(cat /etc/hostname) == archlinux ]]; then
+            echo devium > /etc/hostname
+            sed -i 's/\barchlinux\b/devium/g' /etc/hosts 2>/dev/null
+        fi
         setup_pacman
         enable_services
         brand_bootloader
