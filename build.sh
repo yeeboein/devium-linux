@@ -54,6 +54,10 @@ for must in base linux mkinitcpio-archiso plasma-desktop sddm; do
     grep -qx "$must" "$STAGE/packages.x86_64" || die "Required package '$must' is missing."
 done
 
+# Package list for installed systems (live-ISO-only packages removed).
+grep -vxE 'mkinitcpio-archiso|syslinux|memtest86\+|memtest86\+-efi|edk2-shell|archinstall' \
+    "$STAGE/packages.x86_64" > "$STAGE/airootfs/usr/share/devium/install-packages.txt"
+
 # 3. Bundle ArchPill (https://github.com/yeeboein/archpill).
 say "Downloading ArchPill"
 mkdir -p "$STAGE/airootfs/opt"

@@ -1,0 +1,410 @@
+#!/usr/bin/env python3
+"""Devium Welcome: the friendly front door to Devium."""
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+sys.path.insert(0, "/usr/lib/devium")
+
+from PyQt6.QtCore import QProcess, Qt
+from PyQt6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QGridLayout, QHBoxLayout,
+                             QInputDialog, QLabel, QListWidget, QListWidgetItem, QMessageBox,
+                             QPushButton, QRadioButton, QScrollArea, QStackedWidget,
+                             QVBoxLayout, QWidget)
+
+import devium_ui as ui
+
+CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium")
+
+
+# --------------------------------------------------------------------------- helpers
+def h2(text):
+    l = QLabel(text)
+    l.setObjectName("h2")
+    return l
+
+
+def para(text):
+    l = QLabel(text)
+    l.setWordWrap(True)
+    l.setTextFormat(Qt.TextFormat.RichText)
+    l.setOpenExternalLinks(True)
+    return l
+
+
+def tile(title, desc, on_click, icon=""):
+    b = QPushButton(f"{icon}  {title}\n{desc}" if icon else f"{title}\n{desc}")
+    b.setObjectName("tile")
+    b.setMinimumHeight(64)
+    b.setCursor(Qt.CursorShape.PointingHandCursor)
+    b.clicked.connect(on_click)
+    return b
+
+
+def tiles(items, cols=2):
+    w = QWidget()
+    g = QGridLayout(w)
+    g.setContentsMargins(0, 4, 0, 4)
+    g.setSpacing(10)
+    for i, t in enumerate(items):
+        g.addWidget(t, i // cols, i % cols)
+    return w
+
+
+def page(*widgets):
+    inner = QWidget()
+    lay = QVBoxLayout(inner)
+    lay.setContentsMargins(24, 20, 24, 20)
+    lay.setSpacing(8)
+    for w in widgets:
+        lay.addWidget(w)
+    lay.addStretch(1)
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+    scroll.setWidget(inner)
+    return scroll
+
+
+def run_helper(parent, *args, done=None):
+    """Run devium-helper as root (pkexec asks for the password) without blocking the UI."""
+    p = QProcess(parent)
+    p.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+    p.finished.connect(lambda code, _s: done and done(code, bytes(p.readAll()).decode(errors="replace")))
+    p.start("pkexec", ["/usr/lib/devium/devium-helper", *args])
+    return p
+
+
+def missing(parent, what):
+    QMessageBox.information(parent, "Not installed", f"{what} is not installed.")
+
+
+# --------------------------------------------------------------------------- driver detection
+def detect_drivers():
+    """Return a list of (title, description, [packages]) suggestions for this hardware."""
+    try:
+        pci = subprocess.run(["lspci", "-nn"], capture_output=True, text=True).stdout.lower()
+    except FileNotFoundError:
+        pci = ""
+    out = []
+
+    def installed(pkg):
+        return subprocess.run(["pacman", "-Q", pkg], capture_output=True).returncode == 0
+
+    if "nvidia" in pci and re.search(r"(vga|3d|display).*nvidia", pci):
+        out.append(("NVIDIA graphics",
+                    "Official NVIDIA driver (open kernel modules, for GTX 16xx / RTX and newer). "
+                    "Older cards work with the built-in driver.",
+                    ["nvidia-open", "nvidia-utils", "nvidia-settings"]))
+    if re.search(r"network.*broadcom|broadcom.*(wireless|802\.11|bcm43)", pci):
+        out.append(("Broadcom Wi-Fi", "Driver for many older Broadcom wireless cards.",
+                    ["broadcom-wl"]))
+    if re.search(r"(vga|display).*intel", pci) and not installed("intel-media-driver"):
+        out.append(("Intel video acceleration", "Smoother, cooler video playback on Intel graphics.",
+                    ["intel-media-driver"]))
+    if re.search(r"(vga|display).*(amd|ati)", pci) and not installed("vulkan-radeon"):
+        out.append(("AMD graphics (Vulkan)", "Vulkan support for AMD graphics, used by games.",
+                    ["vulkan-radeon"]))
+    out.append(("Printer drivers", "Drivers for most HP, Epson, Brother and Canon printers.",
+                ["gutenprint", "hplip", "foomatic-db-engine", "foomatic-db-ppds"]))
+    out.append(("Fingerprint reader", "Log in with your fingerprint (if your laptop has a reader).",
+                ["fprintd"]))
+    return out
+
+
+# --------------------------------------------------------------------------- main window
+class Welcome(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Welcome to Devium")
+        self.setWindowIcon(ui.app_icon())
+        self.resize(920, 620)
+        self.procs = []
+
+        root = QHBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        side = QWidget()
+        side.setFixedWidth(210)
+        sl = QVBoxLayout(side)
+        sl.setContentsMargins(10, 16, 6, 12)
+        sl.addWidget(ui.header("Devium", "", size=40))
+        self.nav = QListWidget()
+        self.nav.setObjectName("nav")
+        sl.addWidget(self.nav, 1)
+        self.startup = QCheckBox("Show at login")
+        self.startup.setChecked(not os.path.exists(os.path.join(CONFIG, "welcome-hide")))
+        self.startup.toggled.connect(self.toggle_startup)
+        sl.addWidget(self.startup)
+        root.addWidget(side)
+
+        self.stack = QStackedWidget()
+        root.addWidget(self.stack, 1)
+
+        pages = [("🏠  Home", self.home_page()),
+                 ("🎚  Beginner / Pro", self.mode_page()),
+                 ("💻  Coding", self.coding_page()),
+                 ("🛍  Apps", self.apps_page()),
+                 ("🔧  Drivers", self.drivers_page()),
+                 ("⚙  System", self.system_page()),
+                 ("⌨  Shortcuts", self.shortcuts_page())]
+        for name, w in pages:
+            QListWidgetItem(name, self.nav)
+            self.stack.addWidget(w)
+        self.nav.currentRowChanged.connect(self.stack.setCurrentIndex)
+        self.nav.setCurrentRow(0)
+
+    def toggle_startup(self, on):
+        os.makedirs(CONFIG, exist_ok=True)
+        marker = os.path.join(CONFIG, "welcome-hide")
+        if on and os.path.exists(marker):
+            os.remove(marker)
+        elif not on:
+            open(marker, "w").close()
+
+    def go(self, *cmd, name=None):
+        if not ui.launch(*cmd):
+            missing(self, name or cmd[0])
+
+    # ---------------------------------------------------------------- pages
+    def home_page(self):
+        items = []
+        if ui.is_live():
+            items.append(tile("Install Devium", "Put Devium on this computer's disk",
+                              lambda: self.go("devium-install"), "💿"))
+        items += [
+            tile("Update Manager", "Get the latest updates (Meta+U)",
+                 lambda: self.go("devium-update-manager"), "⬆"),
+            tile("Discover", "Find and install apps",
+                 lambda: self.go("plasma-discover", name="Discover"), "🛍"),
+            tile("New Python project", "Folder, venv, git and VS Code in one click",
+                 self.new_project, "🐍"),
+            tile("Snip", "Screenshot an area: Meta+Shift+S",
+                 lambda: self.go("spectacle", "--region", name="Snip"), "✂"),
+            tile("ArchPill settings", "Customise the pill at the top of the screen",
+                 self.archpill_settings, "💊"),
+            tile("System Settings", "Wi-Fi, display, sound, look and more",
+                 lambda: self.go("systemsettings"), "⚙"),
+        ]
+        live = ("<p>You are running the <b>live</b> version. Nothing is saved after a restart "
+                "until you install Devium. The live password is <b>devium</b>.</p>") if ui.is_live() else ""
+        return page(ui.header("Welcome to Devium",
+                              "A light, fast Arch Linux desktop made for coding."),
+                    para(live + "<p>Start here. Everything is a click away, and you can come "
+                         "back any time from the app menu (or press <b>Meta+F1</b>).</p>"),
+                    tiles(items))
+
+    def mode_page(self):
+        current = subprocess.run(["devium-mode", "status"], capture_output=True,
+                                 text=True).stdout.strip() or "beginner"
+        beginner = QRadioButton("Beginner  —  big, simple and friendly")
+        pro = QRadioButton("Pro  —  compact, powerful, fewer pop-ups")
+        group = QButtonGroup(self)
+        group.addButton(beginner)
+        group.addButton(pro)
+        (pro if current == "pro" else beginner).setChecked(True)
+        apply = QPushButton("Apply")
+        apply.setObjectName("primary")
+        apply.setFixedWidth(140)
+        result = QLabel("")
+
+        def do_apply():
+            mode = "pro" if pro.isChecked() else "beginner"
+            r = subprocess.run(["devium-mode", mode], capture_output=True, text=True)
+            result.setText("✓ " + (r.stdout.strip() or f"{mode} mode on"))
+
+        apply.clicked.connect(do_apply)
+        table = para(
+            "<table cellpadding='5'>"
+            "<tr><th></th><th align='left'>Beginner</th><th align='left'>Pro</th></tr>"
+            "<tr><td><b>Taskbar</b></td><td>Big and easy to hit</td><td>Slim, more space</td></tr>"
+            "<tr><td><b>Terminal</b></td><td>Friendly prompt + tips</td>"
+            "<td>Starship prompt with git status, aliases (gs, ga, gc, gp, venv…)</td></tr>"
+            "<tr><td><b>Dolphin</b></td><td>Big icons, simple view</td>"
+            "<td>Split view, details, hidden files shown (F4 = terminal)</td></tr>"
+            "<tr><td><b>Updates</b></td><td>Pop-up when updates are ready</td>"
+            "<td>Silent, you update when you want</td></tr>"
+            "<tr><td><b>Windows</b></td><td>Normal</td><td>Drag to edges to tile (Meta+arrows)</td></tr>"
+            "</table>")
+        return page(h2("Beginner or Pro?"),
+                    para("Pick how Devium should feel. You can switch any time."),
+                    beginner, pro, apply, result, table)
+
+    def coding_page(self):
+        libs = ("numpy, pandas, matplotlib, requests, flask, beautifulsoup4, pytest, black, ruff, "
+                "pillow, pyyaml, rich, ipython, pip, pipx, virtualenv")
+        return page(
+            h2("Start coding"),
+            tiles([
+                tile("New Python project", "Creates ~/Projects/<name> and opens VS Code",
+                     self.new_project, "🐍"),
+                tile("VS Code", "Python extension and formatter ready",
+                     lambda: self.go("code", name="VS Code"), "📝"),
+                tile("Terminal", "Konsole (F12 in Dolphin opens one too)",
+                     lambda: self.go("konsole"), "⌨"),
+                tile("Kate", "Light, fast text editor",
+                     lambda: self.go("kate"), "✏"),
+                tile("Python shell", "IPython, a friendlier Python prompt",
+                     lambda: self.go("konsole", "-e", "ipython", name="IPython"), "🐍"),
+                tile("Projects folder", "Open ~/Projects in Dolphin",
+                     lambda: self.go("dolphin", os.path.expanduser("~/Projects")), "📁"),
+            ]),
+            h2("What's installed"),
+            para(f"<b>Python libraries:</b> {libs}<br>"
+                 "<b>Tools:</b> git, GitHub CLI (gh), Node.js + npm, gcc/make (base-devel), "
+                 "neovim, btop, ripgrep, fd, jq<br><br>"
+                 "Need more? In a project run <code>pip install &lt;name&gt;</code>. "
+                 "For command-line tools use <code>pipx install &lt;name&gt;</code>."))
+
+    def apps_page(self):
+        def store(app_id):
+            return lambda: self.go("plasma-discover", f"appstream://{app_id}", name="Discover")
+
+        popular = [("Discord", "Chat and voice", "com.discordapp.Discord", "💬"),
+                   ("Spotify", "Music", "com.spotify.Client", "🎵"),
+                   ("Steam", "Games", "com.valvesoftware.Steam", "🎮"),
+                   ("LibreOffice", "Documents, sheets, slides", "org.libreoffice.LibreOffice", "📄"),
+                   ("GIMP", "Photo editing", "org.gimp.GIMP", "🎨"),
+                   ("OBS Studio", "Record and stream", "com.obsproject.Studio", "🎥"),
+                   ("Thunderbird", "Email", "org.mozilla.Thunderbird", "✉"),
+                   ("VLC", "Plays every video", "org.videolan.VLC", "▶")]
+        return page(
+            h2("Get apps"),
+            para("Discover is Devium's app store. Apps come from Flathub and run in a sandbox, "
+                 "so they can't break your system. Click one to open it in Discover."),
+            tile("Open Discover", "Browse thousands of apps",
+                 lambda: self.go("plasma-discover", name="Discover"), "🛍"),
+            h2("Popular"),
+            tiles([tile(n, d, store(i), e) for n, d, i, e in popular]))
+
+    def drivers_page(self):
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        for title, desc, pkgs in detect_drivers():
+            row = QHBoxLayout()
+            text = para(f"<b>{title}</b><br>{desc}<br><small>{' '.join(pkgs)}</small>")
+            btn = QPushButton("Install")
+            btn.setFixedWidth(110)
+            btn.clicked.connect(lambda _c=False, p=pkgs, b=btn: self.install(p, b))
+            row.addWidget(text, 1)
+            row.addWidget(btn)
+            lay.addLayout(row)
+        return page(h2("Drivers"),
+                    para("Devium already includes drivers for most hardware. "
+                         "These are extra drivers that may help on this computer."),
+                    w)
+
+    def install(self, pkgs, btn):
+        btn.setEnabled(False)
+        btn.setText("Installing…")
+
+        def done(code, out):
+            btn.setText("✓ Installed" if code == 0 else "Install")
+            btn.setEnabled(code != 0)
+            if code not in (0, 126, 127):
+                QMessageBox.warning(self, "Install failed", out[-1500:])
+            elif code == 0 and any(p.startswith("nvidia") for p in pkgs):
+                QMessageBox.information(self, "Restart needed", "Restart to start using the new driver.")
+
+        self.procs.append(run_helper(self, "install", *pkgs, done=done))
+
+    def system_page(self):
+        def firewall(on):
+            run_helper(self, "firewall", "on" if on else "off",
+                       done=lambda c, o: QMessageBox.information(
+                           self, "Firewall", ("Firewall is now " + ("on" if on else "off"))
+                           if c == 0 else "Nothing changed."))
+
+        def theme(dark):
+            ui.launch("plasma-apply-colorscheme", "BreezeDark" if dark else "BreezeLight")
+            ui.launch("plasma-apply-desktoptheme", "breeze-dark" if dark else "breeze-light")
+
+        return page(
+            h2("System"),
+            tiles([
+                tile("Update Manager", "Updates, plus free up disk space",
+                     lambda: self.go("devium-update-manager"), "⬆"),
+                tile("Restore points", "Set up Timeshift: undo a bad update in two clicks",
+                     lambda: self.go("timeshift-launcher", name="Timeshift"), "⏪"),
+                tile("Firewall on", "Block incoming connections (recommended)",
+                     lambda: firewall(True), "🛡"),
+                tile("Firewall off", "Allow everything in",
+                     lambda: firewall(False), "🔓"),
+                tile("Dark theme", "Easy on the eyes", lambda: theme(True), "🌙"),
+                tile("Light theme", "Bright and clean", lambda: theme(False), "☀"),
+                tile("Printers", "Add or manage printers",
+                     lambda: self.go("systemsettings", "kcm_printer_manager"), "🖨"),
+                tile("System Monitor", "See what's using CPU and memory",
+                     lambda: self.go("plasma-systemmonitor"), "📊"),
+                tile("Wi-Fi & network", "Connect to a network",
+                     lambda: self.go("systemsettings", "kcm_networkmanagement"), "📶"),
+                tile("Battery & power", "Battery saver is on (TLP)",
+                     lambda: self.go("systemsettings", "kcm_powerdevilprofilesconfig"), "🔋"),
+            ]))
+
+    def shortcuts_page(self):
+        rows = [("Meta", "Open the app menu"),
+                ("Meta+Shift+S", "Snip an area of the screen (copied automatically)"),
+                ("Print", "Open Snip"),
+                ("Meta+Print", "Snip the current window"),
+                ("Meta+Shift+R", "Record an area of the screen"),
+                ("Meta+V", "Clipboard history"),
+                ("Meta+.", "Emoji picker"),
+                ("Meta+U", "Update Manager"),
+                ("Meta+F1", "Devium Welcome"),
+                ("Meta+E", "Files (Dolphin)"),
+                ("Meta+L", "Lock the screen"),
+                ("Meta+D", "Show the desktop"),
+                ("Meta+Arrow keys", "Snap windows to the sides / corners"),
+                ("Meta+W", "Overview of all windows"),
+                ("Alt+Tab", "Switch windows"),
+                ("Alt+Space", "KRunner: search apps, files, do maths"),
+                ("Ctrl+Alt+T", "Terminal"),
+                ("Ctrl+Esc", "System monitor (kill frozen apps)"),
+                ("Dolphin: F4 / F3 / Ctrl+H", "Terminal panel / split view / hidden files")]
+        html = "<table cellpadding='4'>" + "".join(
+            f"<tr><td><b><code>{k}</code></b></td><td>{v}</td></tr>" for k, v in rows) + "</table>"
+        return page(h2("Handy shortcuts"), para("Meta is the Windows key."), para(html))
+
+    # ---------------------------------------------------------------- actions
+    def new_project(self):
+        name, ok = QInputDialog.getText(self, "New Python project",
+                                        "Project name (letters, numbers, - and _):")
+        if not ok or not name.strip():
+            return
+        r = subprocess.run(["devium-new-project", name.strip()], capture_output=True, text=True)
+        if r.returncode == 0:
+            QMessageBox.information(self, "Project created", r.stdout.strip() +
+                                    "\n\nVS Code is opening it now.")
+        else:
+            QMessageBox.warning(self, "Could not create project", (r.stdout + r.stderr).strip())
+
+    def archpill_settings(self):
+        qs = shutil.which("qs") or shutil.which("quickshell")
+        if not qs:
+            return missing(self, "ArchPill (quickshell)")
+        subprocess.Popen(["sh", "-c",
+                          f"{qs} -c archpill ipc call archpill openSettings || "
+                          f"(QS_APP_ID=archpill {qs} -c archpill -n -d; sleep 2; "
+                          f"{qs} -c archpill ipc call archpill openSettings)"],
+                         start_new_session=True)
+
+
+def main():
+    if "--autostart" in sys.argv and os.path.exists(os.path.join(CONFIG, "welcome-hide")):
+        return
+    app = QApplication(sys.argv)
+    app.setApplicationName("Devium Welcome")
+    app.setDesktopFileName("devium-welcome")
+    app.setStyleSheet(ui.STYLE)
+    w = Welcome()
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

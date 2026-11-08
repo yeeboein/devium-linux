@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Update Manager
+GenericName=Software Updates
+Comment=Check for and install updates for Devium, your apps and ArchPill
+Exec=devium-update-manager
+Icon=system-software-update
+Terminal=false
+Categories=System;Settings;
+Keywords=update;upgrade;software;packages;pacman;

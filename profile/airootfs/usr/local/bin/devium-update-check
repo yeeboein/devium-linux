@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Quietly checks for updates (run by devium-update-check.timer) and shows a
+# notification with an "Open Update Manager" button when there are some.
+[[ -f ${XDG_CONFIG_HOME:-$HOME/.config}/devium/no-update-notify ]] && exit 0
+command -v checkupdates >/dev/null || exit 0
+n="$(checkupdates 2>/dev/null | wc -l)"
+(( n > 0 )) || exit 0
+action="$(notify-send --app-name="Devium Updates" --icon=devium \
+    --action=open="Open Update Manager" --wait \
+    "Updates available" "$n update(s) are ready to install.")"
+[[ $action == open ]] && exec devium-update-manager

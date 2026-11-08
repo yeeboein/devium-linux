@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for Devium updates twice a day
+
+[Timer]
+OnStartupSec=15min
+OnUnitActiveSec=12h
+Persistent=false
+
+[Install]
+WantedBy=timers.target
