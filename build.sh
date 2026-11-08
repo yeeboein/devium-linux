@@ -72,7 +72,7 @@ repo_url="https://github.com/yeeboein/devium-linux"
 repo_ref="$(git -C "$HERE" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
 [[ $repo_ref == HEAD ]] && repo_ref=main
 cat > "$STAGE/airootfs/etc/devium-release" <<EOF
-DEVIUM_VERSION=$(date +%Y.%m.%d)
+DEVIUM_VERSION=${DEVIUM_VERSION:-$(date +%Y.%m.%d)}
 DEVIUM_REPO=${DEVIUM_REPO:-$repo_url}
 DEVIUM_REF=${DEVIUM_REF:-$repo_ref}
 EOF

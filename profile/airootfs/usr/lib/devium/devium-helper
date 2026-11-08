@@ -8,6 +8,7 @@
 #   devium-helper snapshot
 #   devium-helper setup PLAN.json   apply the Devium Setup wizard's choices
 #   devium-helper install-local FILE.pkg.tar.zst...   install packages built from the AUR
+#   devium-helper refresh TAG       update Devium's own files to release TAG (Devium Updater)
 set -uo pipefail
 export LC_ALL=C.UTF-8 TERM=dumb
 
@@ -119,6 +120,21 @@ PY
         fi
         step "Done"
         exit $fail
+        ;;
+    refresh)
+        tag="${2:?usage: devium-helper refresh TAG}"
+        [[ $tag =~ ^[A-Za-z0-9._-]+$ ]] || { echo "bad tag"; exit 1; }
+        source /etc/devium-release 2>/dev/null
+        repo="${DEVIUM_REPO:-https://github.com/yeeboein/devium-linux}"
+        step "Downloading Devium $tag"
+        rm -rf /tmp/devium-refresh
+        git clone --depth 1 -b "$tag" "$repo" /tmp/devium-refresh || exit 1
+        step "Updating Devium's apps, look and settings"
+        DEVIUM_REFRESH=1 bash /tmp/devium-refresh/profile/airootfs/usr/lib/devium/devium-setup --installed /tmp/devium-refresh || exit 1
+        sed -i "s/^DEVIUM_VERSION=.*/DEVIUM_VERSION=${tag#v}/" /etc/devium-release 2>/dev/null \
+            || echo "DEVIUM_VERSION=${tag#v}" >> /etc/devium-release
+        rm -rf /tmp/devium-refresh
+        step "Done"
         ;;
     install-local)
         shift

@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+"""Devium Updater: checks GitHub for new Devium releases, updates Devium's own files
+(apps, look, settings) without reinstalling, and downloads new ISOs.
+(System packages are updated by the Update Manager.)"""
+import json
+import os
+import re
+import sys
+import urllib.request
+
+sys.path.insert(0, "/usr/lib/devium")
+
+from PyQt6.QtCore import QProcess, Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPlainTextEdit, QProgressBar,
+                             QPushButton, QTextBrowser, QVBoxLayout, QWidget)
+
+import devium_ui as ui
+
+
+def release_info():
+    info = {"DEVIUM_VERSION": "unknown", "DEVIUM_REPO": "https://github.com/yeeboein/devium-linux"}
+    try:
+        for line in open("/etc/devium-release"):
+            k, _, v = line.strip().partition("=")
+            if k:
+                info[k] = v
+    except OSError:
+        pass
+    return info
+
+
+def api_url(repo):
+    m = re.match(r"https://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$", repo)
+    return f"https://api.github.com/repos/{m.group(1) if m else 'yeeboein/devium-linux'}/releases/latest"
+
+
+def version_key(v):
+    return [int(x) for x in re.findall(r"\d+", v)]
+
+
+class Fetch(QThread):
+    done = pyqtSignal(object, str)
+
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
+
+    def run(self):
+        try:
+            req = urllib.request.Request(self.url, headers={"Accept": "application/vnd.github+json",
+                                                            "User-Agent": "devium-updater"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                self.done.emit(json.load(r), "")
+        except urllib.error.HTTPError as e:
+            self.done.emit(None, "No Devium releases published yet." if e.code == 404 else str(e))
+        except Exception as e:  # offline etc.
+            self.done.emit(None, f"Could not reach GitHub ({e.__class__.__name__}). Check your internet.")
+
+
+class Updater(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Devium Updater")
+        self.setWindowIcon(ui.app_icon())
+        self.resize(720, 560)
+        self.info = release_info()
+        self.release = None
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(20, 18, 20, 18)
+        lay.addWidget(ui.header("Devium Updater",
+                                "New Devium versions: new apps, looks and features. "
+                                "(Use Update Manager for normal software updates.)"))
+        self.status = QLabel(f"You have Devium {self.info['DEVIUM_VERSION']}. Checking for a newer version…")
+        self.status.setObjectName("h2")
+        self.status.setWordWrap(True)
+        lay.addWidget(self.status)
+
+        self.notes = QTextBrowser()
+        self.notes.setOpenExternalLinks(True)
+        lay.addWidget(self.notes, 1)
+
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 0)
+        self.progress.setVisible(False)
+        lay.addWidget(self.progress)
+        self.log = QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setVisible(False)
+        self.log.setMaximumHeight(160)
+        lay.addWidget(self.log)
+
+        row = QHBoxLayout()
+        self.check_btn = QPushButton("Check again")
+        self.check_btn.clicked.connect(self.check)
+        self.iso_btn = QPushButton("Download the new ISO")
+        self.iso_btn.setToolTip("For a USB stick or a fresh install")
+        self.iso_btn.setEnabled(False)
+        self.iso_btn.clicked.connect(self.download_iso)
+        self.update_btn = QPushButton("Update Devium")
+        self.update_btn.setObjectName("primary")
+        self.update_btn.setEnabled(False)
+        self.update_btn.clicked.connect(self.update)
+        row.addWidget(self.check_btn)
+        row.addStretch(1)
+        row.addWidget(self.iso_btn)
+        row.addWidget(self.update_btn)
+        lay.addLayout(row)
+        self.check()
+
+    def check(self):
+        self.status.setText(f"You have Devium {self.info['DEVIUM_VERSION']}. Checking for a newer version…")
+        self.fetch = Fetch(api_url(self.info["DEVIUM_REPO"]))
+        self.fetch.done.connect(self.got)
+        self.fetch.start()
+
+    def got(self, rel, err):
+        if not rel:
+            self.status.setText(err)
+            return
+        self.release = rel
+        tag = rel.get("tag_name", "")
+        newer = version_key(tag) > version_key(self.info["DEVIUM_VERSION"])
+        self.notes.setMarkdown(f"## {rel.get('name') or tag}\n\n{rel.get('body') or 'No release notes.'}")
+        self.iso_btn.setEnabled(any(a["name"].endswith((".iso", ".zip", ".001")) or ".iso." in a["name"]
+                                    for a in rel.get("assets", [])))
+        if newer:
+            self.status.setText(f"Devium {tag.lstrip('v')} is available! You have {self.info['DEVIUM_VERSION']}.")
+            self.update_btn.setEnabled(not ui.is_live())
+        else:
+            self.status.setText(f"You have the latest Devium ({self.info['DEVIUM_VERSION']}).")
+            self.update_btn.setEnabled(False)
+
+    def download_iso(self):
+        url = (self.release or {}).get("html_url") or self.info["DEVIUM_REPO"] + "/releases"
+        ui.launch("xdg-open", url)
+
+    def update(self):
+        tag = self.release["tag_name"]
+        self.update_btn.setEnabled(False)
+        self.progress.setVisible(True)
+        self.log.setVisible(True)
+        self.status.setText(f"Updating to Devium {tag.lstrip('v')}… (you may be asked for your password)")
+        self.proc = QProcess(self)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.proc.readyReadStandardOutput.connect(
+            lambda: self.log.appendPlainText(bytes(self.proc.readAllStandardOutput()).decode(errors="replace").rstrip()))
+        self.proc.finished.connect(self.updated)
+        self.proc.start("pkexec", ["/usr/lib/devium/devium-helper", "refresh", tag])
+
+    def updated(self, code, _s):
+        self.progress.setVisible(False)
+        if code == 0:
+            self.info = release_info()
+            self.status.setText(f"Devium is updated to {self.info['DEVIUM_VERSION']}. "
+                                "Log out and back in to see everything new.")
+        elif code in (126, 127):
+            self.status.setText("Update cancelled.")
+            self.update_btn.setEnabled(True)
+        else:
+            self.status.setText("The update failed. See the details below.")
+            self.update_btn.setEnabled(True)
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("Devium Updater")
+    app.setDesktopFileName("devium-updater")
+    app.setStyleSheet(ui.STYLE)
+    w = Updater()
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

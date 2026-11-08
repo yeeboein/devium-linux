@@ -156,7 +156,8 @@ case "${1:-}" in
         setup_firewall
         setup_flathub
         setup_archpill_source
-        # Give users created by the installer the Devium defaults.
+        # Give users created by the installer the Devium defaults (not on Devium Updater refreshes).
+        [[ -n ${DEVIUM_REFRESH:-} ]] && { say "done"; exit 0; }
         for home in /home/*; do
             [[ -d $home ]] || continue
             owner="$(stat -c %U "$home")"

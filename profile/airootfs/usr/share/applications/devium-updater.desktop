@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Devium Updater
+GenericName=New Devium versions
+Comment=Get new Devium versions: new apps, looks and features
+Exec=devium-updater
+Icon=devium
+Terminal=false
+Categories=System;Settings;
+Keywords=devium;version;upgrade;iso;release;
