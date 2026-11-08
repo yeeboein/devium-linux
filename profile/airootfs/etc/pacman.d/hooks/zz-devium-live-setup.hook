@@ -1,0 +1,14 @@
+# remove from airootfs!
+# Runs once while the ISO is being built (inside the new system) to finish
+# setting up Devium: branding, services and the live user.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = *
+
+[Action]
+Description = Setting up Devium (live system)...
+When = PostTransaction
+Depends = bash
+Exec = /usr/lib/devium/devium-setup --live

@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# Devium system setup.
+#
+#   devium-setup --live              run while the ISO is built (pacman hook, inside the new system)
+#   devium-setup --installed <dir>   run inside a freshly installed system; <dir> is a checkout
+#                                    of the devium-linux repo (used by devium-install)
+#   devium-setup --os-release        (re)write /etc/os-release only
+set -uo pipefail
+
+say() { printf '==> devium-setup: %s\n' "$*"; }
+
+write_os_release() {
+    local version="rolling"
+    [[ -r /etc/devium-release ]] && version="$(sed -n 's/^DEVIUM_VERSION=//p' /etc/devium-release)"
+    rm -f /etc/os-release
+    cat > /etc/os-release <<EOF
+NAME="Devium"
+PRETTY_NAME="Devium"
+ID=devium
+ID_LIKE=arch
+BUILD_ID=${version:-rolling}
+VERSION_ID=${version:-rolling}
+ANSI_COLOR="38;2;34;211;238"
+HOME_URL="https://github.com/yeeboein/devium-linux"
+DOCUMENTATION_URL="https://wiki.archlinux.org/"
+SUPPORT_URL="https://github.com/yeeboein/devium-linux/issues"
+BUG_REPORT_URL="https://github.com/yeeboein/devium-linux/issues"
+LOGO=devium
+EOF
+}
+
+enable_services() {
+    local s
+    for s in sddm.service NetworkManager.service bluetooth.service cups.socket \
+             tlp.service ufw.service systemd-timesyncd.service fstrim.timer \
+             vboxservice.service vmtoolsd.service vmware-vmblock-fuse.service \
+             qemu-guest-agent.service spice-vdagentd.socket \
+             hv_fcopy_daemon.service hv_kvp_daemon.service hv_vss_daemon.service; do
+        [[ -e /usr/lib/systemd/system/$s ]] && systemctl enable "$s" >/dev/null 2>&1 && say "enabled $s"
+    done
+    # TLP and power-profiles-daemon fight over the same settings: TLP wins.
+    systemctl mask power-profiles-daemon.service >/dev/null 2>&1 || true
+    systemctl mask systemd-rfkill.service systemd-rfkill.socket >/dev/null 2>&1 || true
+    # Daily "updates available" check for every user (can be turned off in Pro mode).
+    systemctl --global enable devium-update-check.timer >/dev/null 2>&1 || true
+}
+
+setup_firewall() {
+    [[ -f /etc/ufw/ufw.conf ]] && sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf
+}
+
+setup_flathub() {
+    command -v flatpak >/dev/null || return 0
+    flatpak remote-add --system --if-not-exists flathub \
+        https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 \
+        && say "added Flathub" || say "could not add Flathub now (it is added again on first update)"
+}
+
+setup_archpill_source() {
+    # ArchPill is copied into /opt/archpill by build.sh; installed systems clone it.
+    if [[ ! -f /opt/archpill/install.sh ]]; then
+        rm -rf /opt/archpill
+        git clone --depth 1 https://github.com/yeeboein/archpill.git /opt/archpill >/dev/null 2>&1 \
+            && say "downloaded ArchPill" || say "could not download ArchPill"
+    fi
+    [[ -d /opt/archpill ]] && chmod -R a+rX /opt/archpill
+}
+
+setup_pacman() {
+    sed -i 's/^#Color/Color/; s/^#ParallelDownloads.*/ParallelDownloads = 5/' /etc/pacman.conf
+    grep -q ILoveCandy /etc/pacman.conf || sed -i '/^Color/a ILoveCandy' /etc/pacman.conf
+}
+
+live_user() {
+    if ! id devium >/dev/null 2>&1; then
+        # /etc/skel already contains Devium's files (airootfs is copied before packages).
+        useradd -m -c "Devium Live" -G wheel,audio,video,storage,network,lp,sys -s /bin/bash devium
+        echo 'devium:devium' | chpasswd
+        say "created live user 'devium' (password: devium)"
+    fi
+    mkdir -p /home/devium/Desktop
+    install -m 755 /usr/share/applications/devium-install.desktop /home/devium/Desktop/ 2>/dev/null || true
+    chown -R devium:devium /home/devium
+}
+
+case "${1:-}" in
+    --os-release)
+        write_os_release
+        ;;
+    --live)
+        write_os_release
+        setup_pacman
+        enable_services
+        setup_firewall
+        setup_flathub
+        setup_archpill_source
+        live_user
+        systemctl set-default graphical.target >/dev/null 2>&1
+        ;;
+    --installed)
+        src="${2:?usage: devium-setup --installed <repo dir>}"
+        root="$src/profile/airootfs"
+        [[ -d $root ]] || { echo "no airootfs in $src"; exit 1; }
+        say "copying Devium files"
+        # Everything except files that only make sense on the live ISO.
+        tar -C "$root" \
+            --exclude=./etc/shadow --exclude=./etc/passwd --exclude=./etc/hostname \
+            --exclude=./etc/localtime --exclude=./etc/locale.conf \
+            --exclude=./etc/mkinitcpio.conf.d --exclude=./etc/sudoers.d \
+            --exclude=./etc/polkit-1/rules.d/49-devium-live.rules \
+            --exclude=./etc/sddm.conf.d/20-devium-live-autologin.conf \
+            --exclude=./etc/systemd/journald.conf.d --exclude=./etc/systemd/logind.conf.d \
+            --exclude=./etc/systemd/system --exclude=./root \
+            --exclude=./etc/pacman.d/hooks/zz-devium-live-setup.hook \
+            --exclude=./etc/pacman.d/hooks/zzzz99-remove-custom-hooks-from-airootfs.hook \
+            --exclude=./etc/pacman.d/hooks/uncomment-mirrors.hook \
+            --exclude=./usr/share/applications/devium-install.desktop \
+            -cf - . | tar -C / --no-same-owner -xf -
+        chmod 755 /usr/local/bin/devium-* /usr/lib/devium/devium-* 2>/dev/null
+        [[ -f $src/.devium-release ]] && cp "$src/.devium-release" /etc/devium-release
+        write_os_release
+        setup_pacman
+        enable_services
+        setup_firewall
+        setup_flathub
+        setup_archpill_source
+        # Give users created by the installer the Devium defaults.
+        for home in /home/*; do
+            [[ -d $home ]] || continue
+            owner="$(stat -c %U "$home")"
+            cp -rn /etc/skel/. "$home"/ && chown -R "$owner:" "$home"
+        done
+        systemctl set-default graphical.target >/dev/null 2>&1
+        say "done"
+        ;;
+    *)
+        sed -n '2,8p' "$0"
+        exit 1
+        ;;
+esac
+exit 0

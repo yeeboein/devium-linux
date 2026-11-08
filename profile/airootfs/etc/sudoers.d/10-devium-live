@@ -1,0 +1,2 @@
+# Live session only (not copied to installed systems).
+devium ALL=(ALL:ALL) NOPASSWD: ALL
