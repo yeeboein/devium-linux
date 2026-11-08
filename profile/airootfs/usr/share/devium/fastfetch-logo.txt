@@ -1,17 +1,19 @@
-   .-*+=-:                          
-      -#@@@@%#+=-:.                 
-   *+:  .+@@@@@@@@@@%#*=:           
-   #@@%+.  -#@@@@@@@@@@@@%-         
-   #@@@@@*   .+*#%@@@@@@@@@%-       
-   #@@*-.          .:=*%@@@@@%-     
-   -:                   .+@@@@@%-   
-                          -@@@@@@%- 
-                           %@@@@@@@+
-                          :@@@@@@+. 
-                         =@@@@@+    
-         -#*          :+@@@@@=      
-      .+@@@*      :=*@@@@@@=        
-    -#@@#=:  .-+%@@@@@@@@+          
-  =#*=.  :=#@@@@@@@@@@@+            
-.:.  :+#@@@@@%#*+=-:.               
-  :=**+=-:.                         
+   DEV                                
+     DEVIUMDEV                        
+  D     DEVIUMDEVIUMDE                
+  DEV     DEVIUMDEVIUMDEVI            
+  DEVIUM    DEVIUMDEVIUMDEVI          
+  DEVIUM         DEVIUMDEVIUMD        
+  DEV                   DEVIUMDEV     
+                          DEVIUMDE    
+                            DEVIUMDE  
+                            DEVIUMDEVI
+                            DEVIUMDE  
+                           DEVIUMD    
+          D              DEVIUMD      
+       DEVI          DEVIUMDEV        
+     DEVIUM      DEVIUMDEVIU          
+  DEVIU     DEVIUMDEVIUMDE            
+DEV     DEVIUMDEVIUMDEVI              
+    DEVIUMDEVIUM                      
+ DEVI                                 
