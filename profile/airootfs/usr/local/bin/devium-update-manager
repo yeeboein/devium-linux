@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+"""Devium Update Manager: check for and install updates without a terminal."""
+import os
+import re
+import sys
+
+sys.path.insert(0, "/usr/lib/devium")
+
+from PyQt6.QtCore import QProcess, Qt, QTimer
+from PyQt6.QtWidgets import (QApplication, QHBoxLayout, QHeaderView, QLabel, QMessageBox,
+                             QPlainTextEdit, QProgressBar, QPushButton, QTreeWidget,
+                             QTreeWidgetItem, QVBoxLayout, QWidget)
+
+import devium_ui as ui
+
+ARCHPILL = os.path.expanduser("~/archpill")
+
+
+class UpdateManager(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Devium Update Manager")
+        self.setWindowIcon(ui.app_icon())
+        self.resize(760, 560)
+        self.proc = None
+        self.queue = []          # list of (label, program, args, on_done)
+        self.kernel_before = os.uname().release
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(20, 18, 20, 18)
+        lay.addWidget(ui.header("Updates", "Keep Devium, your apps and ArchPill up to date."))
+
+        self.status = QLabel("Press “Check for updates” to see what's new.")
+        self.status.setObjectName("h2")
+        lay.addWidget(self.status)
+
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels(["Name", "Installed", "New version", "Source"])
+        self.tree.setRootIsDecorated(False)
+        self.tree.setAlternatingRowColors(True)
+        self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        lay.addWidget(self.tree, 1)
+
+        self.progress = QProgressBar()
+        self.progress.setVisible(False)
+        lay.addWidget(self.progress)
+
+        self.log = QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setVisible(False)
+        self.log.setMaximumBlockCount(5000)
+        self.log.setStyleSheet("font-family: 'JetBrains Mono', monospace; font-size: 9pt;")
+        lay.addWidget(self.log, 1)
+
+        row = QHBoxLayout()
+        self.details_btn = QPushButton("Show details")
+        self.details_btn.setCheckable(True)
+        self.details_btn.toggled.connect(self.toggle_details)
+        self.clean_btn = QPushButton("Free up space")
+        self.clean_btn.setToolTip("Remove old package versions and unused app runtimes")
+        self.clean_btn.clicked.connect(self.clean)
+        self.check_btn = QPushButton("Check for updates")
+        self.check_btn.clicked.connect(self.check)
+        self.update_btn = QPushButton("Update all")
+        self.update_btn.setObjectName("primary")
+        self.update_btn.setEnabled(False)
+        self.update_btn.clicked.connect(self.update_all)
+        row.addWidget(self.details_btn)
+        row.addWidget(self.clean_btn)
+        row.addStretch(1)
+        row.addWidget(self.check_btn)
+        row.addWidget(self.update_btn)
+        lay.addLayout(row)
+
+        QTimer.singleShot(300, self.check)
+
+    # ------------------------------------------------------------------ helpers
+    def toggle_details(self, on):
+        self.log.setVisible(on)
+        self.details_btn.setText("Hide details" if on else "Show details")
+
+    def busy(self, on, text=None):
+        for b in (self.check_btn, self.clean_btn):
+            b.setEnabled(not on)
+        if on:
+            self.update_btn.setEnabled(False)
+        self.progress.setVisible(on)
+        self.progress.setRange(0, 0)
+        if text:
+            self.status.setText(text)
+
+    def run_queue(self):
+        if not self.queue:
+            return
+        label, program, args, on_done = self.queue.pop(0)
+        self.status.setText(label)
+        self.log.appendPlainText(f"\n$ {program} {' '.join(args)}")
+        self.proc = QProcess(self)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        out = []
+        self.proc.readyReadStandardOutput.connect(lambda: self.read_output(out))
+        self.proc.finished.connect(lambda code, _s: on_done(code, "".join(out)))
+        self.proc.start(program, args)
+
+    def read_output(self, out):
+        text = bytes(self.proc.readAllStandardOutput()).decode(errors="replace")
+        out.append(text)
+        self.log.insertPlainText(text)
+        self.log.ensureCursorVisible()
+        # pacman prints "(12/80) upgrading foo" - use it for a real progress bar
+        m = re.findall(r"\((\d+)/(\d+)\) (?:upgrading|installing|reinstalling)", text)
+        if m:
+            done, total = map(int, m[-1])
+            self.progress.setRange(0, total)
+            self.progress.setValue(done)
+
+    # ------------------------------------------------------------------ check
+    def check(self):
+        self.tree.clear()
+        self.found = 0
+        self.busy(True, "Checking for updates…")
+        self.queue = [("Checking system packages…", "checkupdates", ["--nocolor"], self.got_pacman)]
+        if os.path.exists("/usr/bin/flatpak"):
+            self.queue.append(("Checking apps…", "flatpak",
+                               ["remote-ls", "--updates", "--columns=name,application,version"],
+                               self.got_flatpak))
+        if os.path.isdir(os.path.join(ARCHPILL, ".git")):
+            self.queue.append(("Checking ArchPill…", "sh",
+                               ["-c", f"cd '{ARCHPILL}' && git fetch -q && git rev-list --count HEAD..@{{u}}"],
+                               self.got_archpill))
+        self.queue.append(("", "true", [], self.check_done))
+        self.run_queue()
+
+    def add(self, name, old, new, source):
+        QTreeWidgetItem(self.tree, [name, old, new, source])
+        self.found += 1
+
+    def got_pacman(self, code, out):
+        # checkupdates: exit 0 = updates, 2 = none, anything else = error
+        if code == 0:
+            for line in out.splitlines():
+                p = line.split()
+                if len(p) >= 4 and p[2] == "->":
+                    self.add(p[0], p[1], p[3], "System")
+        elif code != 2:
+            self.log.appendPlainText("Could not check system packages (no internet?).")
+        self.run_queue()
+
+    def got_flatpak(self, code, out):
+        if code == 0:
+            for line in out.splitlines():
+                p = line.split("\t")
+                if len(p) >= 2 and p[0].strip():
+                    self.add(p[0], "", p[2] if len(p) > 2 else "", "App (Flathub)")
+        self.run_queue()
+
+    def got_archpill(self, code, out):
+        n = out.strip().splitlines()[-1] if out.strip() else "0"
+        if code == 0 and n.isdigit() and int(n) > 0:
+            self.add("ArchPill", "", f"{n} new change(s)", "ArchPill")
+            self.archpill_update = True
+        else:
+            self.archpill_update = False
+        self.run_queue()
+
+    def check_done(self, _code, _out):
+        self.busy(False)
+        if self.found:
+            self.status.setText(f"{self.found} update(s) available")
+            self.update_btn.setEnabled(True)
+        else:
+            self.status.setText("✓ Devium is up to date")
+
+    # ------------------------------------------------------------------ update
+    def update_all(self):
+        self.busy(True, "Updating… (you may be asked for your password)")
+        self.queue = [("Installing updates…", "pkexec", ["/usr/lib/devium/devium-helper", "update"],
+                       self.system_done)]
+        if getattr(self, "archpill_update", False):
+            self.queue.append(("Updating ArchPill…", "sh",
+                               ["-c", f"cd '{ARCHPILL}' && git pull --ff-only && ./install.sh --no-packages"],
+                               lambda c, o: self.run_queue()))
+        self.queue.append(("", "true", [], self.update_done))
+        self.run_queue()
+
+    def system_done(self, code, _out):
+        if code != 0:
+            self.queue = []
+            self.busy(False)
+            if code in (126, 127):
+                self.status.setText("Update cancelled.")
+            else:
+                self.status.setText("Update failed - see details.")
+                self.details_btn.setChecked(True)
+            return
+        self.run_queue()
+
+    def update_done(self, _code, _out):
+        self.busy(False)
+        self.tree.clear()
+        self.status.setText("✓ Updates installed")
+        if not os.path.isdir(f"/usr/lib/modules/{self.kernel_before}"):
+            r = QMessageBox.question(self, "Restart needed",
+                                     "The Linux kernel was updated. Restart now to finish?")
+            if r == QMessageBox.StandardButton.Yes:
+                ui.launch("systemctl", "reboot")
+
+    # ------------------------------------------------------------------ clean
+    def clean(self):
+        self.busy(True, "Freeing up space…")
+        self.queue = [("Removing old files…", "pkexec", ["/usr/lib/devium/devium-helper", "clean"],
+                       lambda c, o: (self.busy(False),
+                                     self.status.setText("✓ Cleaned up" if c == 0 else "Clean-up cancelled")))]
+        self.run_queue()
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("Devium Update Manager")
+    app.setDesktopFileName("devium-update-manager")
+    app.setStyleSheet(ui.STYLE)
+    w = UpdateManager()
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

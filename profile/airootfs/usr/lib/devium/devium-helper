@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Privileged actions for the Devium apps. Run through pkexec (asks for your password once).
+#
+#   devium-helper update            snapshot (if Timeshift is set up), then update everything
+#   devium-helper clean             remove old package cache and unused Flatpak runtimes
+#   devium-helper install PKG...    install packages from the Arch repos
+#   devium-helper firewall on|off
+#   devium-helper snapshot
+set -uo pipefail
+export LC_ALL=C.UTF-8 TERM=dumb
+
+[[ $EUID -eq 0 ]] || { echo "devium-helper must run as root (use pkexec)"; exit 1; }
+
+step() { printf '\n### %s\n' "$*"; }
+
+snapshot() {
+    if command -v timeshift >/dev/null && [[ -s /etc/timeshift/timeshift.json ]] \
+       && grep -q '"backup_device_uuid" *: *"[^"]' /etc/timeshift/timeshift.json; then
+        step "Creating a restore point (Timeshift)"
+        timeshift --create --scripted --comments "${1:-Devium restore point}" --tags O \
+            || echo "Snapshot failed - continuing."
+    else
+        echo "(Timeshift is not set up yet, skipping restore point. Set it up in Devium Welcome > System.)"
+    fi
+}
+
+case "${1:-}" in
+    update)
+        snapshot "Before update $(date '+%Y-%m-%d %H:%M')"
+        step "Updating the keyring"
+        pacman -Sy --needed --noconfirm archlinux-keyring || exit 1
+        step "Updating system packages"
+        pacman -Su --noconfirm || exit 1
+        if command -v flatpak >/dev/null; then
+            flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null
+            step "Updating Flatpak apps"
+            flatpak update --system -y --noninteractive || echo "Flatpak update had problems."
+        fi
+        step "Done"
+        ;;
+    clean)
+        step "Removing old package versions"
+        paccache -rk1
+        paccache -ruk0
+        if command -v flatpak >/dev/null; then
+            step "Removing unused Flatpak runtimes"
+            flatpak uninstall --system --unused -y --noninteractive
+        fi
+        step "Done"
+        ;;
+    install)
+        shift
+        (( $# )) || { echo "nothing to install"; exit 1; }
+        for p in "$@"; do
+            [[ $p =~ ^[a-z0-9@._+-]+$ ]] || { echo "bad package name: $p"; exit 1; }
+        done
+        step "Installing: $*"
+        pacman -Sy --needed --noconfirm "$@"
+        ;;
+    firewall)
+        case "${2:-}" in
+            on)  ufw --force enable && systemctl enable --now ufw ;;
+            off) ufw disable && systemctl disable --now ufw ;;
+            *) echo "usage: devium-helper firewall on|off"; exit 1 ;;
+        esac
+        ;;
+    snapshot)
+        snapshot "Manual restore point $(date '+%Y-%m-%d %H:%M')"
+        ;;
+    *)
+        sed -n '2,9p' "$0"; exit 1 ;;
+esac

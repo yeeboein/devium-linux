@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Create a ready-to-code Python project and open it in VS Code.
+#   devium-new-project my-app        -> ~/Projects/my-app
+set -euo pipefail
+name="${1:?usage: devium-new-project <name>}"
+[[ $name =~ ^[A-Za-z0-9._-]+$ ]] || { echo "Use letters, numbers, - _ . only"; exit 1; }
+dir="${PROJECTS_DIR:-$HOME/Projects}/$name"
+[[ -e $dir ]] && { echo "$dir already exists"; exit 1; }
+mkdir -p "$dir"
+cd "$dir"
+
+cat > main.py <<PY
+"""$name - created with Devium."""
+
+
+def main() -> None:
+    print("Hello from $name!")
+
+
+if __name__ == "__main__":
+    main()
+PY
+cat > test_main.py <<'PY'
+from main import main
+
+
+def test_main(capsys):
+    main()
+    assert "Hello" in capsys.readouterr().out
+PY
+cat > .gitignore <<'GI'
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+GI
+printf '# %s\n\nRun it:\n\n    source .venv/bin/activate\n    python main.py\n    pytest\n' "$name" > README.md
+: > requirements.txt
+
+# --system-site-packages: numpy, pandas, requests... from Devium work right away.
+python -m venv --system-site-packages .venv
+git init -q && git add -A && git commit -qm "Start $name" 2>/dev/null || true
+mkdir -p .vscode
+printf '{\n    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"\n}\n' > .vscode/settings.json
+
+echo "Created $dir"
+command -v code >/dev/null && (code "$dir" main.py >/dev/null 2>&1 &)

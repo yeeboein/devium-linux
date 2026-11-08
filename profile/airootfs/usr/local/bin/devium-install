@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Install Devium to disk. Uses Arch's official installer (archinstall) with Devium's
+# package list, then adds Devium's apps, branding and ArchPill to the new system.
+set -uo pipefail
+
+if [[ -z ${DEVIUM_IN_TERMINAL:-} && -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]]; then
+    exec env DEVIUM_IN_TERMINAL=1 konsole --hide-menubar -p tabtitle="Install Devium" \
+        -e sudo --preserve-env=DEVIUM_IN_TERMINAL "$0"
+fi
+[[ $EUID -eq 0 ]] || exec sudo "$0" "$@"
+
+C='\e[1;36m'; M='\e[1;35m'; Y='\e[1;33m'; N='\e[0m'
+pause() { read -r -p "Press Enter to close this window..." _; }
+
+clear
+echo -e "${C}"
+echo "   ____             _                 "
+echo "  |  _ \  _____   _(_)_   _ _ __ ___  "
+echo "  | | | |/ _ \ \ / / | | | | '_ \` _ \ "
+echo "  | |_| |  __/\ V /| | |_| | | | | | |"
+echo "  |____/ \___| \_/ |_|\__,_|_| |_| |_|"
+echo -e "${N}"
+echo -e "${M}Devium installer${N}"
+echo
+echo "This uses Arch Linux's installer. In the menu, set:"
+echo -e "  ${C}Disk configuration${N}   pick your disk (\"best-effort\" wipes it and sets it up for you)"
+echo -e "  ${C}Bootloader${N}           leave the default"
+echo -e "  ${C}Authentication${N}       create your user (tick 'superuser' / sudo)"
+echo -e "  ${C}Profile${N}              choose ${Y}Minimal${N} - Devium adds KDE Plasma and its apps itself"
+echo -e "  ${C}Network${N}              choose ${Y}NetworkManager${N}"
+echo -e "  ${C}Timezone${N}             your timezone"
+echo "Devium's packages are already filled in under 'Additional packages'."
+echo
+echo -e "${Y}Warning:${N} the disk you choose can be erased. Back up first."
+echo
+if ! curl -fsI -m 8 https://archlinux.org >/dev/null 2>&1; then
+    echo -e "${Y}No internet connection.${N} Connect to Wi-Fi from the network icon in the taskbar, then try again."
+    pause; exit 1
+fi
+read -r -p "Start the installer? [y/N] " ans
+[[ ${ans,,} == y* ]] || exit 0
+
+source /etc/devium-release 2>/dev/null
+REPO="${DEVIUM_REPO:-https://github.com/yeeboein/devium-linux}"
+REF="${DEVIUM_REF:-main}"
+CFG=/tmp/devium-archinstall.json
+
+python3 - "$CFG" "$REPO" "$REF" <<'PY'
+import json, sys
+cfg, repo, ref = sys.argv[1:]
+pkgs = [l.strip() for l in open("/usr/share/devium/install-packages.txt") if l.strip()]
+json.dump({
+    "packages": pkgs,
+    "network_config": {"type": "nm"},
+    "audio_config": {"audio": "pipewire"},
+    "kernels": ["linux"],
+    "swap": True,
+    "ntp": True,
+    "custom_commands": [
+        "pacman -S --needed --noconfirm git",
+        f"rm -rf /root/devium-src && git clone --depth 1 -b {ref} {repo} /root/devium-src",
+        "bash /root/devium-src/profile/airootfs/usr/lib/devium/devium-setup --installed /root/devium-src",
+        "rm -rf /root/devium-src",
+    ],
+}, open(cfg, "w"), indent=2)
+PY
+
+archinstall --config "$CFG"
+status=$?
+echo
+if [[ $status -eq 0 ]]; then
+    echo -e "${C}Devium is installed!${N} Remove the USB stick / ISO and restart."
+else
+    echo -e "${Y}The installer stopped (code $status).${N} Nothing may have been changed. You can try again."
+fi
+pause

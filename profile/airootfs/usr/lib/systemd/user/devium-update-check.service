@@ -1,0 +1,7 @@
+[Unit]
+Description=Check for Devium updates
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/devium-update-check

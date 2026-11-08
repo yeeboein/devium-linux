@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Devium Welcome
+GenericName=Welcome & Help
+Comment=Get started with Devium: install, apps, coding, drivers and settings
+Exec=devium-welcome
+Icon=devium
+Terminal=false
+Categories=System;Settings;
+Keywords=welcome;help;start;devium;drivers;mode;

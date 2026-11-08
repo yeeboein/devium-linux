@@ -2,7 +2,7 @@
 # Runs at every Plasma login (from /etc/xdg/autostart) but only does work once per user.
 #  - installs ArchPill for this user (from /opt/archpill)
 #  - sets up VS Code (Python extension, theme, formatter)
-#  - opens Devium Welcome the first time
+
 set -uo pipefail
 
 STATE="${XDG_CONFIG_HOME:-$HOME/.config}/devium"
@@ -41,10 +41,4 @@ if [[ ! -f $STATE/vscode-ext-done ]] && command -v code >/dev/null; then
     ) &
 fi
 
-# --- Welcome app ------------------------------------------------------------
-if [[ ! -f $STATE/welcome-shown ]]; then
-    touch "$STATE/welcome-shown"
-    sleep 3
-    devium-welcome &
-fi
 wait
