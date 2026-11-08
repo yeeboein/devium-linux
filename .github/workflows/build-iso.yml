@@ -23,7 +23,16 @@ jobs:
           sudo docker run --rm --privileged \
             -v "$PWD":/devium -w /devium \
             archlinux:latest \
-            bash -c 'pacman -Syu --noconfirm --needed archiso git && git config --global --add safe.directory /devium && ./build.sh'
+            bash -c '
+              printf "Server = %s\n" \
+                "https://geo.mirror.pkgbuild.com/\$repo/os/\$arch" \
+                "https://mirrors.kernel.org/archlinux/\$repo/os/\$arch" \
+                "https://mirror.rackspace.com/archlinux/\$repo/os/\$arch" \
+                "https://mirror.leaseweb.net/archlinux/\$repo/os/\$arch" \
+                "https://fastly.mirror.pkgbuild.com/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist &&
+              pacman -Syu --noconfirm --needed archiso git &&
+              git config --global --add safe.directory /devium &&
+              ./build.sh'
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4
