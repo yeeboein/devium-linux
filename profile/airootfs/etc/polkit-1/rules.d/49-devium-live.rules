@@ -1,0 +1,6 @@
+// Live session only: the "devium" live user is never asked for a password.
+polkit.addRule(function (action, subject) {
+    if (subject.user == "devium") {
+        return polkit.Result.YES;
+    }
+});

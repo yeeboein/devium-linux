@@ -1,0 +1,11 @@
+# Keeps Devium's name in /etc/os-release when the "filesystem" package is updated.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = filesystem
+
+[Action]
+Description = Restoring Devium os-release...
+When = PostTransaction
+Exec = /usr/lib/devium/devium-setup --os-release
