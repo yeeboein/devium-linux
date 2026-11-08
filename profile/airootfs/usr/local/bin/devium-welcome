@@ -409,8 +409,13 @@ class Welcome(QWidget):
 
 
 def main():
-    if "--autostart" in sys.argv and os.path.exists(os.path.join(CONFIG, "welcome-hide")):
-        return
+    if "--autostart" in sys.argv:
+        if os.path.exists(os.path.join(CONFIG, "welcome-hide")):
+            return
+        # On a fresh install, Devium Setup opens first; Welcome waits until next login.
+        if not ui.is_live() and not (os.path.exists(os.path.join(CONFIG, "setup-done")) or
+                                     os.path.exists(os.path.join(CONFIG, "setup-seen"))):
+            return
     app = QApplication(sys.argv)
     app.setApplicationName("Devium Welcome")
     app.setDesktopFileName("devium-welcome")

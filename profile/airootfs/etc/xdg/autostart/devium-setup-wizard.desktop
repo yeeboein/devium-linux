@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Devium Setup (first run)
+Exec=/usr/local/bin/devium-setup-wizard --first-run
+Icon=tools-wizard
+NoDisplay=true
+X-KDE-autostart-phase=2
+X-KDE-autostart-after=panel

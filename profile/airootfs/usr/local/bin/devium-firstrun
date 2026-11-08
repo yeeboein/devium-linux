@@ -12,7 +12,8 @@ exec >>"$LOG" 2>&1
 echo "=== devium-firstrun $(date)"
 
 # --- ArchPill ---------------------------------------------------------------
-if [[ ! -f $STATE/archpill-done ]]; then
+# On installed systems ArchPill is optional: the Setup wizard installs it if picked.
+if [[ ! -f $STATE/archpill-done ]] && command -v qs >/dev/null; then
     if [[ ! -d /opt/archpill ]] && command -v git >/dev/null; then
         echo "ArchPill not bundled; trying to download it"
         git clone --depth 1 https://github.com/yeeboein/archpill.git "$HOME/archpill" || true
