@@ -29,6 +29,22 @@ LOGO=devium
 EOF
 }
 
+brand_bootloader() {
+    # Boot menu entries created by archinstall say "Arch Linux": rename them to Devium.
+    local f
+    for f in /boot/loader/entries/*.conf /efi/loader/entries/*.conf; do
+        [[ -f $f ]] && sed -i 's/Arch Linux/Devium/g' "$f"
+    done
+    if [[ -f /etc/default/grub ]]; then
+        if grep -q '^GRUB_DISTRIBUTOR=' /etc/default/grub; then
+            sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Devium"/' /etc/default/grub
+        else
+            echo 'GRUB_DISTRIBUTOR="Devium"' >> /etc/default/grub
+        fi
+        [[ -f /boot/grub/grub.cfg ]] && grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
+    fi
+}
+
 enable_services() {
     local s
     for s in sddm.service NetworkManager.service bluetooth.service cups.socket \
@@ -124,6 +140,7 @@ case "${1:-}" in
         write_os_release
         setup_pacman
         enable_services
+        brand_bootloader
         setup_firewall
         setup_flathub
         setup_archpill_source
