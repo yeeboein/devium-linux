@@ -6,6 +6,8 @@
 #   devium-helper install PKG...    install packages from the Arch repos
 #   devium-helper firewall on|off
 #   devium-helper snapshot
+#   devium-helper setup PLAN.json   apply the Devium Setup wizard's choices
+#   devium-helper install-local FILE.pkg.tar.zst...   install packages built from the AUR
 set -uo pipefail
 export LC_ALL=C.UTF-8 TERM=dumb
 
@@ -66,6 +68,65 @@ case "${1:-}" in
         ;;
     snapshot)
         snapshot "Manual restore point $(date '+%Y-%m-%d %H:%M')"
+        ;;
+    setup)
+        plan="${2:?usage: devium-helper setup PLAN.json}"
+        [[ -f $plan ]] || { echo "no plan: $plan"; exit 1; }
+        # Read the plan with Python and turn it into safe, validated shell variables.
+        eval "$(python3 - "$plan" <<'PY'
+import json, re, shlex, sys
+p = json.load(open(sys.argv[1]))
+ok_pkg = re.compile(r"^[a-z0-9@._+-]+$")
+ok_app = re.compile(r"^[A-Za-z0-9._-]+$")
+ok_svc = {"docker.socket", "ollama.service"}
+ok_grp = {"docker"}
+ok_shell = {"/usr/bin/zsh", "/usr/bin/fish", "/bin/bash"}
+def arr(name, items, rx):
+    items = [i for i in items if rx.match(i)]
+    print(f"{name}=(" + " ".join(shlex.quote(i) for i in items) + ")")
+arr("PKGS", p.get("pacman", []), ok_pkg)
+arr("APPS", p.get("flatpak", []), ok_app)
+print("SVCS=(" + " ".join(s for s in p.get("services", []) if s in ok_svc) + ")")
+print("GRPS=(" + " ".join(g for g in p.get("groups", []) if g in ok_grp) + ")")
+user = p.get("user", "")
+print("SETUP_USER=" + shlex.quote(user if re.match(r"^[a-z_][a-z0-9_-]*$", user) else ""))
+sh = p.get("shell", "")
+print("SETUP_SHELL=" + shlex.quote(sh if sh in ok_shell else ""))
+PY
+)"
+        fail=0
+        if (( ${#PKGS[@]} )); then
+            step "Installing ${#PKGS[@]} packages"
+            pacman -Sy --needed --noconfirm "${PKGS[@]}" || fail=1
+        fi
+        if (( ${#APPS[@]} )); then
+            flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null
+            step "Installing ${#APPS[@]} apps from Flathub"
+            for app in "${APPS[@]}"; do
+                flatpak install --system -y --noninteractive flathub "$app" || { echo "Could not install $app"; fail=1; }
+            done
+        fi
+        for svc in "${SVCS[@]}"; do
+            step "Enabling $svc"
+            systemctl enable --now "$svc" || fail=1
+        done
+        if [[ -n $SETUP_USER ]]; then
+            for g in "${GRPS[@]}"; do usermod -aG "$g" "$SETUP_USER"; done
+            if [[ -n $SETUP_SHELL && -x $SETUP_SHELL ]]; then
+                step "Setting your shell to $SETUP_SHELL"
+                chsh -s "$SETUP_SHELL" "$SETUP_USER"
+            fi
+        fi
+        step "Done"
+        exit $fail
+        ;;
+    install-local)
+        shift
+        for f in "$@"; do
+            [[ $f == /tmp/devium-aur/*.pkg.tar.zst && $f != *..* && -f $f ]] || { echo "refusing: $f"; exit 1; }
+        done
+        step "Installing $(basename -a "$@" | tr '\n' ' ')"
+        pacman -U --needed --noconfirm "$@"
         ;;
     *)
         sed -n '2,9p' "$0"; exit 1 ;;

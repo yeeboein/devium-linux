@@ -1,0 +1,588 @@
+#!/usr/bin/env python3
+"""Devium Setup: pick your browser, editor, languages, tools and apps.
+Only what you choose gets installed, so Devium stays light."""
+import getpass
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+sys.path.insert(0, "/usr/lib/devium")
+
+from PyQt6.QtCore import QProcess, QSize, Qt
+from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QFrame, QHBoxLayout, QLabel,
+                             QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
+                             QProgressBar, QPushButton, QRadioButton, QScrollArea, QStackedWidget,
+                             QVBoxLayout, QWidget)
+
+import devium_ui as ui
+import setup_catalog as cat
+
+CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium")
+DONE_MARKER = os.path.join(CONFIG, "setup-done")
+
+
+# --------------------------------------------------------------------------- helpers
+def fmt_mb(mb):
+    if mb <= 0:
+        return "included"
+    return f"about {mb / 1024:.1f} GB" if mb >= 1000 else f"about {mb} MB"
+
+
+def free_mb():
+    return shutil.disk_usage("/").free // (1024 * 1024)
+
+
+_INSTALLED = None
+
+
+def installed(pkg):
+    global _INSTALLED
+    if _INSTALLED is None:
+        try:
+            r = subprocess.run(["pacman", "-Qq"], capture_output=True, text=True)
+            _INSTALLED = set(r.stdout.split())
+        except FileNotFoundError:
+            _INSTALLED = set()
+    return pkg in _INSTALLED
+
+
+def available_packages(names):
+    """Return the subset of package names that exist in the repos (one pacman call)."""
+    if not names:
+        return set()
+    try:
+        r = subprocess.run(["pacman", "-Si", *sorted(names)], capture_output=True, text=True)
+    except FileNotFoundError:
+        return set()
+    return set(re.findall(r"^Name\s*:\s*(\S+)", r.stdout, re.M))
+
+
+def label(text, obj=None, wrap=True):
+    l = QLabel(text)
+    l.setWordWrap(wrap)
+    if obj:
+        l.setObjectName(obj)
+    return l
+
+
+def scroll(inner):
+    s = QScrollArea()
+    s.setWidgetResizable(True)
+    s.setFrameShape(QFrame.Shape.NoFrame)
+    s.setWidget(inner)
+    return s
+
+
+# --------------------------------------------------------------------------- wizard
+class Wizard(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Devium Setup")
+        self.setWindowIcon(ui.app_icon())
+        self.resize(940, 640)
+        self.inputs = {}       # item id -> QCheckBox / QRadioButton
+        self.items = {}        # item id -> item dict
+        self.queue = []
+
+        # Hide items whose repo packages don't exist (e.g. renamed upstream).
+        all_pkgs = {p for page in cat.PAGES for it in page["items"] for p in it.get("pacman", [])}
+        self.avail = available_packages(all_pkgs) or all_pkgs   # offline: show everything
+
+        root = QHBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # left: list of steps
+        side = QWidget()
+        side.setFixedWidth(220)
+        sl = QVBoxLayout(side)
+        sl.setContentsMargins(12, 16, 6, 12)
+        sl.addWidget(ui.header("Setup", "", size=36))
+        self.steps = QListWidget()
+        self.steps.setObjectName("nav")
+        self.steps.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.steps.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.steps.itemClicked.connect(self.step_clicked)
+        sl.addWidget(self.steps, 1)
+        root.addWidget(side)
+
+        # right: pages + bottom bar
+        right = QVBoxLayout()
+        right.setContentsMargins(24, 18, 24, 16)
+        self.stack = QStackedWidget()
+        right.addWidget(self.stack, 1)
+
+        bar = QHBoxLayout()
+        self.total = QLabel()
+        self.total.setObjectName("subtitle")
+        self.back_btn = QPushButton("Back")
+        self.skip_btn = QPushButton("Skip")
+        self.next_btn = QPushButton("Next")
+        self.next_btn.setObjectName("primary")
+        self.back_btn.clicked.connect(lambda: self.go(self.stack.currentIndex() - 1))
+        self.skip_btn.clicked.connect(self.skip)
+        self.next_btn.clicked.connect(self.next)
+        bar.addWidget(self.total, 1)
+        bar.addWidget(self.back_btn)
+        bar.addWidget(self.skip_btn)
+        bar.addWidget(self.next_btn)
+        right.addLayout(bar)
+        root.addLayout(right, 1)
+
+        # pages
+        self.add_page("Welcome", self.welcome_page())
+        for page in cat.PAGES:
+            self.add_page(page["title"].split(" and ")[0], self.choice_page(page), page)
+        self.add_page("Look and feel", self.look_page())
+        self.add_page("Summary", self.summary_page())
+        self.add_page("Installing", self.install_page())
+        self.add_page("Done", self.done_page())
+        self.go(0)
+
+    # ------------------------------------------------------------------ layout
+    def add_page(self, name, widget, page=None):
+        widget.setProperty("catalog", page["id"] if page else "")
+        self.stack.addWidget(widget)
+        QListWidgetItem(name, self.steps)
+
+    def go(self, i):
+        i = max(0, min(i, self.stack.count() - 1))
+        installing = self.stack.currentWidget() is self.install_w and self.queue
+        if installing:
+            return
+        # skip the Python libraries page when Python isn't ticked
+        w = self.stack.widget(i)
+        if w.property("catalog") == "pylibs" and not self.checked("python"):
+            i += 1 if i >= self.stack.currentIndex() else -1
+        self.stack.setCurrentIndex(i)
+        self.steps.setCurrentRow(i)
+        w = self.stack.currentWidget()
+        last_steps = w in (self.install_w, self.done_w)
+        self.back_btn.setVisible(i > 0 and not last_steps)
+        self.skip_btn.setVisible(0 < i < self.stack.count() - 3)
+        self.next_btn.setVisible(not last_steps)
+        self.next_btn.setText("Install my picks" if w is self.summary_w else
+                              "Let's go" if i == 0 else "Next")
+        if w is self.summary_w:
+            self.fill_summary()
+        self.update_total()
+
+    def step_clicked(self, item):
+        row = self.steps.row(item)
+        if row <= self.stack.indexOf(self.summary_w) and self.stack.currentIndex() <= self.stack.indexOf(self.summary_w):
+            self.go(row)
+        else:
+            self.steps.setCurrentRow(self.stack.currentIndex())
+
+    def next(self):
+        if self.stack.currentWidget() is self.summary_w:
+            self.start_install()
+        else:
+            self.go(self.stack.currentIndex() + 1)
+
+    def skip(self):
+        """Skip = clear this page's choices (single-choice pages keep their default)."""
+        page_id = self.stack.currentWidget().property("catalog")
+        page = next((p for p in cat.PAGES if p["id"] == page_id), None)
+        if page and not page["single"]:
+            for it in page["items"]:
+                if it["id"] in self.inputs:
+                    self.inputs[it["id"]].setChecked(False)
+        self.go(self.stack.currentIndex() + 1)
+
+    # ------------------------------------------------------------------ pages
+    def welcome_page(self):
+        w = QWidget()
+        l = QVBoxLayout(w)
+        logo = QLabel()
+        logo.setPixmap(QPixmap(ui.LOGO).scaled(120, 120, Qt.AspectRatioMode.KeepAspectRatio,
+                                              Qt.TransformationMode.SmoothTransformation))
+        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        l.addStretch(1)
+        l.addWidget(logo)
+        t = label("Welcome to Devium", "title")
+        t.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        l.addWidget(t)
+        txt = label(
+            "Let's set up your computer. On the next pages, pick the apps and tools you want.\n"
+            "Devium only installs what you choose, so it stays fast and light.\n\n"
+            "Not sure? Just keep clicking Next: good choices are already selected.\n"
+            "You can change everything later from Devium Welcome.\n\n"
+            f"Free disk space: {free_mb() / 1024:.1f} GB")
+        txt.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        l.addWidget(txt)
+        if ui.is_live():
+            live = label("You're using the live version: anything installed here is gone after a restart. "
+                         "Install Devium first, then run Devium Setup.")
+            live.setStyleSheet("color: #f59e0b;")
+            live.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            l.addWidget(live)
+        if not shutil.which("pacman") or subprocess.run(
+                ["sh", "-c", "curl -fsI -m 6 https://archlinux.org >/dev/null"]).returncode != 0:
+            warn = label("No internet connection. Connect to Wi-Fi (network icon in the dock) "
+                         "before installing your picks.")
+            warn.setStyleSheet("color: #f59e0b;")
+            warn.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            l.addWidget(warn)
+        l.addStretch(2)
+        return w
+
+    def choice_page(self, page):
+        inner = QWidget()
+        l = QVBoxLayout(inner)
+        l.setSpacing(6)
+        l.addWidget(label(page["title"], "h2"))
+        l.addWidget(label(page["intro"], "subtitle"))
+        group = QButtonGroup(self) if page["single"] else None
+        for it in page["items"]:
+            if it.get("pacman") and not set(it["pacman"]) <= self.avail:
+                continue   # not in the repos (anymore)
+            self.items[it["id"]] = it
+            text = f"{it['name']}   —   {it['desc']}   ({fmt_mb(it.get('mb', 0))})"
+            box = QRadioButton(text) if page["single"] else QCheckBox(text)
+            box.setChecked(bool(it.get("default")))
+            box.setStyleSheet("padding: 6px;")
+            box.toggled.connect(self.update_total)
+            if group:
+                group.addButton(box)
+            self.inputs[it["id"]] = box
+            l.addWidget(box)
+        l.addStretch(1)
+        return scroll(inner)
+
+    def look_page(self):
+        inner = QWidget()
+        l = QVBoxLayout(inner)
+        l.setSpacing(6)
+        l.addWidget(label("Look and feel", "h2"))
+        l.addWidget(label("Make Devium feel like yours. All of this can be changed later.", "subtitle"))
+
+        def radios(title, options, default):
+            l.addWidget(label(title, "h2"))
+            g = QButtonGroup(self)
+            for oid, text in options:
+                r = QRadioButton(text)
+                r.setChecked(oid == default)
+                r.setStyleSheet("padding: 5px;")
+                g.addButton(r)
+                self.inputs[oid] = r
+                l.addWidget(r)
+
+        radios("Mode", [("mode-beginner", "Beginner   —   big dock, tips, simple file manager"),
+                        ("mode-pro", "Pro   —   slim dock, Starship prompt, git aliases, split-view files")],
+               "mode-beginner")
+        radios("Theme", [("theme-dark", "Dark"), ("theme-light", "Light")], "theme-dark")
+        radios("Terminal shell", [(f"shell-{s['id']}", f"{s['name']}   —   {s['desc']}") for s in cat.SHELLS],
+               "shell-zsh")
+
+        l.addWidget(label("Extras", "h2"))
+        ap = QCheckBox(f"ArchPill   —   a Dynamic-Island-style pill at the top of the screen with time, "
+                       f"music, volume and battery ({fmt_mb(cat.ARCHPILL['mb'])}, about 40 MB RAM)")
+        ap.setChecked(True)
+        ap.toggled.connect(self.update_total)
+        self.inputs["archpill"] = ap
+        dock = QCheckBox("Hide the dock when a window covers it")
+        dock.setChecked(True)
+        self.inputs["dock-hide"] = dock
+        for b in (ap, dock):
+            b.setStyleSheet("padding: 5px;")
+            l.addWidget(b)
+        l.addStretch(1)
+        return scroll(inner)
+
+    def summary_page(self):
+        self.summary_w = QWidget()
+        l = QVBoxLayout(self.summary_w)
+        l.addWidget(label("Ready to install", "h2"))
+        l.addWidget(label("Here's everything you picked. Click Back to change anything.", "subtitle"))
+        self.summary_text = QLabel()
+        self.summary_text.setWordWrap(True)
+        self.summary_text.setTextFormat(Qt.TextFormat.RichText)
+        l.addWidget(scroll(self.summary_text), 1)
+        return self.summary_w
+
+    def install_page(self):
+        self.install_w = QWidget()
+        l = QVBoxLayout(self.install_w)
+        l.addWidget(label("Installing your picks", "h2"))
+        self.install_status = label("Starting…")
+        l.addWidget(self.install_status)
+        self.progress = QProgressBar()
+        l.addWidget(self.progress)
+        tip = label("Tip: this can take a while on slow internet. You can keep using your computer.",
+                    "subtitle")
+        l.addWidget(tip)
+        self.details_btn = QPushButton("Show details")
+        self.details_btn.setCheckable(True)
+        self.details_btn.setFixedWidth(140)
+        l.addWidget(self.details_btn)
+        self.log = QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setVisible(False)
+        self.log.setStyleSheet("font-family: 'JetBrains Mono', monospace; font-size: 9pt;")
+        self.details_btn.toggled.connect(self.log.setVisible)
+        l.addWidget(self.log, 1)
+        l.addStretch(0)
+        return self.install_w
+
+    def done_page(self):
+        self.done_w = QWidget()
+        l = QVBoxLayout(self.done_w)
+        l.addStretch(1)
+        t = label("Devium is ready!", "title")
+        t.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        l.addWidget(t)
+        self.done_text = label("")
+        self.done_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        l.addWidget(self.done_text)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        for text, icon, cmd in [("Devium Welcome", "devium", ["devium-welcome"]),
+                                ("Get more apps", "plasmadiscover", ["plasma-discover"]),
+                                ("Updates", "system-software-update", ["devium-update-manager"])]:
+            b = QPushButton(QIcon.fromTheme(icon), text)
+            b.setIconSize(QSize(22, 22))
+            b.clicked.connect(lambda _c=False, c=cmd: ui.launch(*c))
+            row.addWidget(b)
+        close = QPushButton("Finish")
+        close.setObjectName("primary")
+        close.clicked.connect(self.close)
+        row.addWidget(close)
+        row.addStretch(1)
+        l.addLayout(row)
+        l.addStretch(2)
+        return self.done_w
+
+    # ------------------------------------------------------------------ choices
+    def checked(self, iid):
+        b = self.inputs.get(iid)
+        return bool(b and b.isChecked())
+
+    def picked_items(self):
+        out = []
+        for page in cat.PAGES:
+            if page["id"] == "pylibs" and not self.checked("python"):
+                continue
+            out += [it for it in page["items"] if self.checked(it["id"])]
+        return out
+
+    def plan(self):
+        items = self.picked_items()
+        pac, fl, aur, svcs, groups, ext = [], [], [], [], [], []
+        mb = 0
+        for it in items:
+            already = all(installed(p) for p in it.get("pacman", [])) and not it.get("flatpak") and not it.get("aur")
+            if not already:
+                mb += it.get("mb", 0)
+            pac += [p for p in it.get("pacman", []) if p in self.avail]
+            fl += it.get("flatpak", [])
+            aur += it.get("aur", [])
+            svcs += it.get("services", [])
+            groups += [it["group"]] if it.get("group") else []
+            ext += it.get("ext", [])
+        shell = next((s for s in cat.SHELLS if self.checked(f"shell-{s['id']}")), cat.SHELLS[0])
+        pac += shell["pacman"]
+        if shell["pacman"] and not installed(shell["pacman"][0]):
+            mb += shell["mb"]
+        if self.checked("archpill") and not installed("quickshell"):
+            pac += cat.ARCHPILL["pacman"]
+            mb += cat.ARCHPILL["mb"]
+        if aur:
+            pac += ["base-devel", "git"]
+        dedupe = lambda xs: list(dict.fromkeys(xs))
+        return {"items": items, "pacman": dedupe(pac), "flatpak": dedupe(fl), "aur": dedupe(aur),
+                "services": dedupe(svcs), "groups": dedupe(groups), "ext": dedupe(ext),
+                "shell": shell, "mb": mb}
+
+    def update_total(self):
+        p = self.plan()
+        free = free_mb()
+        txt = f"Your picks: {fmt_mb(p['mb']) if p['mb'] else 'nothing extra'}   ·   Free space: {free / 1024:.1f} GB"
+        if p["mb"] > free * 0.9:
+            txt += "   ·   Not enough space!"
+        self.total.setText(txt)
+
+    def fill_summary(self):
+        p = self.plan()
+        free = free_mb()
+        rows = "".join(f"<tr><td>{it['name']}</td><td align='right'>{fmt_mb(it.get('mb', 0))}</td></tr>"
+                       for it in p["items"])
+        look = [("Beginner" if self.checked("mode-beginner") else "Pro") + " mode",
+                ("Dark" if self.checked("theme-dark") else "Light") + " theme",
+                f"{p['shell']['name']} shell",
+                "ArchPill on" if self.checked("archpill") else "ArchPill off"]
+        left = free - p["mb"]
+        warn = ""
+        if left < free * 0.1 or left < 2048:
+            warn = ("<p style='color:#f59e0b'><b>Warning:</b> this would leave very little free space. "
+                    "Consider unticking some of the bigger items.</p>")
+        self.summary_text.setText(
+            f"<table cellpadding='4' width='100%'>{rows or '<tr><td>Nothing extra</td></tr>'}</table>"
+            f"<p><b>Look:</b> {', '.join(look)}</p>"
+            f"<p><b>Total: {fmt_mb(p['mb']) if p['mb'] else 'nothing to download'}</b>, "
+            f"leaving about {max(left, 0) / 1024:.1f} GB free.</p>{warn}"
+            "<p>Click <b>Install my picks</b>. You'll be asked for your password once.</p>")
+
+    # ------------------------------------------------------------------ install
+    def start_install(self):
+        p = self.plan()
+        os.makedirs(CONFIG, exist_ok=True)
+        plan_file = os.path.join("/tmp", f"devium-setup-{os.getuid()}.json")
+        with open(plan_file, "w") as f:
+            json.dump({"user": getpass.getuser(), "pacman": p["pacman"], "flatpak": p["flatpak"],
+                       "services": p["services"], "groups": p["groups"], "shell": p["shell"]["path"]}, f)
+        self.p = p
+        steps = []
+        steps.append(("Installing packages and apps…", "pkexec",
+                      ["/usr/lib/devium/devium-helper", "setup", plan_file]))
+        for pkg in p["aur"]:
+            steps.append((f"Building {pkg} from the AUR…", "bash", ["-c", self.aur_script(pkg)]))
+            steps.append((f"Installing {pkg}…", "bash", ["-c",
+                          f"pkexec /usr/lib/devium/devium-helper install-local /tmp/devium-aur/{pkg}/*.pkg.tar.zst"]))
+        steps.append(("Setting up your choices…", "bash", ["-c", self.user_script(p)]))
+        self.queue = steps
+        self.total_steps = len(steps)
+        self.go(self.stack.indexOf(self.install_w))
+        self.queue = steps   # go() doesn't run while installing; keep the queue
+        self.run_next()
+
+    def aur_script(self, pkg):
+        return (f"set -e; rm -rf /tmp/devium-aur/{pkg}; mkdir -p /tmp/devium-aur; cd /tmp/devium-aur; "
+                f"git clone --depth 1 https://aur.archlinux.org/{pkg}.git; cd {pkg}; "
+                f"makepkg --noconfirm --needed -c 2>&1 | tail -n 40")
+
+    def user_script(self, p):
+        """Everything that runs as the user (no password needed)."""
+        q = lambda s: "'" + s.replace("'", "'\\''") + "'"
+        lines = ["set +e"]
+        chosen = {it["id"]: it for it in p["items"]}
+        # default browser / file manager / terminal
+        for it in p["items"]:
+            if it["id"] in [x["id"] for x in cat.PAGES[0]["items"]] and it.get("desktop"):
+                lines.append(f"xdg-settings set default-web-browser {q(it['desktop'])}")
+            if it["id"] in [x["id"] for x in cat.PAGES[1]["items"]] and it.get("desktop"):
+                lines.append(f"xdg-mime default {q(it['desktop'])} inode/directory")
+            if it["id"] in [x["id"] for x in cat.PAGES[2]["items"]] and it.get("exec"):
+                lines.append(f"kwriteconfig6 --file kdeglobals --group General --key TerminalApplication {q(it['exec'])}")
+                lines.append(f"kwriteconfig6 --file kdeglobals --group General --key TerminalService {q(it['desktop'])}")
+        # editor extensions for the chosen languages
+        for ed in ("vscodium", "vscode"):
+            if ed in chosen:
+                cli = chosen[ed]["cli"]
+                if ed == "vscodium":
+                    lines.append("mkdir -p ~/.config/VSCodium/User && "
+                                 "[ -f ~/.config/VSCodium/User/settings.json ] || "
+                                 "cp /usr/share/devium/vscode-settings.json ~/.config/VSCodium/User/settings.json")
+                for e in p["ext"]:
+                    lines.append(f"command -v {cli} >/dev/null && {cli} --install-extension {q(e)} --force")
+        if "rust" in chosen:
+            lines.append("command -v rustup >/dev/null && rustup default stable")
+        # dock: swap Konsole / Dolphin launchers for the chosen apps, add the editor, dock auto-hide
+        launchers = ["preferred://filemanager", "preferred://browser"]
+        term = next((it for it in p["items"] if it["id"] in [x["id"] for x in cat.PAGES[2]["items"]]), None)
+        launchers.append(f"applications:{term['desktop'] if term else 'org.kde.konsole.desktop'}")
+        for ed in ("vscodium", "vscode"):
+            if ed in chosen:
+                launchers.append(f"applications:{chosen[ed]['desktop']}")
+        launchers += ["applications:org.kde.kate.desktop", "applications:devium-snip.desktop",
+                      "applications:org.kde.discover.desktop", "applications:devium-welcome.desktop"]
+        hiding = "dodgewindows" if self.checked("dock-hide") else "none"
+        js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';"
+              "p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General'];"
+              "w.writeConfig('launchers','" + ",".join(launchers) + "'); w.reloadConfig(); }); });")
+        lines.append(f"(qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)} "
+                     f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
+        # mode + theme
+        lines.append("devium-mode " + ("pro" if self.checked("mode-pro") else "beginner"))
+        if self.checked("theme-light"):
+            lines.append("plasma-apply-colorscheme BreezeLight; plasma-apply-desktoptheme breeze-light")
+        else:
+            lines.append("plasma-apply-colorscheme BreezeDark; plasma-apply-desktoptheme breeze-dark")
+        # ArchPill
+        if self.checked("archpill"):
+            lines.append("if command -v qs >/dev/null && [ -d /opt/archpill ]; then "
+                         "[ -d ~/archpill ] || cp -r /opt/archpill ~/archpill; "
+                         "(cd ~/archpill && ./install.sh --no-packages); fi")
+        else:
+            lines.append("[ -x ~/archpill/uninstall.sh ] && ~/archpill/uninstall.sh")
+        lines.append(f"mkdir -p {q(CONFIG)} && touch {q(DONE_MARKER)}")
+        return "\n".join(lines)
+
+    def run_next(self):
+        if not self.queue:
+            return self.finished()
+        lbl, prog, args = self.queue.pop(0)
+        done = self.total_steps - len(self.queue) - 1
+        self.progress.setRange(0, self.total_steps)
+        self.progress.setValue(done)
+        self.install_status.setText(f"{lbl}   (step {done + 1} of {self.total_steps})")
+        self.log.appendPlainText(f"\n$ {prog} {' '.join(args)[:200]}")
+        self.proc = QProcess(self)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.proc.readyReadStandardOutput.connect(self.read_out)
+        self.proc.finished.connect(self.step_done)
+        self.proc.start(prog, args)
+
+    def read_out(self):
+        text = bytes(self.proc.readAllStandardOutput()).decode(errors="replace")
+        self.log.insertPlainText(text)
+        self.log.ensureCursorVisible()
+        m = re.findall(r"\((\d+)/(\d+)\) (?:installing|upgrading)", text)
+        if m:
+            self.install_status.setText(self.install_status.text().split("   (")[0] +
+                                        f"   (package {m[-1][0]} of {m[-1][1]})")
+
+    def step_done(self, code, _status):
+        if code in (126, 127) and self.proc.program() == "pkexec":
+            self.queue = []
+            QMessageBox.information(self, "Cancelled", "Nothing was installed. You can run Devium Setup "
+                                    "again any time from Devium Welcome.")
+            self.go(self.stack.indexOf(self.summary_w))
+            return
+        if code != 0:
+            self.failed = getattr(self, "failed", 0) + 1
+            self.log.appendPlainText(f"\n(step finished with code {code}, continuing)")
+        self.run_next()
+
+    def finished(self):
+        self.progress.setValue(self.total_steps)
+        msg = "Everything you picked is installed."
+        if getattr(self, "failed", 0):
+            msg = ("Most things are installed, but some steps had problems.\n"
+                   "Click Show details on the previous page, or try again later from Devium Welcome.")
+        if self.p["groups"] or self.p["shell"]["id"] != "zsh":
+            msg += "\n\nLog out and back in to finish (for your new shell / Docker access)."
+        self.done_text.setText(msg)
+        self.go(self.stack.indexOf(self.done_w))
+
+    def closeEvent(self, ev):
+        if self.queue or (getattr(self, "proc", None) and self.proc.state() != QProcess.ProcessState.NotRunning):
+            QMessageBox.information(self, "Still installing", "Please wait until installing has finished.")
+            ev.ignore()
+            return
+        # Closing early still counts as "seen", so it doesn't pop up at every login.
+        os.makedirs(CONFIG, exist_ok=True)
+        open(os.path.join(CONFIG, "setup-seen"), "w").close()
+        ev.accept()
+
+
+def main():
+    if "--first-run" in sys.argv:
+        # Only on installed systems, only once.
+        if ui.is_live() or os.path.exists(DONE_MARKER) or os.path.exists(os.path.join(CONFIG, "setup-seen")):
+            return
+    app = QApplication(sys.argv)
+    app.setApplicationName("Devium Setup")
+    app.setDesktopFileName("devium-setup-wizard")
+    app.setStyleSheet(ui.STYLE)
+    w = Wizard()
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

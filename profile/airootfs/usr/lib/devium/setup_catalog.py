@@ -1,0 +1,196 @@
+"""Everything the Devium Setup wizard offers.
+
+Each item:
+    id       unique id
+    name     shown to the user
+    desc     one short line
+    mb       rough download+install size in MB (shown as "about")
+    pacman   packages from the Arch repos
+    flatpak  app ids from Flathub
+    aur      AUR packages (built as the user, then installed)
+    default  selected unless the user changes it
+Extra keys are used by the wizard for follow-up steps (desktop file, code extensions...).
+Items whose pacman packages don't exist are hidden automatically.
+"""
+
+PAGES = [
+    {
+        "id": "browser", "title": "Web browser", "single": True,
+        "intro": "Pick the app you'll use for websites. You can install more later from Discover.",
+        "items": [
+            {"id": "brave", "name": "Brave", "desc": "Fast, blocks ads and trackers", "mb": 350,
+             "flatpak": ["com.brave.Browser"], "desktop": "com.brave.Browser.desktop", "default": True},
+            {"id": "firefox", "name": "Firefox", "desc": "Popular and privacy-friendly", "mb": 250,
+             "pacman": ["firefox"], "desktop": "firefox.desktop"},
+            {"id": "chrome", "name": "Google Chrome", "desc": "Works best with Google services", "mb": 350,
+             "flatpak": ["com.google.Chrome"], "desktop": "com.google.Chrome.desktop"},
+            {"id": "chromium", "name": "Chromium", "desc": "Chrome without the Google extras", "mb": 300,
+             "pacman": ["chromium"], "desktop": "chromium.desktop"},
+            {"id": "librewolf", "name": "LibreWolf", "desc": "Firefox with extra privacy", "mb": 250,
+             "flatpak": ["io.gitlab.librewolf-community"], "desktop": "io.gitlab.librewolf-community.desktop"},
+            {"id": "vivaldi", "name": "Vivaldi", "desc": "Very customisable", "mb": 350,
+             "pacman": ["vivaldi"], "desktop": "vivaldi-stable.desktop"},
+            {"id": "nobrowser", "name": "None", "desc": "I'll install one myself later", "mb": 0},
+        ],
+    },
+    {
+        "id": "filemanager", "title": "File manager", "single": True,
+        "intro": "The app for browsing your files and folders. Your pick opens from the dock and from folders.",
+        "items": [
+            {"id": "dolphin", "name": "Dolphin", "desc": "Powerful: tabs, split view, terminal panel (included)",
+             "mb": 0, "desktop": "org.kde.dolphin.desktop", "default": True},
+            {"id": "thunar", "name": "Thunar", "desc": "Very light and simple", "mb": 15,
+             "pacman": ["thunar", "thunar-volman", "gvfs"], "desktop": "thunar.desktop"},
+            {"id": "pcmanfm", "name": "PCManFM-Qt", "desc": "Ultra-light, good for old laptops", "mb": 10,
+             "pacman": ["pcmanfm-qt"], "desktop": "pcmanfm-qt.desktop"},
+            {"id": "nemo", "name": "Nemo", "desc": "Classic and easy", "mb": 40,
+             "pacman": ["nemo"], "desktop": "nemo.desktop"},
+            {"id": "nautilus", "name": "Nautilus (GNOME Files)", "desc": "Clean and minimal", "mb": 60,
+             "pacman": ["nautilus"], "desktop": "org.gnome.Nautilus.desktop"},
+            {"id": "yazi", "name": "yazi", "desc": "Fast keyboard-driven file manager in the terminal", "mb": 10,
+             "pacman": ["yazi"], "desktop": "yazi.desktop"},
+        ],
+    },
+    {
+        "id": "terminal", "title": "Terminal", "single": True,
+        "intro": "The window for typing commands. It opens with Ctrl+Alt+T and from the dock.",
+        "items": [
+            {"id": "konsole", "name": "Konsole", "desc": "Full-featured: tabs, split panes, profiles (included)",
+             "mb": 0, "exec": "konsole", "desktop": "org.kde.konsole.desktop", "default": True},
+            {"id": "kitty", "name": "Kitty", "desc": "Fast and very customisable", "mb": 30,
+             "pacman": ["kitty"], "exec": "kitty", "desktop": "kitty.desktop"},
+            {"id": "alacritty", "name": "Alacritty", "desc": "Super fast and minimal", "mb": 15,
+             "pacman": ["alacritty"], "exec": "alacritty", "desktop": "Alacritty.desktop"},
+            {"id": "ghostty", "name": "Ghostty", "desc": "Modern, fast and good-looking", "mb": 40,
+             "pacman": ["ghostty"], "exec": "ghostty", "desktop": "com.mitchellh.ghostty.desktop"},
+            {"id": "wezterm", "name": "WezTerm", "desc": "Packed with features, configured in Lua", "mb": 60,
+             "pacman": ["wezterm"], "exec": "wezterm", "desktop": "org.wezfurlong.wezterm.desktop"},
+            {"id": "foot", "name": "Foot", "desc": "Tiny and light", "mb": 5,
+             "pacman": ["foot"], "exec": "foot", "desktop": "foot.desktop"},
+        ],
+    },
+    {
+        "id": "editor", "title": "Code editor", "single": False,
+        "intro": "Where you write code. Pick one or more. Kate is always included.",
+        "items": [
+            {"id": "vscodium", "name": "VSCodium", "desc": "VS Code without Microsoft tracking (recommended)",
+             "mb": 350, "aur": ["vscodium-bin"], "cli": "codium", "desktop": "codium.desktop", "default": True},
+            {"id": "vscode", "name": "VS Code", "desc": "Microsoft's official build", "mb": 350,
+             "aur": ["visual-studio-code-bin"], "cli": "code", "desktop": "code.desktop"},
+            {"id": "zed", "name": "Zed", "desc": "New and very fast", "mb": 150, "pacman": ["zed"]},
+            {"id": "pycharm", "name": "PyCharm Community", "desc": "Professional Python IDE", "mb": 1000,
+             "pacman": ["pycharm-community-edition"]},
+            {"id": "intellij", "name": "IntelliJ IDEA Community", "desc": "Professional Java/Kotlin IDE",
+             "mb": 1000, "pacman": ["intellij-idea-community-edition"]},
+            {"id": "neovim", "name": "Neovim", "desc": "Keyboard-driven editor for experts", "mb": 30,
+             "pacman": ["neovim"]},
+            {"id": "vim", "name": "Vim", "desc": "The classic", "mb": 10, "pacman": ["vim"]},
+        ],
+    },
+    {
+        "id": "languages", "title": "Programming languages and compilers", "single": False,
+        "intro": "Tick the languages you want to use. Everything needed to run and compile them is included.",
+        "items": [
+            {"id": "python", "name": "Python", "desc": "Great for beginners, data and AI (pip, pipx, venv)",
+             "mb": 100, "pacman": ["python", "python-pip", "python-pipx", "python-virtualenv"],
+             "ext": ["ms-python.python", "charliermarsh.ruff"], "default": True},
+            {"id": "cpp", "name": "C / C++", "desc": "gcc, clang, cmake, make, ninja, meson, gdb, lldb, valgrind",
+             "mb": 450, "pacman": ["gcc", "clang", "cmake", "make", "ninja", "meson", "gdb", "lldb", "valgrind"],
+             "ext": ["llvm-vs-code-extensions.vscode-clangd"], "default": True},
+            {"id": "node", "name": "JavaScript (Node.js)", "desc": "Websites and web apps (node, npm)", "mb": 80,
+             "pacman": ["nodejs", "npm"]},
+            {"id": "java", "name": "Java", "desc": "OpenJDK with Maven and Gradle", "mb": 250,
+             "pacman": ["jdk-openjdk", "maven", "gradle"], "ext": ["redhat.java"]},
+            {"id": "kotlin", "name": "Kotlin", "desc": "Modern language for Android and the JVM", "mb": 100,
+             "pacman": ["kotlin", "jdk-openjdk"]},
+            {"id": "rust", "name": "Rust", "desc": "Fast and safe (rustup, cargo)", "mb": 600,
+             "pacman": ["rustup"], "ext": ["rust-lang.rust-analyzer"]},
+            {"id": "go", "name": "Go", "desc": "Simple and fast, for servers and tools", "mb": 250,
+             "pacman": ["go"], "ext": ["golang.go"]},
+            {"id": "dotnet", "name": "C# / .NET", "desc": "dotnet SDK", "mb": 400,
+             "pacman": ["dotnet-sdk"], "ext": ["muhammad-sammy.csharp"]},
+            {"id": "zig", "name": "Zig", "desc": "Modern systems language, also builds C/C++", "mb": 150,
+             "pacman": ["zig"], "ext": ["ziglang.vscode-zig"]},
+            {"id": "lua", "name": "Lua", "desc": "Small and simple, used in games and Neovim (LuaRocks)", "mb": 5,
+             "pacman": ["lua", "luarocks"], "ext": ["sumneko.lua"]},
+            {"id": "fortran", "name": "Fortran", "desc": "gfortran, for science and maths", "mb": 40,
+             "pacman": ["gcc-fortran"]},
+            {"id": "haskell", "name": "Haskell", "desc": "GHC and cabal", "mb": 700,
+             "pacman": ["ghc", "cabal-install"], "ext": ["haskell.haskell"]},
+        ],
+    },
+    {
+        "id": "pylibs", "title": "Python libraries", "single": False, "needs": "python",
+        "intro": "Ready-made code for your Python programs, in simple sets.",
+        "items": [
+            {"id": "py-basics", "name": "Basics", "desc": "requests, rich, pyyaml, pillow, ipython", "mb": 40,
+             "pacman": ["python-requests", "python-rich", "python-yaml", "python-pillow", "ipython"],
+             "default": True},
+            {"id": "py-data", "name": "Data science", "desc": "numpy, pandas, matplotlib, scipy, seaborn, Jupyter",
+             "mb": 300, "pacman": ["python-numpy", "python-pandas", "python-matplotlib", "python-scipy",
+                                   "python-seaborn", "jupyterlab"]},
+            {"id": "py-web", "name": "Web", "desc": "flask, fastapi, uvicorn, beautifulsoup4", "mb": 30,
+             "pacman": ["python-flask", "python-fastapi", "uvicorn", "python-beautifulsoup4"]},
+            {"id": "py-test", "name": "Testing and tidy code", "desc": "pytest, black, ruff, mypy", "mb": 50,
+             "pacman": ["python-pytest", "python-black", "ruff", "mypy"], "default": True},
+            {"id": "py-ai", "name": "AI / machine learning", "desc": "scikit-learn, PyTorch (CPU) - large",
+             "mb": 1500, "pacman": ["python-scikit-learn", "python-pytorch"]},
+        ],
+    },
+    {
+        "id": "devtools", "title": "Developer tools", "single": False,
+        "intro": "Extra tools for coding, sharing code and AI.",
+        "items": [
+            {"id": "gh", "name": "GitHub CLI", "desc": "Use GitHub from the terminal (gh)", "mb": 60,
+             "pacman": ["git", "github-cli"], "default": True},
+            {"id": "glab", "name": "GitLab CLI", "desc": "Use GitLab from the terminal (glab)", "mb": 30,
+             "pacman": ["git", "glab"]},
+            {"id": "lazygit", "name": "Lazygit", "desc": "A friendly visual Git tool", "mb": 20,
+             "pacman": ["lazygit"]},
+            {"id": "docker", "name": "Docker", "desc": "Run apps in containers (starts only when used)", "mb": 450,
+             "pacman": ["docker", "docker-compose", "docker-buildx"], "services": ["docker.socket"],
+             "group": "docker"},
+            {"id": "ollama", "name": "Ollama", "desc": "Run AI chatbots on your own computer (models download later)",
+             "mb": 100, "pacman": ["ollama"], "services": ["ollama.service"]},
+            {"id": "alpaca", "name": "Alpaca", "desc": "A simple chat app for Ollama", "mb": 50,
+             "flatpak": ["com.jeffser.Alpaca"]},
+            {"id": "continue", "name": "AI coding helper", "desc": "Continue extension for VSCodium/VS Code (works with Ollama)",
+             "mb": 20, "ext": ["continue.continue"]},
+            {"id": "sqlite", "name": "DB Browser for SQLite", "desc": "Look inside databases", "mb": 30,
+             "pacman": ["sqlitebrowser"]},
+            {"id": "yay", "name": "yay (AUR helper)", "desc": "Install community packages from the AUR", "mb": 15,
+             "aur": ["yay-bin"]},
+        ],
+    },
+    {
+        "id": "apps", "title": "Apps", "single": False,
+        "intro": "Popular apps from Flathub. They run in a sandbox, so they can't break your system. "
+                 "The first one also downloads about 500 MB of shared files.",
+        "items": [
+            {"id": "discord", "name": "Discord", "desc": "Chat and voice", "mb": 400,
+             "flatpak": ["com.discordapp.Discord"]},
+            {"id": "spotify", "name": "Spotify", "desc": "Music", "mb": 350, "flatpak": ["com.spotify.Client"]},
+            {"id": "steam", "name": "Steam", "desc": "Games", "mb": 500, "flatpak": ["com.valvesoftware.Steam"]},
+            {"id": "libreoffice", "name": "LibreOffice", "desc": "Documents, spreadsheets, slides", "mb": 600,
+             "flatpak": ["org.libreoffice.LibreOffice"]},
+            {"id": "gimp", "name": "GIMP", "desc": "Photo editing", "mb": 400, "flatpak": ["org.gimp.GIMP"]},
+            {"id": "obs", "name": "OBS Studio", "desc": "Record and stream your screen", "mb": 300,
+             "flatpak": ["com.obsproject.Studio"]},
+            {"id": "thunderbird", "name": "Thunderbird", "desc": "Email", "mb": 250,
+             "flatpak": ["org.mozilla.Thunderbird"]},
+            {"id": "vlc", "name": "VLC", "desc": "Plays every video", "mb": 150, "flatpak": ["org.videolan.VLC"]},
+        ],
+    },
+]
+
+# Look & feel choices (handled by the wizard itself)
+SHELLS = [
+    {"id": "zsh", "name": "zsh", "desc": "Recommended: suggestions as you type, coloured commands",
+     "path": "/usr/bin/zsh", "pacman": ["zsh", "zsh-autosuggestions", "zsh-syntax-highlighting"], "mb": 0},
+    {"id": "fish", "name": "fish", "desc": "Friendliest: smart suggestions out of the box",
+     "path": "/usr/bin/fish", "pacman": ["fish"], "mb": 15},
+    {"id": "bash", "name": "bash", "desc": "The classic, what most online guides use",
+     "path": "/bin/bash", "pacman": [], "mb": 0},
+]
+ARCHPILL = {"id": "archpill", "mb": 60, "pacman": ["quickshell", "qt6-svg", "qt6-declarative", "upower",
+                                                   "brightnessctl", "libnotify"]}
