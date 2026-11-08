@@ -39,6 +39,8 @@
 
 ## Get the ISO
 
+📖 **New here? Follow the step-by-step [Devium guide](docs/GUIDE.md)** (download, VM, USB, install, troubleshooting).
+
 ### Option A: build on GitHub (no Arch machine needed)
 
 1. Open the repo's **Actions** tab → **Build Devium ISO** → **Run workflow** (pick this branch).
