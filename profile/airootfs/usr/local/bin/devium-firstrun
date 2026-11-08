@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Runs at every Plasma login (from /etc/xdg/autostart) but only does work once per user.
+#  - installs ArchPill for this user (from /opt/archpill)
+#  - sets up VS Code (Python extension, theme, formatter)
+#  - opens Devium Welcome the first time
+set -uo pipefail
+
+STATE="${XDG_CONFIG_HOME:-$HOME/.config}/devium"
+mkdir -p "$STATE"
+LOG="$STATE/firstrun.log"
+exec >>"$LOG" 2>&1
+echo "=== devium-firstrun $(date)"
+
+# --- ArchPill ---------------------------------------------------------------
+if [[ ! -f $STATE/archpill-done ]]; then
+    if [[ ! -d /opt/archpill ]] && command -v git >/dev/null; then
+        echo "ArchPill not bundled; trying to download it"
+        git clone --depth 1 https://github.com/yeeboein/archpill.git "$HOME/archpill" || true
+    elif [[ ! -d $HOME/archpill ]]; then
+        cp -r /opt/archpill "$HOME/archpill"
+    fi
+    if [[ -x $HOME/archpill/install.sh ]]; then
+        # Packages are already part of Devium, so skip that step.
+        (cd "$HOME/archpill" && ./install.sh --no-packages) && touch "$STATE/archpill-done"
+    fi
+fi
+
+# --- VS Code ----------------------------------------------------------------
+CODE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/Code - OSS/User"
+if [[ ! -f $CODE_DIR/settings.json ]]; then
+    mkdir -p "$CODE_DIR"
+    cp /usr/share/devium/vscode-settings.json "$CODE_DIR/settings.json"
+fi
+if [[ ! -f $STATE/vscode-ext-done ]] && command -v code >/dev/null; then
+    (
+        ok=1
+        for ext in ms-python.python charliermarsh.ruff ms-python.debugpy; do
+            code --install-extension "$ext" --force || ok=0
+        done
+        [[ $ok == 1 ]] && touch "$STATE/vscode-ext-done"
+    ) &
+fi
+
+# --- Welcome app ------------------------------------------------------------
+if [[ ! -f $STATE/welcome-shown ]]; then
+    touch "$STATE/welcome-shown"
+    sleep 3
+    devium-welcome &
+fi
+wait

@@ -1,0 +1,10 @@
+# Devium Snip: copy every screenshot to the clipboard and save it.
+[General]
+clipboardGroup=PostScreenshotCopyImage
+launchAction=UseLastUsedCapturemode
+showCaptureInstructions=true
+useReleaseToCapture=true
+
+[ImageSave]
+imageSaveLocation[$e]=file://$HOME/Pictures/Screenshots
+autoSaveImage=true

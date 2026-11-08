@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Service
+MimeType=inode/directory;text/plain;text/x-python;application/x-shellscript;application/json;
+Actions=openInCode;
+X-KDE-Priority=TopLevel
+
+[Desktop Action openInCode]
+Name=Open in VS Code
+Icon=code-oss
+Exec=code %F
+

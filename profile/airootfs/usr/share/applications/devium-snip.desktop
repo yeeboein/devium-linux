@@ -1,0 +1,27 @@
+[Desktop Entry]
+Type=Application
+Name=Snip
+GenericName=Snipping Tool
+Comment=Select part of the screen, draw on it and copy it (Meta+Shift+S)
+Exec=spectacle --region
+Icon=spectacle
+Terminal=false
+Categories=Utility;Graphics;
+Keywords=screenshot;snip;snipping;capture;screen;record;
+Actions=Region;Window;Full;Record;
+
+[Desktop Action Region]
+Name=Snip an area
+Exec=spectacle --region
+
+[Desktop Action Window]
+Name=Snip a window
+Exec=spectacle --activewindow
+
+[Desktop Action Full]
+Name=Snip the whole screen
+Exec=spectacle --fullscreen
+
+[Desktop Action Record]
+Name=Record the screen
+Exec=spectacle --record region
