@@ -1,9 +1,25 @@
 <p align="center">
-  <img src="profile/airootfs/usr/share/devium/logo.png" width="140" alt="Devium logo">
+  <img src="docs/banner.png" alt="Devium: light, fast, made for coding" width="100%">
 </p>
 
-<h1 align="center">Devium</h1>
-<p align="center">A light, fast Arch Linux desktop made for coding — easy for beginners, nice for pros.</p>
+<p align="center">
+  <img src="profile/airootfs/usr/share/devium/logo.png" width="96" alt="Devium logo"><br>
+  <b>A light, fast Arch Linux desktop made for coding: easy for beginners, nice for pros.</b>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/desktop-mockup.png" width="90%" alt="Devium desktop (mock-up)"><br>
+  <sub>Desktop mock-up: mountain wallpaper, floating dock, ArchPill, fastfetch and Devium Welcome.</sub>
+</p>
+
+### Devium Setup: pick only what you want
+
+<p align="center">
+  <img src="docs/screenshots/wizard-1-welcome.png" width="45%">
+  <img src="docs/screenshots/wizard-3-languages.png" width="45%"><br>
+  <img src="docs/screenshots/wizard-4-look.png" width="45%">
+  <img src="docs/screenshots/wizard-5-summary.png" width="45%">
+</p>
 
 ---
 
