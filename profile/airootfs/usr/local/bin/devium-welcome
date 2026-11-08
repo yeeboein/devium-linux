@@ -342,6 +342,8 @@ class Welcome(QWidget):
             tiles([
                 tile("Update Manager", "Updates, plus free up disk space",
                      lambda: self.go("devium-update-manager"), "system-software-update"),
+                tile("Devium Updater", "New Devium versions and ISOs",
+                     lambda: self.go("devium-updater"), "devium"),
                 tile("Restore points", "Set up Timeshift: undo a bad update in two clicks",
                      lambda: self.go("timeshift-launcher", name="Timeshift"), "timeshift"),
                 tile("Firewall on", "Block incoming connections (recommended)",

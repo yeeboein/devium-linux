@@ -34,6 +34,12 @@ class UpdateManager(QWidget):
         self.status.setObjectName("h2")
         lay.addWidget(self.status)
 
+        self.disk = QLabel()
+        self.disk.setObjectName("subtitle")
+        self.disk.setWordWrap(True)
+        lay.addWidget(self.disk)
+        QTimer.singleShot(800, self.show_disk)
+
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(["Name", "Installed", "New version", "Source"])
         self.tree.setRootIsDecorated(False)
@@ -113,6 +119,27 @@ class UpdateManager(QWidget):
             done, total = map(int, m[-1])
             self.progress.setRange(0, total)
             self.progress.setValue(done)
+
+    # ------------------------------------------------------------------ disk
+    def show_disk(self):
+        import shutil
+        import subprocess
+
+        def du(path):
+            try:
+                out = subprocess.run(["du", "-sm", path], capture_output=True, text=True, timeout=5).stdout
+                return int(out.split()[0]) if out else 0
+            except Exception:
+                return 0
+
+        total = shutil.disk_usage("/")
+        used_gb, total_gb = total.used / 2**30, total.total / 2**30
+        parts = [("Package cache", du("/var/cache/pacman/pkg")), ("Flatpak apps", du("/var/lib/flatpak")),
+                 ("Your files", du(os.path.expanduser("~")))]
+        detail = ", ".join(f"{n}: {mb / 1024:.1f} GB" for n, mb in parts if mb)
+        pct = total.used / total.total * 100
+        warn = "   Running low on space!" if pct > 90 else ""
+        self.disk.setText(f"Disk: {used_gb:.1f} GB of {total_gb:.1f} GB used ({pct:.0f}%).{warn}\n{detail}")
 
     # ------------------------------------------------------------------ check
     def check(self):
@@ -209,7 +236,7 @@ class UpdateManager(QWidget):
     def clean(self):
         self.busy(True, "Freeing up space…")
         self.queue = [("Removing old files…", "pkexec", ["/usr/lib/devium/devium-helper", "clean"],
-                       lambda c, o: (self.busy(False),
+                       lambda c, o: (self.busy(False), self.show_disk(),
                                      self.status.setText("✓ Cleaned up" if c == 0 else "Clean-up cancelled")))]
         self.run_queue()
 

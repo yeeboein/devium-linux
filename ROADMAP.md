@@ -3,21 +3,21 @@
 Status of the "next update" (v2). Tick items as they land.
 
 ## Look and feel
-- [ ] Mountain wallpaper as default (desktop, login, lock screen)
-- [ ] Dock: centred, big icons, floating, hides when a window covers it ("dodge windows")
-- [ ] White Devium logo as the dock's app-menu button
-- [ ] Animated Devium boot screen (Plymouth)
-- [ ] No emojis in Devium apps (theme icons instead)
-- [ ] Beginner mode = big dock, Pro mode = slim dock
+- [x] Mountain wallpaper as default (desktop, login, lock screen)
+- [x] Dock: centred, big icons, floating, hides when a window covers it ("dodge windows")
+- [x] White Devium logo as the dock's app-menu button
+- [x] Animated Devium boot screen (Plymouth)
+- [x] No emojis in Devium apps (theme icons instead)
+- [x] Beginner mode = big dock, Pro mode = slim dock
 
 ## Installer
 - [ ] Point-and-click installer (Calamares), Devium-branded, beginner instructions on every page
 
-## "Welcome to Devium" setup wizard (first boot after install)
+## "Welcome to Devium" setup wizard (first boot after install) - done (devium-setup-wizard)
 Pages: Welcome, Browser, Everyday apps (file manager + terminal), Code editor, Languages /
 compilers, Python libraries, Developer tools, Apps (Flathub), Look and feel (mode, theme,
 shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
-- Browsers: Brave, Brave Origin (verify package source), Firefox, Chrome, Chromium, LibreWolf, Vivaldi, none
+- Browsers: Brave, Brave Origin (TODO: no verified Arch/Flathub package yet), Firefox, Chrome, Chromium, LibreWolf, Vivaldi, none
 - File managers: Dolphin, Thunar, PCManFM-Qt, Nemo, Nautilus, yazi
 - Terminals: Konsole, Kitty, Alacritty, WezTerm, Ghostty, Foot
 - Editors: VSCodium, VS Code, PyCharm, IntelliJ, Zed, Neovim, Vim, Kate
@@ -29,13 +29,13 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - ArchPill optional (ticked by default)
 
 ## Light on storage and RAM
-- [ ] Extras only installed when picked in the wizard (target: ~5-6 GB disk, ~450-600 MB RAM idle, ISO < 2 GB)
-- [ ] Package cache auto-clean, journal capped at 50 MB, on-demand services
-- [ ] Storage info: sizes in wizard, disk breakdown + "Free up space" in Update Manager, low-space warning
+- [x] Extras only installed when picked in the wizard (target: ~5-6 GB disk, ~450-600 MB RAM idle, ISO < 2 GB)
+- [x] Package cache auto-clean, journal capped at 50 MB, on-demand services
+- [x] Storage info: sizes in wizard, disk breakdown + "Free up space" in Update Manager, low-space warning
 
 ## Other
-- [ ] zsh by default (autosuggestions + syntax highlighting); fish/bash in the wizard
-- [ ] Devium Updater app: checks GitHub Releases for new Devium versions, updates Devium's own files, downloads new ISOs
-- [ ] ISOs published as GitHub Releases per edition ("KDE Plasma")
-- [ ] Remove network-boot (PXE) options from the ISO
+- [x] zsh by default (autosuggestions + syntax highlighting); fish/bash in the wizard
+- [x] Devium Updater app: checks GitHub Releases for new Devium versions, updates Devium's own files, downloads new ISOs
+- [x] ISOs published as GitHub Releases per edition ("KDE Plasma")
+- [x] Remove network-boot (PXE) options from the ISO
 - [x] Rename "Arch Linux" boot entries to Devium on installed systems
