@@ -17,6 +17,8 @@ memtest86+
 memtest86+-efi
 edk2-shell
 efibootmgr
+grub
+os-prober
 arch-install-scripts
 archinstall
 sudo

@@ -3,6 +3,12 @@
 # package list, then adds Devium's apps, branding and ArchPill to the new system.
 set -uo pipefail
 
+# Point-and-click installer (Calamares) when it's on the ISO; the text installer is the fallback.
+if [[ -z ${DEVIUM_TEXT_INSTALLER:-} && -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]] && command -v calamares >/dev/null; then
+    exec sudo --preserve-env=DISPLAY,WAYLAND_DISPLAY,XDG_RUNTIME_DIR,XAUTHORITY,QT_QPA_PLATFORM \
+        calamares -style breeze
+fi
+
 if [[ -z ${DEVIUM_IN_TERMINAL:-} && -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]]; then
     exec env DEVIUM_IN_TERMINAL=1 konsole --hide-menubar -p tabtitle="Install Devium" \
         -e sudo --preserve-env=DEVIUM_IN_TERMINAL "$0"

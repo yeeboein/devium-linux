@@ -9,6 +9,7 @@
 #   devium-helper setup PLAN.json   apply the Devium Setup wizard's choices
 #   devium-helper install-local FILE.pkg.tar.zst...   install packages built from the AUR
 #   devium-helper refresh TAG       update Devium's own files to release TAG (Devium Updater)
+#   devium-helper brave-origin      install or update Brave Origin (official build from Brave)
 set -uo pipefail
 export LC_ALL=C.UTF-8 TERM=dumb
 
@@ -27,6 +28,55 @@ snapshot() {
     fi
 }
 
+
+brave_origin() {
+    # Official Brave Origin build: brave-origin-<version>-linux-amd64.zip on Brave's GitHub releases.
+    step "Looking for the latest Brave Origin"
+    local url
+    url="$(curl -fsSL "https://api.github.com/repos/brave/brave-browser/releases?per_page=30" | python3 -c '
+import json, re, sys
+for r in json.load(sys.stdin):
+    if r.get("prerelease") or r.get("draft"):
+        continue
+    for a in r.get("assets", []):
+        if re.fullmatch(r"brave-origin-[0-9.]+-linux-amd64\.zip", a["name"]):
+            print(a["browser_download_url"]); sys.exit(0)
+')" || true
+    [[ $url == https://github.com/brave/brave-browser/releases/download/* ]] || { echo "Could not find Brave Origin's download."; return 1; }
+    local ver="${url##*/brave-origin-}"; ver="${ver%-linux-amd64.zip}"
+    if [[ -f /opt/brave-origin/.version && $(cat /opt/brave-origin/.version) == "$ver" ]]; then
+        echo "Brave Origin $ver is already up to date."; return 0
+    fi
+    step "Downloading Brave Origin $ver"
+    local tmp; tmp="$(mktemp -d)"
+    curl -fL --retry 3 -o "$tmp/brave-origin.zip" "$url" || { rm -rf "$tmp"; return 1; }
+    mkdir -p "$tmp/x" && unzip -q "$tmp/brave-origin.zip" -d "$tmp/x" || { rm -rf "$tmp"; return 1; }
+    # the zip may contain a top-level folder
+    local top="$tmp/x"; [[ $(ls -A "$top" | wc -l) == 1 && -d $top/$(ls -A "$top") ]] && top="$top/$(ls -A "$top")"
+    rm -rf /opt/brave-origin && mv "$top" /opt/brave-origin && rm -rf "$tmp"
+    echo "$ver" > /opt/brave-origin/.version
+    [[ -f /opt/brave-origin/chrome-sandbox ]] && chown root:root /opt/brave-origin/chrome-sandbox && chmod 4755 /opt/brave-origin/chrome-sandbox
+    local bin
+    for b in brave-origin brave brave-browser; do [[ -x /opt/brave-origin/$b ]] && { bin=/opt/brave-origin/$b; break; }; done
+    [[ -n $bin ]] || { echo "Brave Origin was downloaded but its program wasn't found."; return 1; }
+    ln -sf "$bin" /usr/local/bin/brave-origin
+    local icon=/opt/brave-origin/product_logo_128.png; [[ -f $icon ]] || icon=brave-browser
+    cat > /usr/share/applications/brave-origin.desktop <<DESK
+[Desktop Entry]
+Type=Application
+Name=Brave Origin
+GenericName=Web Browser
+Comment=Brave without Rewards, Wallet, VPN or AI
+Exec=/usr/local/bin/brave-origin %U
+Icon=$icon
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=text/html;x-scheme-handler/http;x-scheme-handler/https;
+StartupWMClass=brave-origin
+DESK
+    echo "Brave Origin $ver installed."
+}
+
 case "${1:-}" in
     update)
         snapshot "Before update $(date '+%Y-%m-%d %H:%M')"
@@ -39,6 +89,7 @@ case "${1:-}" in
             step "Updating Flatpak apps"
             flatpak update --system -y --noninteractive || echo "Flatpak update had problems."
         fi
+        [[ -d /opt/brave-origin ]] && { brave_origin || echo "Brave Origin update had problems."; }
         step "Done"
         ;;
     clean)
@@ -135,6 +186,9 @@ PY
             || echo "DEVIUM_VERSION=${tag#v}" >> /etc/devium-release
         rm -rf /tmp/devium-refresh
         step "Done"
+        ;;
+    brave-origin)
+        brave_origin
         ;;
     install-local)
         shift

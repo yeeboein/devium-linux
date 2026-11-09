@@ -1,0 +1,42 @@
+---
+componentName: devium
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 900px,620px
+windowPlacement: center
+sidebar: widget
+navigation: widget
+
+strings:
+    productName:         Devium
+    shortProductName:    Devium
+    version:             beta
+    shortVersion:        beta
+    versionedName:       Devium
+    shortVersionedName:  Devium
+    bootloaderEntryName: Devium
+    productUrl:          https://github.com/yeeboein/devium-linux
+    supportUrl:          https://github.com/yeeboein/devium-linux/issues
+    knownIssuesUrl:      https://github.com/yeeboein/devium-linux/issues
+    releaseNotesUrl:     https://github.com/yeeboein/devium-linux/releases
+    donateUrl:           ""
+
+images:
+    productLogo:         "logo.png"
+    productIcon:         "logo.png"
+    productWelcome:      "welcome.jpg"
+
+slideshow:               "show.qml"
+slideshowAPI:            2
+
+style:
+   SidebarBackground:        "#1e232a"
+   SidebarText:              "#dde3ea"
+   SidebarTextCurrent:       "#1b2026"
+   SidebarBackgroundCurrent: "#8fb4d8"
+
+uploadServer:
+    type:    "none"
+    url:     ""
+    sizeLimit: 0

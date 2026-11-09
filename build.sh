@@ -86,6 +86,29 @@ DEVIUM_REPO=${DEVIUM_REPO:-$repo_url}
 DEVIUM_REF=${DEVIUM_REF:-$repo_ref}
 EOF
 
+# 4b. Build the point-and-click installer (Calamares) from the AUR into Devium's local repo.
+build_aur() {   # build_aur <package>: build as an unprivileged user, install it, keep the package
+    local name="$1" dir="$WORK/aur/$1"
+    rm -rf "$dir"; mkdir -p "$WORK/aur"
+    git clone --depth 1 "https://aur.archlinux.org/$name.git" "$dir" || return 1
+    chown -R devbuild: "$WORK/aur"
+    su devbuild -c "cd '$dir' && makepkg -s --noconfirm --needed" || return 1
+    pacman -U --noconfirm --needed "$dir"/*.pkg.tar.zst >/dev/null
+    cp "$dir"/*.pkg.tar.zst "$STAGE/airootfs/opt/devium-repo/"
+}
+id devbuild >/dev/null 2>&1 || useradd -m devbuild
+echo "devbuild ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/devbuild
+mkdir -p "$STAGE/airootfs/opt/devium-repo"
+CALAMARES=0
+if [[ ${DEVIUM_NO_CALAMARES:-0} != 1 ]]; then
+    say "Building the Devium installer (Calamares) - this takes a while"
+    if build_aur ckbcomp && build_aur calamares; then
+        CALAMARES=1
+    else
+        warn "Could not build Calamares; the ISO will use the text installer instead."
+    fi
+fi
+
 # 5. Package Devium's files as "devium-desktop" in a small repo on the ISO, so the installer
 #    copies them onto the new system straight from the ISO (no internet or GitHub needed).
 say "Packaging devium-desktop"
@@ -105,7 +128,7 @@ tar -C "$STAGE/airootfs" \
     --exclude=./etc/pacman.d/hooks/uncomment-mirrors.hook \
     --exclude=./usr/share/applications/devium-install.desktop \
     --exclude=./usr/share/applications/devium-about-live.desktop \
-    --exclude=./opt/devium-repo --exclude='*/.git' \
+    --exclude=./opt/devium-repo --exclude='*/.git' --exclude=./etc/calamares \
     -cf - . | tar -C "$PKG/root" -xf -
 # Files other packages own go to overrides/ (devium-setup copies them into place).
 for f in etc/skel/.bashrc etc/skel/.bash_profile etc/default/useradd etc/plymouth/plymouthd.conf; do
@@ -132,13 +155,39 @@ pkgver="$(sed -n 's/^DEVIUM_VERSION=//p' "$STAGE/airootfs/etc/devium-release" | 
     echo 'post_install() { /usr/lib/devium/devium-setup --package; }'
     echo 'post_upgrade() { post_install; }'
 } > "$PKG/devium.install"
-id devbuild >/dev/null 2>&1 || useradd -m devbuild
 chown -R devbuild: "$PKG"
 su devbuild -c "cd '$PKG' && makepkg -f --nodeps --noconfirm" >/dev/null || die "Could not package devium-desktop"
-mkdir -p "$STAGE/airootfs/opt/devium-repo"
 cp "$PKG"/devium-desktop-*.pkg.tar.zst "$STAGE/airootfs/opt/devium-repo/"
 repo-add -q "$STAGE/airootfs/opt/devium-repo/devium.db.tar.gz" "$STAGE"/airootfs/opt/devium-repo/*.pkg.tar.zst
 echo devium-desktop >> "$STAGE/airootfs/usr/share/devium/install-packages.txt"
+
+# The installer's packages step: everything an installed system needs (most is already on the
+# ISO; the rest is downloaded), minus the live-only tools.
+if (( CALAMARES )); then
+    {
+        echo "backend: pacman"
+        echo "skip_if_no_internet: false"
+        echo "update_db: true"
+        echo "update_system: false"
+        echo "pacman:"
+        echo "    num_retries: 3"
+        echo "    disable_download_timeout: false"
+        echo "    needed_only: true"
+        echo "operations:"
+        echo "  - install:"
+        sed 's/^/      - /' "$STAGE/airootfs/usr/share/devium/install-packages.txt"
+        echo "      - grub"
+        echo "      - os-prober"
+    } > "$STAGE/airootfs/etc/calamares/modules/packages.conf"
+    # live ISO packages: the installer itself (from the local repo)
+    printf 'calamares\nckbcomp\n' >> "$STAGE/packages.x86_64"
+    sed -i 's/^DEVIUM_INSTALLER=.*//' "$STAGE/airootfs/etc/devium-release"
+    echo "DEVIUM_INSTALLER=calamares" >> "$STAGE/airootfs/etc/devium-release"
+else
+    rm -rf "$STAGE/airootfs/etc/calamares"
+fi
+# mkarchiso installs the live packages with the profile's pacman.conf: add the local repo.
+printf '\n[devium]\nSigLevel = Optional TrustAll\nServer = file://%s\n' "$STAGE/airootfs/opt/devium-repo" >> "$STAGE/pacman.conf"
 
 # 6. Build.
 say "Building the ISO (this takes a while)"
