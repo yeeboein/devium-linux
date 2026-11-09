@@ -8,7 +8,7 @@ Status of the "next update" (v2). Tick items as they land.
 - [x] White Devium logo as the dock's app-menu button
 - [x] Animated Devium boot screen (Plymouth)
 - [x] No emojis in Devium apps (theme icons instead)
-- [x] Beginner mode = big dock, Pro mode = slim dock
+- [x] Big floating dock is part of the Devium themes (Base KDE gets the normal panel)
 
 ## Installer
 - [ ] Point-and-click installer (Calamares), Devium-branded, beginner instructions on every page

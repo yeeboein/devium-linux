@@ -30,7 +30,7 @@
 | **Base** | Arch Linux (rolling), `linux` kernel, UEFI + BIOS boot, zram swap |
 | **Desktop** | KDE Plasma (core only, no PIM/Akonadi), dark Breeze theme, bottom panel with the Devium start button |
 | **Lightweight** | Baloo file indexing off, no blur, fast animations, TLP battery saver — ~550–750 MB RAM idle |
-| **Devium apps** | **Welcome** (Meta+F1), **Update Manager** (Meta+U), **Snip** (Meta+Shift+S), Beginner/Pro mode |
+| **Devium apps** | **Welcome** (Meta+F1), **Update Manager** (Meta+U), **Snip** (Meta+Shift+S), `support` command |
 | **ArchPill** | [yeeboein/archpill](https://github.com/yeeboein/archpill) preinstalled and set up on first login |
 | **Apps** | Dolphin, Konsole, Kate, Spectacle (Snip), Gwenview, Okular, Ark, KCalc, System Monitor, Firefox, mpv, Discover + Flathub, Timeshift |
 | **Coding** | VS Code (`code`, preconfigured for Python), git, GitHub CLI, Node.js + npm, base-devel (gcc/make), neovim, btop, ripgrep, fd, jq, starship |
@@ -39,8 +39,7 @@
 
 ### Devium apps
 
-- **Devium Welcome** — opens at login (untick “Show at login” to stop). Install Devium, switch Beginner/Pro
-  mode, start a Python project, get popular apps from Discover, install extra drivers (NVIDIA, Broadcom
+- **Devium Welcome** — opens at login (untick “Show at login” to stop). Install Devium, start a Python project, get popular apps from Discover, install extra drivers (NVIDIA, Broadcom
   Wi‑Fi, printers…), firewall/theme/restore-point switches and a shortcut cheat sheet.
 - **Update Manager** — lists system, Flatpak and ArchPill updates, updates everything with one password
   prompt and a progress bar, takes a Timeshift restore point first (once Timeshift is set up), frees up
@@ -49,9 +48,7 @@
 - **Snip** — Spectacle set up like the Windows Snipping Tool: **Meta+Shift+S** to select an area, draw on
   it, and it's already copied to the clipboard (and saved in `~/Pictures/Screenshots`). **Meta+Shift+R**
   records the screen.
-- **Beginner / Pro mode** — Pro gives a slimmer panel, Starship prompt with git status and aliases
-  (`gs`, `ga`, `gc`, `gp`, `venv`), Dolphin split view + hidden files, and no update pop-ups.
-  Also available as `devium-mode pro` / `devium-mode beginner`.
+- **`support`** — type it in a terminal to see helpful commands and what they do.
 
 ## Get the ISO
 

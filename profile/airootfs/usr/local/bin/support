@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# support - helpful Devium commands and what they do.
+#   support            show everything
+#   support <topic>    show one topic (e.g. support files, support git)
+
+B=$'\e[1m'; D=$'\e[2m'; N=$'\e[0m'
+T=$'\e[38;2;180;184;224m'   # lavender: section titles
+C=$'\e[38;2;150;178;208m'   # blue-grey: commands
+W=$'\e[38;2;232;205;150m'   # pale yellow: warnings
+
+section() { [[ -z $FILTER || ${1,,} == *"$FILTER"* ]] && { SHOW=1; printf "\n${B}${T}%s${N}\n" "$1"; } || SHOW=0; }
+cmd() { (( SHOW )) && printf "  ${C}%-34s${N} %s\n" "$1" "$2"; }
+note() { (( SHOW )) && printf "  ${D}%s${N}\n" "$1"; }
+
+FILTER="${1,,}"
+[[ $FILTER == -h || $FILTER == --help ]] && FILTER=""
+
+printf "${B}${T}Devium support${N}  ${D}- helpful commands. Type ${N}${C}support <topic>${N}${D} to show one topic.${N}\n"
+printf "${D}Topics: devium, updates, apps, files, system, network, git, python, coding, help${N}\n"
+
+section "Devium"
+cmd "support"                         "Show this list"
+cmd "devium-welcome"                  "Open Devium Welcome (Meta+F1)"
+cmd "devium-setup-wizard"             "Pick apps, languages, games and theme"
+cmd "devium-update-manager  (update)" "Install updates with a progress bar (Meta+U)"
+cmd "devium-updater"                  "Get new Devium versions and ISOs"
+cmd "devium-new-project <name>"       "New Python project in ~/Projects, opens your editor"
+cmd "fastfetch"                       "Show the Devium logo and system info"
+
+section "Updates and software"
+cmd "update"                          "Update everything (opens Update Manager)"
+cmd "sudo pacman -Syu"                "Update everything in the terminal"
+cmd "pacman -Ss <word>"               "Search for a package"
+cmd "sudo pacman -S <package>"        "Install a package"
+cmd "sudo pacman -Rns <package>"      "Remove a package and what it pulled in"
+cmd "pacman -Qe"                      "List packages you installed"
+cmd "flatpak search <word>"           "Search Flathub apps"
+cmd "flatpak install flathub <app>"   "Install a Flathub app"
+cmd "flatpak list --app"              "List Flathub apps"
+cmd "yay -S <package>"                "Install from the AUR (if you picked yay)"
+cmd "sudo paccache -rk1"              "Free space: remove old package versions"
+
+section "Apps"
+cmd "plasma-discover"                 "App store"
+cmd "spectacle --region"              "Snip an area of the screen (Meta+Shift+S)"
+cmd "dolphin ."                       "Open this folder in the file manager"
+cmd "kate <file>"                     "Edit a file in Kate"
+cmd "codium . / code ."               "Open this folder in VSCodium / VS Code"
+cmd "xdg-open <file>"                 "Open a file with its default app"
+
+section "Files and folders"
+cmd "ls -la   (ll)"                   "List files, including hidden ones"
+cmd "cd <folder> / cd .. / cd ~"      "Go into a folder / up one / home"
+cmd "pwd"                             "Show where you are"
+cmd "mkdir <name>"                    "Make a folder"
+cmd "cp <from> <to>  (-r for folders)" "Copy"
+cmd "mv <from> <to>"                  "Move or rename"
+cmd "rm <file>  /  rm -r <folder>"    "Delete (no recycle bin!)"
+cmd "cat <file> / less <file>"        "Show a file / scroll through it"
+cmd "nano <file>"                     "Simple terminal text editor"
+cmd "rg <text>"                       "Search for text in files (ripgrep)"
+cmd "fd <name>"                       "Find files by name"
+cmd "tree"                            "Show folders as a tree"
+cmd "du -sh * | sort -h"              "What's taking up space here"
+cmd "df -h /"                         "Free disk space"
+cmd "unzip <file.zip> / tar xf <file>" "Unpack archives"
+
+section "System"
+cmd "btop"                            "See CPU, memory and running apps"
+cmd "free -h"                         "Memory use"
+cmd "uname -r"                        "Linux kernel version"
+cmd "systemctl status <service>"      "Is a service running?"
+cmd "journalctl -b -p err"            "Errors since this boot"
+cmd "sudo timeshift --create"         "Make a restore point"
+cmd "sudo ufw status"                 "Firewall status"
+cmd "chsh -s /usr/bin/zsh"            "Change your shell (zsh / fish / bash)"
+cmd "reboot / poweroff"               "Restart / shut down"
+
+section "Network"
+cmd "nmcli device wifi list"          "Show Wi-Fi networks"
+cmd "nmcli device wifi connect <name> --ask" "Connect to Wi-Fi"
+cmd "ip -br addr"                     "Your IP addresses"
+cmd "ping -c3 archlinux.org"          "Check the internet works"
+
+section "Git"
+cmd "git clone <url>"                 "Download a project"
+cmd "gs  (git status)"                "What changed"
+cmd "ga <file>  (git add)"            "Stage changes  (ga . = everything)"
+cmd "gc -m \"message\"  (git commit)" "Save a snapshot"
+cmd "gp  (git push)"                  "Upload to GitHub/GitLab"
+cmd "gl  (git log)"                   "Recent history"
+cmd "gh auth login"                   "Log in to GitHub"
+cmd "glab auth login"                 "Log in to GitLab"
+cmd "lazygit"                         "Visual git in the terminal"
+
+section "Python"
+cmd "python  (py)"                    "Start Python"
+cmd "python file.py"                  "Run a script"
+cmd "venv"                            "Make + turn on a virtual env in .venv"
+cmd "source .venv/bin/activate"       "Turn on an existing virtual env"
+cmd "pip install <package>"           "Install a library (inside a venv)"
+cmd "pipx install <tool>"             "Install a Python command-line tool"
+cmd "pytest"                          "Run tests"
+cmd "ruff check . / black ."          "Check / tidy your code"
+
+section "Coding (other languages)"
+cmd "gcc main.c -o app && ./app"      "Compile and run C"
+cmd "g++ main.cpp -o app && ./app"    "Compile and run C++"
+cmd "cmake -B build && cmake --build build" "Build a CMake project"
+cmd "cargo new <name> / cargo run"    "New / run a Rust project"
+cmd "go run main.go"                  "Run Go"
+cmd "javac Main.java && java Main"    "Compile and run Java"
+cmd "node app.js / npm install"       "Run JavaScript / install packages"
+cmd "lua script.lua"                  "Run Lua"
+cmd "docker run hello-world"          "Test Docker (if installed)"
+cmd "ollama run llama3.2"             "Chat with a local AI (if installed)"
+
+section "Help"
+cmd "man <command>"                   "Full manual for a command"
+cmd "<command> --help"                "Quick help for a command"
+cmd "tldr <command>"                  "Short examples (pip install tldr)"
+note "Arch Wiki: https://wiki.archlinux.org   Devium: https://github.com/yeeboein/devium-linux"
+(( SHOW )) && printf "  ${W}Careful:${N} commands with ${C}sudo${N} change the system. Read them before pressing Enter.\n"
+echo

@@ -150,7 +150,6 @@ class Welcome(QWidget):
 
         pages = [("Home", "go-home", self.home_page()),
                  ("Setup wizard", "tools-wizard", self.wizard_page()),
-                 ("Beginner / Pro", "configure", self.mode_page()),
                  ("Coding", "applications-development", self.coding_page()),
                  ("Apps", "plasmadiscover", self.apps_page()),
                  ("Drivers", "hwinfo", self.drivers_page()),
@@ -210,42 +209,6 @@ class Welcome(QWidget):
                          "You can run it again any time to add or remove things."),
                     tile("Open Devium Setup", "Choose what to install",
                          lambda: self.go("devium-setup-wizard", name="Devium Setup"), "tools-wizard"))
-
-    def mode_page(self):
-        current = subprocess.run(["devium-mode", "status"], capture_output=True,
-                                 text=True).stdout.strip() or "beginner"
-        beginner = QRadioButton("Beginner  —  big, simple and friendly")
-        pro = QRadioButton("Pro  —  compact, powerful, fewer pop-ups")
-        group = QButtonGroup(self)
-        group.addButton(beginner)
-        group.addButton(pro)
-        (pro if current == "pro" else beginner).setChecked(True)
-        apply = QPushButton("Apply")
-        apply.setObjectName("primary")
-        apply.setFixedWidth(140)
-        result = QLabel("")
-
-        def do_apply():
-            mode = "pro" if pro.isChecked() else "beginner"
-            r = subprocess.run(["devium-mode", mode], capture_output=True, text=True)
-            result.setText("✓ " + (r.stdout.strip() or f"{mode} mode on"))
-
-        apply.clicked.connect(do_apply)
-        table = para(
-            "<table cellpadding='5'>"
-            "<tr><th></th><th align='left'>Beginner</th><th align='left'>Pro</th></tr>"
-            "<tr><td><b>Taskbar</b></td><td>Big and easy to hit</td><td>Slim, more space</td></tr>"
-            "<tr><td><b>Terminal</b></td><td>Friendly prompt + tips</td>"
-            "<td>Starship prompt with git status, aliases (gs, ga, gc, gp, venv…)</td></tr>"
-            "<tr><td><b>Dolphin</b></td><td>Big icons, simple view</td>"
-            "<td>Split view, details, hidden files shown (F4 = terminal)</td></tr>"
-            "<tr><td><b>Updates</b></td><td>Pop-up when updates are ready</td>"
-            "<td>Silent, you update when you want</td></tr>"
-            "<tr><td><b>Windows</b></td><td>Normal</td><td>Drag to edges to tile (Meta+arrows)</td></tr>"
-            "</table>")
-        return page(h2("Beginner or Pro?"),
-                    para("Pick how Devium should feel. You can switch any time."),
-                    beginner, pro, apply, result, table)
 
     def coding_page(self):
         libs = ("numpy, pandas, matplotlib, requests, flask, beautifulsoup4, pytest, black, ruff, "
