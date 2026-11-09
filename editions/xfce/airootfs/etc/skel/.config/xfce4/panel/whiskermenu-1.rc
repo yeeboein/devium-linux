@@ -1,0 +1,7 @@
+button-icon=/usr/share/devium/start-button.png
+show-button-title=false
+button-single-row=false
+launcher-show-name=true
+launcher-show-description=true
+position-search-alternate=true
+position-commands-alternate=true

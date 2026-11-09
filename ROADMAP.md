@@ -48,7 +48,11 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] KDE Lite / Full KDE choice (KDElite)
 - [x] Gaming page, Devium Dark, support command
 
+## beta4
+- [x] Point-and-click installer (Calamares) with "Install alongside" dual boot (GRUB + os-prober)
+- [x] Devium Xfce edition (editions/xfce, EDITION=xfce ./build.sh)
+- [x] Brave Origin (official build from Brave's GitHub releases)
+
 ## Next
-- [ ] Point-and-click installer (Calamares)
-- [ ] Brave Origin (when a package source exists)
-- [ ] Maybe: Devium Xfce edition for very old laptops
+- [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
+- [ ] Real screenshots from a VM for the website

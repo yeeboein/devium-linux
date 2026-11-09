@@ -393,7 +393,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Devium Welcome")
     app.setDesktopFileName("devium-welcome")
-    app.setStyleSheet(ui.STYLE)
+    ui.style_app(app)
     w = Welcome()
     w.show()
     sys.exit(app.exec())

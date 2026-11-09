@@ -1,0 +1,41 @@
+# Devium Xfce edition: added on top of profile/packages.x86_64 (minus the "#kde" lines).
+# Same tags: "#install" = installed systems only (not on the ISO).
+
+# --- Xfce desktop ---
+xfce4-panel
+xfce4-session
+xfce4-settings
+xfdesktop
+xfwm4
+xfconf
+xfce4-terminal
+xfce4-notifyd
+xfce4-whiskermenu-plugin
+xfce4-pulseaudio-plugin
+xfce4-power-manager
+thunar
+thunar-volman
+tumbler
+gvfs
+lightdm
+lightdm-gtk-greeter
+network-manager-applet
+polkit-gnome
+arc-gtk-theme
+papirus-icon-theme
+xdg-desktop-portal-gtk
+
+# --- Xfce apps on installed systems ---
+xfce4-screenshooter #install
+xfce4-taskmanager #install
+xfce4-clipman-plugin #install
+mousepad #install
+ristretto #install
+file-roller #install
+thunar-archive-plugin #install
+atril #install
+galculator #install
+blueman #install
+system-config-printer #install
+lightdm-gtk-greeter-settings #install
+gnome-disk-utility #install

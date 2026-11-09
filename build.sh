@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Build the Devium ISO. Run on Arch Linux (or in an archlinux container) as root:
 #
-#   sudo ./build.sh            build into ./out
-#   sudo ./build.sh --clean    remove the old work directory first
+#   sudo ./build.sh                    build the KDE Plasma edition into ./out
+#   sudo EDITION=xfce ./build.sh       build the lighter Xfce edition
+#   sudo ./build.sh --clean            remove the old work directory first
 #
 # Needs: archiso, git (installed automatically if missing).
 set -euo pipefail
@@ -11,6 +12,11 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK="${WORK_DIR:-$HERE/work}"
 OUT="${OUT_DIR:-$HERE/out}"
 STAGE="$WORK/profile"
+EDITION="${EDITION:-kdeplasma}"
+case "$EDITION" in
+    kdeplasma|xfce) ;;
+    *) echo "Unknown EDITION '$EDITION' (use kdeplasma or xfce)"; exit 1 ;;
+esac
 
 say()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*"; }
@@ -32,6 +38,19 @@ say "Preparing profile in $STAGE"
 rm -rf "$STAGE"
 mkdir -p "$STAGE" "$OUT"
 cp -a "$HERE/profile/." "$STAGE/"
+say "Edition: $EDITION"
+# Package list for this edition: Xfce drops the "#kde" lines and adds its own desktop.
+SRC_LIST="$WORK/packages.$EDITION"
+if [[ $EDITION == xfce ]]; then
+    grep -v '#kde' "$HERE/profile/packages.x86_64" > "$SRC_LIST"
+    cat "$HERE/editions/xfce/packages.x86_64" >> "$SRC_LIST"
+    cp -a "$HERE/editions/xfce/airootfs/." "$STAGE/airootfs/"
+    # KDE-only files are harmless on Xfce, but drop the KDE desktop layout and login theme.
+    rm -rf "$STAGE/airootfs/usr/share/plasma" "$STAGE/airootfs/usr/share/sddm" "$STAGE/airootfs/etc/sddm.conf.d"
+    sed -i 's/^iso_application=.*/iso_application="Devium Xfce Live"/' "$STAGE/profiledef.sh"
+else
+    cp "$HERE/profile/packages.x86_64" "$SRC_LIST"
+fi
 
 # 2. Drop packages that don't exist (anymore), instead of failing the whole build.
 say "Checking package list"
@@ -47,17 +66,18 @@ while read -r pkg; do
     else
         missing+=("$pkg")
     fi
-done < "$HERE/profile/packages.x86_64"
+done < "$SRC_LIST"
 if (( ${#missing[@]} )); then
     warn "Skipping packages not found in the repos: ${missing[*]}"
 fi
-for must in base linux mkinitcpio-archiso plasma-desktop sddm; do
+desktop_must="plasma-desktop sddm"; [[ $EDITION == xfce ]] && desktop_must="xfce4-session lightdm"
+for must in base linux mkinitcpio-archiso $desktop_must; do
     grep -qx "$must" "$STAGE/packages.x86_64" || die "Required package '$must' is missing."
 done
 
 # Package list for installed systems (live-ISO-only packages removed).
 # Lines tagged "#live" are left out: users pick those in the Devium Setup wizard.
-sed -n '/#live/!{s/#.*//;s/[[:space:]]//g;/./p}' "$HERE/profile/packages.x86_64" \
+sed -n '/#live/!{s/#.*//;s/[[:space:]]//g;/./p}' "$SRC_LIST" \
     | grep -vxE 'mkinitcpio-archiso|syslinux|memtest86\+|memtest86\+-efi|edk2-shell|archinstall' \
     | while read -r p; do
         if pacman -Si "$p" >/dev/null 2>&1 || pacman -Sg "$p" >/dev/null 2>&1; then echo "$p"
@@ -84,17 +104,25 @@ cat > "$STAGE/airootfs/etc/devium-release" <<EOF
 DEVIUM_VERSION=${DEVIUM_VERSION:-$(date +%Y.%m.%d)}
 DEVIUM_REPO=${DEVIUM_REPO:-$repo_url}
 DEVIUM_REF=${DEVIUM_REF:-$repo_ref}
+DEVIUM_EDITION=$EDITION
 EOF
 
 # 4b. Build the point-and-click installer (Calamares) from the AUR into Devium's local repo.
 build_aur() {   # build_aur <package>: build as an unprivileged user, install it, keep the package
-    local name="$1" dir="$WORK/aur/$1"
+    local name="$1" dir="$WORK/aur/$1" cache="$HERE/.aur-cache"
+    mkdir -p "$cache"
+    if compgen -G "$cache/$name-[0-9]*.pkg.tar.zst" >/dev/null; then   # built earlier in this run
+        pacman -U --noconfirm --needed "$cache/$name"-[0-9]*.pkg.tar.zst >/dev/null
+        cp "$cache/$name"-[0-9]*.pkg.tar.zst "$STAGE/airootfs/opt/devium-repo/"
+        return 0
+    fi
     rm -rf "$dir"; mkdir -p "$WORK/aur"
     git clone --depth 1 "https://aur.archlinux.org/$name.git" "$dir" || return 1
     chown -R devbuild: "$WORK/aur"
     su devbuild -c "cd '$dir' && makepkg -s --noconfirm --needed" || return 1
     pacman -U --noconfirm --needed "$dir"/*.pkg.tar.zst >/dev/null
     cp "$dir"/*.pkg.tar.zst "$STAGE/airootfs/opt/devium-repo/"
+    cp "$dir"/*.pkg.tar.zst "$cache/"
 }
 id devbuild >/dev/null 2>&1 || useradd -m devbuild
 echo "devbuild ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/devbuild
@@ -120,6 +148,7 @@ tar -C "$STAGE/airootfs" \
     --exclude=./etc/localtime --exclude=./etc/locale.conf \
     --exclude=./etc/mkinitcpio.conf.d --exclude=./etc/sudoers.d \
     --exclude=./etc/polkit-1 --exclude=./etc/sddm.conf.d/20-devium-live-autologin.conf \
+    --exclude=./etc/lightdm/lightdm.conf.d/20-devium-live-autologin.conf --exclude=./usr/share/devium/xfce/live \
     --exclude=./etc/systemd/journald.conf.d/volatile-storage.conf --exclude=./etc/systemd/logind.conf.d \
     --exclude=./etc/systemd/system/etc-pacman.d-gnupg.mount --exclude=./etc/systemd/system/pacman-init.service \
     --exclude=./etc/systemd/system/multi-user.target.wants --exclude=./root \
@@ -131,7 +160,8 @@ tar -C "$STAGE/airootfs" \
     --exclude=./opt/devium-repo --exclude='*/.git' --exclude=./etc/calamares \
     -cf - . | tar -C "$PKG/root" -xf -
 # Files other packages own go to overrides/ (devium-setup copies them into place).
-for f in etc/skel/.bashrc etc/skel/.bash_profile etc/default/useradd etc/plymouth/plymouthd.conf; do
+for f in etc/skel/.bashrc etc/skel/.bash_profile etc/default/useradd etc/plymouth/plymouthd.conf \
+         etc/lightdm/lightdm-gtk-greeter.conf; do
     if [[ -f $PKG/root/$f ]]; then
         mkdir -p "$PKG/root/usr/share/devium/overrides/$(dirname "$f")"
         mv "$PKG/root/$f" "$PKG/root/usr/share/devium/overrides/$f"
@@ -179,6 +209,10 @@ if (( CALAMARES )); then
         echo "      - grub"
         echo "      - os-prober"
     } > "$STAGE/airootfs/etc/calamares/modules/packages.conf"
+    if [[ $EDITION == xfce ]]; then
+        sed -i 's/- sddm/- lightdm/' "$STAGE/airootfs/etc/calamares/modules/displaymanager.conf"
+        sed -i 's/name: sddm/name: lightdm/' "$STAGE/airootfs/etc/calamares/modules/services-systemd.conf"
+    fi
     # live ISO packages: the installer itself (from the local repo)
     printf 'calamares\nckbcomp\n' >> "$STAGE/packages.x86_64"
     sed -i 's/^DEVIUM_INSTALLER=.*//' "$STAGE/airootfs/etc/devium-release"

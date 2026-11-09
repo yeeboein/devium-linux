@@ -63,7 +63,7 @@ brand_bootloader() {
 
 enable_services() {
     local s
-    for s in sddm.service NetworkManager.service bluetooth.service cups.socket \
+    for s in sddm.service lightdm.service NetworkManager.service bluetooth.service cups.socket \
              tlp.service ufw.service systemd-timesyncd.service fstrim.timer \
              vboxservice.service vmtoolsd.service vmware-vmblock-fuse.service \
              qemu-guest-agent.service spice-vdagentd.socket \
@@ -112,6 +112,15 @@ live_user() {
             getent group "$g" >/dev/null && usermod -aG "$g" devium
         done
         say "created live user 'devium' (password: devium)"
+    fi
+    # Xfce edition: LightDM autologin needs the "autologin" group; live dock = Install + About
+    if [[ -d /usr/share/devium/xfce/live ]]; then
+        getent group autologin >/dev/null || groupadd -r autologin
+        usermod -aG autologin devium
+        mkdir -p /home/devium/.config/xfce4/xfconf/xfce-perchannel-xml /home/devium/.config/xfce4/panel
+        cp /usr/share/devium/xfce/live/xfconf/xfce4-panel.xml /home/devium/.config/xfce4/xfconf/xfce-perchannel-xml/
+        rm -rf /home/devium/.config/xfce4/panel/launcher-*
+        cp -r /usr/share/devium/xfce/live/panel/. /home/devium/.config/xfce4/panel/
     fi
     mkdir -p /home/devium/Desktop
     install -m 755 /usr/share/applications/devium-install.desktop /home/devium/Desktop/ 2>/dev/null || true

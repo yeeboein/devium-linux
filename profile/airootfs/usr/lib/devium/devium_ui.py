@@ -70,8 +70,52 @@ def is_live() -> bool:
     return os.path.isdir("/run/archiso")
 
 
+# KDE app -> Xfce equivalent, used when the KDE app isn't installed (Xfce edition)
+ALTERNATIVES = {
+    "systemsettings": ["xfce4-settings-manager"],
+    "konsole": ["xfce4-terminal"],
+    "kate": ["mousepad"],
+    "dolphin": ["thunar"],
+    "spectacle": ["xfce4-screenshooter", "-r"],
+    "plasma-systemmonitor": ["xfce4-taskmanager"],
+    "plasma-discover": ["xdg-open", "https://flathub.org"],
+}
+
+
+def edition():
+    try:
+        for line in open("/etc/devium-release"):
+            if line.startswith("DEVIUM_EDITION="):
+                return line.strip().split("=", 1)[1]
+    except OSError:
+        pass
+    return "kdeplasma"
+
+
+def style_app(app):
+    """Devium look for the Devium apps. KDE already gives Qt apps Devium's colours;
+    elsewhere (Xfce) set the Devium palette ourselves."""
+    import os
+    if "KDE" not in os.environ.get("XDG_CURRENT_DESKTOP", ""):
+        from PyQt6.QtGui import QColor, QPalette
+        app.setStyle("Fusion")
+        pal = QPalette()
+        C = QPalette.ColorRole
+        for role, c in [(C.Window, "#2b323b"), (C.WindowText, "#dde3ea"), (C.Base, "#242a32"),
+                        (C.AlternateBase, "#29303a"), (C.Text, "#dde3ea"), (C.Button, "#343d48"),
+                        (C.ButtonText, "#dde3ea"), (C.Mid, "#3b4450"), (C.Highlight, "#8fb4d8"),
+                        (C.HighlightedText, "#1b2026"), (C.Link, "#8fb4d8"), (C.ToolTipBase, "#242a32"),
+                        (C.ToolTipText, "#dde3ea"), (C.PlaceholderText, "#8a93a6")]:
+            pal.setColor(role, QColor(c))
+        app.setPalette(pal)
+    app.setStyleSheet(STYLE)
+
+
 def launch(*cmd: str) -> bool:
     """Start a program in the background. Returns False if it isn't installed."""
+    if not shutil.which(cmd[0]) and cmd[0] in ALTERNATIVES:
+        alt = ALTERNATIVES[cmd[0]]
+        cmd = tuple(alt) + (cmd[1:] if cmd[0] not in ("spectacle", "plasma-discover") else ())
     if not shutil.which(cmd[0]):
         return False
     subprocess.Popen(list(cmd), start_new_session=True,

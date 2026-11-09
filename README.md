@@ -64,7 +64,8 @@ Built with [ArchPill](https://github.com/yeeboein/archpill), [KDElite](https://g
 
 ### Option A: download a release
 
-Get the latest ISO from the [Releases page](https://github.com/yeeboein/devium-linux/releases) (beta3 and newer).
+Get the latest ISO from the [Releases page](https://github.com/yeeboein/devium-linux/releases).
+There are two editions: **KDE Plasma** (most computers) and the lighter **Xfce** (very old laptops).
 
 ### Option B: build on GitHub (no Arch machine needed)
 
@@ -85,6 +86,8 @@ cd devium-linux
 ```bash
 sudo ./build.sh
 ```
+
+For the lighter Xfce edition: `sudo EDITION=xfce ./build.sh`
 
 The ISO ends up in `out/`. Packages that no longer exist in the Arch repos are skipped with a warning
 instead of failing the build. Use `sudo ./build.sh --clean` to start from scratch.

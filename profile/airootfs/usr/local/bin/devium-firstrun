@@ -11,6 +11,23 @@ LOG="$STATE/firstrun.log"
 exec >>"$LOG" 2>&1
 echo "=== devium-firstrun $(date)"
 
+# --- Xfce edition: Devium wallpaper and shortcuts ----------------------------
+if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-done ]]; then
+    sleep 3   # let xfdesktop create its settings
+    wp=/usr/share/wallpapers/Devium/contents/images/1920x1080.jpg
+    for prop in $(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E 'last-image$'); do
+        xfconf-query -c xfce4-desktop -p "$prop" -s "$wp"
+    done
+    xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -n -t string -s "$wp" 2>/dev/null
+    sc() { xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/$1" -n -t string -s "$2"; }
+    sc "<Super><Shift>s" "xfce4-screenshooter -r -c"
+    sc "<Super>u" "devium-update-manager"
+    sc "<Super>F1" "devium-welcome"
+    sc "<Super>e" "exo-open --launch FileManager"
+    sc "<Primary><Alt>t" "exo-open --launch TerminalEmulator"
+    touch "$STATE/xfce-done"
+fi
+
 # --- Live ISO: a simple preview with just "Install Devium" and "About Devium" ----
 if [[ -d /run/archiso ]]; then
     if [[ ! -f $STATE/live-dock-done ]]; then

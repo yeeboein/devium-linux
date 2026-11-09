@@ -65,7 +65,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("About Devium")
     app.setDesktopFileName("devium-about")
-    app.setStyleSheet(ui.STYLE)
+    ui.style_app(app)
     w = About()
     w.show()
     sys.exit(app.exec())
