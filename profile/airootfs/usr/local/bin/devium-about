@@ -50,6 +50,10 @@ class About(QWidget):
         row.addWidget(gh)
         row.addStretch(1)
         if ui.is_live():
+            pw = QLabel("Live preview login: user devium, password devium")
+            pw.setObjectName("subtitle")
+            pw.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lay.insertWidget(lay.count() - 1, pw)
             inst = QPushButton("Install Devium")
             inst.setObjectName("primary")
             inst.clicked.connect(lambda: ui.launch("devium-install"))

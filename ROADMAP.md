@@ -56,6 +56,9 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 ## beta5
 - [x] Installer fix (squashfs-tools, rsync), QR codes for links, install splash, storage trims, 12 GB minimum
 
+## beta7
+- [x] Installer packages step fixed (devium-desktop installed with --overwrite after it, live keyring copied), no auto-lock on the live preview
+
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website

@@ -125,6 +125,9 @@ live_user() {
         rm -rf /home/devium/.config/xfce4/panel/launcher-*
         cp -r /usr/share/devium/xfce/live/panel/. /home/devium/.config/xfce4/panel/
     fi
+    # The live preview never locks itself (people don't know the live password).
+    mkdir -p /home/devium/.config
+    printf '[Daemon]\nAutolock=false\nLockOnResume=false\n' > /home/devium/.config/kscreenlockerrc
     mkdir -p /home/devium/Desktop
     install -m 755 /usr/share/applications/devium-install.desktop /home/devium/Desktop/ 2>/dev/null || true
     chown -R devium:devium /home/devium

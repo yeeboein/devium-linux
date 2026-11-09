@@ -205,7 +205,7 @@ if (( CALAMARES )); then
         echo "    needed_only: true"
         echo "operations:"
         echo "  - install:"
-        sed 's/^/      - /' "$STAGE/airootfs/usr/share/devium/install-packages.txt"
+        grep -vx 'devium-desktop' "$STAGE/airootfs/usr/share/devium/install-packages.txt" | sed 's/^/      - /'
         echo "      - grub"
         echo "      - os-prober"
     } > "$STAGE/airootfs/etc/calamares/modules/packages.conf"
