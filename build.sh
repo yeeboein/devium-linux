@@ -198,7 +198,10 @@ if (( CALAMARES )); then
         echo "backend: pacman"
         echo "skip_if_no_internet: false"
         echo "update_db: true"
-        echo "update_system: false"
+        # Upgrade everything copied from the ISO in the same step. Installing new packages
+        # against a freshly synced database without upgrading is a partial upgrade, which
+        # breaks on KDE's exact-version dependencies once the ISO is a few days old.
+        echo "update_system: true"
         echo "pacman:"
         echo "    num_retries: 3"
         echo "    disable_download_timeout: false"
