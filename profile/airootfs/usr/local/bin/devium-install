@@ -37,6 +37,15 @@ if ! curl -fsI -m 8 https://archlinux.org >/dev/null 2>&1; then
     echo -e "${Y}No internet connection.${N} Connect to Wi-Fi from the network icon in the taskbar, then try again."
     pause; exit 1
 fi
+# Devium needs about 20 GB. Warn early instead of failing halfway through the install.
+biggest=$(lsblk -dbno SIZE,TYPE,RO 2>/dev/null | awk '$2=="disk" && $3==0 {print $1}' | sort -n | tail -n1)
+if [[ -n $biggest ]] && (( biggest < 20 * 1000**3 )); then
+    echo -e "${Y}Your biggest disk is only $(( biggest / 1000**3 )) GB.${N} Devium needs at least 20 GB."
+    echo "In a virtual machine: shut it down and give it a bigger disk (30 GB is good)."
+    pause; exit 1
+fi
+echo -e "At the disk step, choose ${C}ext4${N} and answer ${Y}No${N} to a separate /home partition."
+echo
 read -r -p "Start the installer? [y/N] " ans
 [[ ${ans,,} == y* ]] || exit 0
 
@@ -66,8 +75,9 @@ json.dump({
 }, open(cfg, "w"), indent=2)
 PY
 
-# --skip-ntp: do not hang waiting for the clock to sync (VMs often never report "synced")
-archinstall --config "$CFG" --skip-ntp
+# --skip-ntp: do not hang waiting for the clock to sync (VMs often never report "synced").
+# install-progress.py keeps a Devium progress bar pinned to the bottom of this window.
+python3 /usr/lib/devium/install-progress.py archinstall --config "$CFG" --skip-ntp
 status=$?
 echo
 if [[ $status -eq 0 ]]; then
