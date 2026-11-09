@@ -20,6 +20,8 @@ efibootmgr
 grub
 os-prober
 arch-install-scripts
+squashfs-tools
+rsync
 archinstall
 sudo
 nano
