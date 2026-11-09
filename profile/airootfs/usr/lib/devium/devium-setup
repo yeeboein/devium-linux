@@ -186,6 +186,7 @@ case "${1:-}" in
         write_os_release
         ;;
     --live)
+        apply_overrides   # e.g. the Xfce edition's theme and dock settings
         write_os_release
         setup_pacman
         enable_services

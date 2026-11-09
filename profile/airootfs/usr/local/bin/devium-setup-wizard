@@ -566,11 +566,11 @@ class Wizard(QWidget):
             lines.append("kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile Devium.profile")
         # fastfetch keeps its own colours (/etc/xdg/fastfetch), so it looks the same with every theme
         if XFCE:
-            gtk = "Adwaita" if self.checked("style-kde") else ("Arc-Lighter" if light else "Arc-Dark")
+            gtk = "Adwaita" if (self.checked("style-kde") or light) else "Adwaita-dark"
             icons = "Adwaita" if self.checked("style-kde") else ("Papirus-Light" if light else "Papirus-Dark")
             lines.append(f"xfconf-query -c xsettings -p /Net/ThemeName -s {gtk}; "
                          f"xfconf-query -c xsettings -p /Net/IconThemeName -s {icons}; "
-                         f"xfconf-query -c xfwm4 -p /general/theme -s {gtk if gtk != 'Adwaita' else 'Default'}")
+                         "xfconf-query -c xfwm4 -p /general/theme -s Default")
         lines.append(f"plasma-apply-colorscheme {scheme}; "
                      f"plasma-apply-desktoptheme {'breeze-light' if light else 'breeze-dark'}")
         # KDE Lite / Full KDE (KDElite only changes your own settings and can be undone)
