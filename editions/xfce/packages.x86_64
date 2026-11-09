@@ -21,7 +21,7 @@ lightdm
 lightdm-gtk-greeter
 network-manager-applet
 polkit-gnome
-arc-gtk-theme
+gnome-themes-extra
 papirus-icon-theme
 xdg-desktop-portal-gtk
 

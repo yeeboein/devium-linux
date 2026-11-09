@@ -8,7 +8,7 @@
   system). When the computer starts, a boot menu lets you pick **Devium** or **Windows**.
 - **Devium Xfce edition:** a lighter ISO for very old laptops. Same Devium look, apps, Setup
   wizard and `support` command, with the Xfce desktop, a dock-style panel and the
-  Arc-Dark / Papirus theme.
+  dark Adwaita / Papirus theme.
 - **Brave Origin** in Devium Setup: Brave without Rewards, Wallet, VPN or AI. Devium installs
   Brave's official Linux build and Update Manager keeps it up to date.
 - Smaller ISO (stronger compression).
@@ -17,7 +17,7 @@
 | | KDE Plasma | Xfce |
 |---|---|---|
 | Best for | Most computers (4 GB+ RAM) | Very old laptops (2-4 GB RAM) |
-| Look | Floating dock, Devium themes, KDE Lite option | Dock-style panel, Arc-Dark theme |
+| Look | Floating dock, Devium themes, KDE Lite option | Dock-style panel, dark Adwaita theme |
 | Idle RAM (target) | ~450-650 MB | ~300-400 MB |
 
 ## Known limitations
