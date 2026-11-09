@@ -20,8 +20,7 @@ PAGES = [
         "items": [
             {"id": "brave", "name": "Brave", "desc": "Fast, blocks ads and trackers", "mb": 350,
              "flatpak": ["com.brave.Browser"], "desktop": "com.brave.Browser.desktop", "default": True},
-            {"id": "braveorigin", "name": "Brave Origin", "desc": "Minimal Brave: no Rewards, Wallet, VPN or AI "
-             "(official build, kept updated by Update Manager)", "mb": 350, "helper": "brave-origin",
+            {"id": "braveorigin", "name": "Brave Origin", "desc": "Minimal Brave: no Rewards, Wallet, VPN or AI", "mb": 350, "helper": "brave-origin",
              "pacman": ["unzip", "curl"], "desktop": "brave-origin.desktop"},
             {"id": "firefox", "name": "Firefox", "desc": "Popular and privacy-friendly", "mb": 250,
              "pacman": ["firefox"], "desktop": "firefox.desktop"},
