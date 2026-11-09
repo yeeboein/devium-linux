@@ -1,7 +1,6 @@
 # Devium package list. One package per line; lines starting with # are ignored.
 # build.sh skips (with a warning) any package that no longer exists in the repos.
 #
-# Packages marked "#live" are only on the live ISO (so people can try them).
 # Installed systems don't get them: users pick them in the Devium Setup wizard.
 
 # --- Base system & live ISO ---
@@ -23,7 +22,7 @@ archinstall
 sudo
 nano
 less
-man-db
+man-db #install
 bash-completion
 dosfstools
 e2fsprogs
@@ -35,7 +34,7 @@ lvm2
 usbutils
 pciutils
 zram-generator
-pacman-contrib
+pacman-contrib #install
 reflector
 pv
 plymouth
@@ -44,22 +43,22 @@ plymouth
 networkmanager
 wpa_supplicant
 iwd
-modemmanager
-bluez
-bluez-utils
+modemmanager #install
+bluez #install
+bluez-utils #install
 pipewire
 pipewire-alsa
 pipewire-pulse
 pipewire-jack
 wireplumber
-alsa-utils
-cups
-system-config-printer
-print-manager
-tlp
-ufw
-plasma-firewall
-power-profiles-daemon
+alsa-utils #install
+cups #install
+system-config-printer #install
+print-manager #install
+tlp #install
+ufw #install
+plasma-firewall #install
+power-profiles-daemon #install
 
 # --- Virtual machine guest support ---
 virtualbox-guest-utils
@@ -69,9 +68,9 @@ spice-vdagent
 
 # --- Graphics ---
 mesa
-vulkan-radeon
-vulkan-intel
-intel-media-driver
+vulkan-radeon #install
+vulkan-intel #install
+intel-media-driver #install
 xorg-server
 xorg-xwayland
 
@@ -79,99 +78,83 @@ xorg-xwayland
 plasma-desktop
 plasma-workspace
 sddm
-sddm-kcm
+sddm-kcm #install
 kscreen
 plasma-nm
 plasma-pa
 powerdevil
-bluedevil
-kde-gtk-config
+bluedevil #install
+kde-gtk-config #install
 breeze
-breeze-gtk
-kinfocenter
-plasma-systemmonitor
+breeze-gtk #install
+kinfocenter #install
+plasma-systemmonitor #install
 xdg-desktop-portal-kde
 qt6-wayland
-kwallet-pam
+kwallet-pam #install
 polkit-kde-agent
-kdeplasma-addons
-discover
-flatpak
+kdeplasma-addons #install
+discover #install
+flatpak #install
 
 # --- Apps ---
-dolphin
-dolphin-plugins
-kio-extras
-ffmpegthumbs
-kdegraphics-thumbnailers
+dolphin #install
+dolphin-plugins #install
+kio-extras #install
+ffmpegthumbs #install
+kdegraphics-thumbnailers #install
 konsole
-kate
-spectacle
-gwenview
-okular
-ark
-kcalc
-firefox #live
-mpv #live
-gst-plugins-good
-gst-libav
-ffmpeg
-timeshift
+kate #install
+spectacle #install
+gwenview #install
+okular #install
+ark #install
+kcalc #install
+gst-plugins-good #install
+gst-libav #install
+ffmpeg #install
+timeshift #install
 noto-fonts
-noto-fonts-emoji
+noto-fonts-emoji #install
 ttf-jetbrains-mono
-ttf-jetbrains-mono-nerd
+ttf-jetbrains-mono-nerd #install
 
 # --- Shell ---
 zsh
 zsh-autosuggestions
 zsh-syntax-highlighting
-zsh-completions
+zsh-completions #install
 
 # --- Coding (base; more in the Setup wizard) ---
-code #live
-base-devel
-git
-github-cli #live
-nodejs #live
-npm #live
-neovim
-fastfetch
-btop
-starship
-wget
+base-devel #install
+git #install
+neovim #install
+fastfetch #install
+btop #install
+starship #install
+wget #install
 curl
-unzip
-zip
-tree
-ripgrep
-fd
-jq
+unzip #install
+zip #install
+tree #install
+ripgrep #install
+fd #install
+jq #install
 
 # --- Python (+ libraries) ---
 python
-python-pip
-python-pipx
-python-virtualenv
-python-numpy #live
-python-pandas #live
-python-matplotlib #live
-python-requests
-python-flask #live
-python-beautifulsoup4 #live
-python-pytest #live
-python-black #live
-ruff #live
-python-pillow
-python-yaml
-python-rich
-ipython #live
+python-pip #install
+python-pipx #install
+python-virtualenv #install
+python-requests #install
+python-pillow #install
+python-yaml #install
+python-rich #install
 python-pyqt6
 
 # --- ArchPill (Dynamic-Island-style pill) ---
-quickshell #live
-qt6-svg
-qt6-declarative
-upower
-brightnessctl
+qt6-svg #install
+qt6-declarative #install
+upower #install
+brightnessctl #install
 libnotify

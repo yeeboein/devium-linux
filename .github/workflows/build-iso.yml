@@ -1,11 +1,12 @@
 name: Build Devium ISO
 
 # Run by hand (Actions tab -> Run workflow) to get a test ISO as a download,
-# or push a tag like v2026.12 to publish a GitHub Release ("KDE Plasma" edition).
+# or push a tag like beta3 or v1.0 to publish a GitHub Release ("KDE Plasma" edition).
+# Release notes come from docs/releases/<tag>.md when that file exists.
 on:
   workflow_dispatch:
   push:
-    tags: ['v*']
+    tags: ['v*', 'beta*']
 
 permissions:
   contents: write
@@ -27,7 +28,7 @@ jobs:
 
       - name: Pick the version
         run: |
-          if [[ $GITHUB_REF == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else v="$(date +%Y.%m.%d)"; fi
+          if [[ $GITHUB_REF == refs/tags/* ]]; then v="${GITHUB_REF_NAME#v}"; else v="$(date +%Y.%m.%d)"; fi
           echo "DEVIUM_VERSION=$v" >> "$GITHUB_ENV"
 
       - name: Build ISO in an Arch Linux container
@@ -55,15 +56,18 @@ jobs:
           mv ./*.iso "$iso"
           sha256sum "$iso" > "$iso.sha256"
           # GitHub Releases allow at most 2 GB per file: split bigger ISOs into parts.
-          if [[ $GITHUB_REF == refs/tags/v* && $(stat -c %s "$iso") -gt 2000000000 ]]; then
+          if [[ $GITHUB_REF == refs/tags/* && $(stat -c %s "$iso") -gt 2000000000 ]]; then
             split -b 1900M -d -a 3 "$iso" "$iso."
             rm "$iso"
             echo "SPLIT=1" >> "$GITHUB_ENV"
           fi
           ls -lh
+          cd ..
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          { [[ -f $notes ]] && cat "$notes"; echo; cat .github/release-footer.md; } > release-notes.md
 
       - name: Upload ISO (Actions download)
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-artifact@v4
         with:
           name: devium-iso
@@ -72,19 +76,10 @@ jobs:
           retention-days: 14
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           name: Devium KDE Plasma ${{ env.DEVIUM_VERSION }}
           files: out/*
-          body: |
-            **Devium KDE Plasma ${{ env.DEVIUM_VERSION }}**
-
-            Download `devium-kdeplasma-${{ env.DEVIUM_VERSION }}-x86_64.iso` and follow the
-            [guide](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/GUIDE.md).
-
-            If the ISO comes in parts (`.iso.000`, `.iso.001`...), download all parts and join them:
-            - Linux/macOS: `cat devium-*.iso.0* > devium.iso`
-            - Windows (Command Prompt): `copy /b devium-kdeplasma-${{ env.DEVIUM_VERSION }}-x86_64.iso.000+devium-kdeplasma-${{ env.DEVIUM_VERSION }}-x86_64.iso.001 devium.iso`
-
-            Check the download with the `.sha256` file.
+          body_path: release-notes.md
+          prerelease: ${{ startsWith(github.ref_name, 'beta') }}

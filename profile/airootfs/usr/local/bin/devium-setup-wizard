@@ -23,6 +23,7 @@ import setup_catalog as cat
 
 CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium")
 DONE_MARKER = os.path.join(CONFIG, "setup-done")
+KDELITE = "/opt/kdelite/kdelite"
 
 
 # --------------------------------------------------------------------------- helpers
@@ -275,6 +276,10 @@ class Wizard(QWidget):
                 self.inputs[oid] = r
                 l.addWidget(r)
 
+        if os.path.exists(KDELITE):
+            radios("Desktop", [("kde-lite", "KDE Lite   —   recommended: switches off KDE extras you don't need, "
+                                            "uses less RAM"),
+                               ("kde-full", "Full KDE   —   everything KDE normally runs")], "kde-lite")
         radios("Brightness", [("theme-dark", "Dark"), ("theme-light", "Light")], "theme-dark")
         radios("Terminal shell", [(f"shell-{s['id']}", f"{s['name']}   —   {s['desc']}") for s in cat.SHELLS],
                "shell-zsh")
@@ -420,7 +425,7 @@ class Wizard(QWidget):
         free = free_mb()
         rows = "".join(f"<tr><td>{it['name']}</td><td align='right'>{fmt_mb(it.get('mb', 0))}</td></tr>"
                        for it in p["items"])
-        look = [("Devium Dark theme" if self.checked("style-deviumdark") else
+        look = (["KDE Lite" if self.checked("kde-lite") else "Full KDE"] if os.path.exists(KDELITE) else []) + [("Devium Dark theme" if self.checked("style-deviumdark") else
                  ("Devium" if self.checked("style-devium") else "Base KDE") + " theme, " +
                  ("dark" if self.checked("theme-dark") else "light")),
                 f"{p['shell']['name']} shell",
@@ -538,6 +543,12 @@ class Wizard(QWidget):
         # fastfetch keeps its own colours (/etc/xdg/fastfetch), so it looks the same with every theme
         lines.append(f"plasma-apply-colorscheme {scheme}; "
                      f"plasma-apply-desktoptheme {'breeze-light' if light else 'breeze-dark'}")
+        # KDE Lite / Full KDE (KDElite only changes your own settings and can be undone)
+        if self.checked("kde-lite"):
+            lines.append(f"bash {KDELITE} apply")
+        elif self.checked("kde-full"):
+            lines.append(f"[ -d ~/.local/share/kdelite ] && bash {KDELITE} revert")
+        lines.append(f"mkdir -p {q(CONFIG)} && touch {q(os.path.join(CONFIG, 'shell-chosen'))}")
         # ArchPill
         if self.checked("archpill"):
             lines.append("if command -v qs >/dev/null && [ -d /opt/archpill ]; then "

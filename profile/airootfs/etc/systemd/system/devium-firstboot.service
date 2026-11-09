@@ -1,0 +1,14 @@
+[Unit]
+Description=Finish setting up Devium (first boot)
+# Safety net: if the installer couldn't finish Devium's setup, do it before the login screen.
+ConditionPathExists=!/var/lib/devium/finished
+Before=display-manager.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/devium/devium-setup --finish
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

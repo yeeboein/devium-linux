@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""About Devium: what Devium is, its version and the people who make it."""
+import sys
+
+sys.path.insert(0, "/usr/lib/devium")
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+
+import devium_ui as ui
+
+
+class About(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("About Devium")
+        self.setWindowIcon(ui.app_icon())
+        self.setFixedWidth(520)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(28, 24, 28, 20)
+        lay.setSpacing(10)
+
+        logo = QLabel()
+        logo.setPixmap(QPixmap(ui.LOGO).scaled(96, 96, Qt.AspectRatioMode.KeepAspectRatio,
+                                              Qt.TransformationMode.SmoothTransformation))
+        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(logo)
+        title = QLabel("Devium")
+        title.setObjectName("title")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(title)
+        ver = QLabel(f"Version {ui.devium_version()}  ·  KDE Plasma edition")
+        ver.setObjectName("subtitle")
+        ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(ver)
+        desc = QLabel("A light, fast Arch Linux desktop made for coding. Easy for beginners, nice for pros, "
+                      "and it runs well on older laptops. After installing, Devium Setup lets you pick "
+                      "exactly what you want, so nothing you don't need gets installed.")
+        desc.setWordWrap(True)
+        desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(desc)
+        lay.addSpacing(6)
+        lay.addWidget(ui.developers_widget())
+        lay.addSpacing(8)
+
+        row = QHBoxLayout()
+        gh = QPushButton("Devium on GitHub")
+        gh.clicked.connect(lambda: ui.launch("xdg-open", "https://github.com/yeeboein/devium-linux"))
+        row.addWidget(gh)
+        row.addStretch(1)
+        if ui.is_live():
+            inst = QPushButton("Install Devium")
+            inst.setObjectName("primary")
+            inst.clicked.connect(lambda: ui.launch("devium-install"))
+            row.addWidget(inst)
+        close = QPushButton("Close")
+        close.clicked.connect(self.close)
+        row.addWidget(close)
+        lay.addLayout(row)
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("About Devium")
+    app.setDesktopFileName("devium-about")
+    app.setStyleSheet(ui.STYLE)
+    w = About()
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
