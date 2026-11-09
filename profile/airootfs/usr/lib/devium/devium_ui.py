@@ -129,7 +129,9 @@ def developers_widget():
         card.setStyleSheet(f"QWidget#devcard {{ border: 1px solid palette(mid); border-radius: 14px; }}")
         row = QHBoxLayout(card)
         row.setContentsMargins(12, 10, 12, 10)
+        card.setMinimumHeight(92)
         img = QLabel()
+        img.setFixedSize(64, 64)
         img.setPixmap(round_pixmap(pic, 64))
         row.addWidget(img)
         txt = QLabel(f"<b style='font-size:13pt'>{name}</b><br>"
@@ -144,6 +146,7 @@ def developers_widget():
     links = QLabel("<br>".join(f"<a href='{u}' style='color:{ACCENT}'>{n}</a> &nbsp;—&nbsp; {d}"
                                for n, d, u in CREDITS))
     links.setOpenExternalLinks(True)
+    links.setMinimumHeight(links.sizeHint().height() + 8)
     col.addWidget(links)
     return w
 
