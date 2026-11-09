@@ -24,6 +24,23 @@ import setup_catalog as cat
 CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium")
 DONE_MARKER = os.path.join(CONFIG, "setup-done")
 KDELITE = "/opt/kdelite/kdelite"
+XFCE = ui.edition() == "xfce"
+if XFCE:
+    # Thunar and the Xfce terminal come with the Xfce edition; Dolphin/Konsole become optional.
+    for page in cat.PAGES:
+        if page["id"] == "filemanager":
+            for it in page["items"]:
+                if it["id"] == "dolphin":
+                    it.update(pacman=["dolphin"], mb=80, default=False, desc="Powerful KDE file manager")
+                if it["id"] == "thunar":
+                    it.update(pacman=[], mb=0, default=True, desc="Light and simple (included)")
+        if page["id"] == "terminal":
+            for it in page["items"]:
+                if it["id"] == "konsole":
+                    it.update(pacman=["konsole"], mb=40, default=False, desc="KDE's full-featured terminal")
+            page["items"].insert(0, {"id": "xfceterm", "name": "Xfce Terminal", "desc": "Simple and light (included)",
+                                     "mb": 0, "exec": "xfce4-terminal", "desktop": "xfce4-terminal.desktop",
+                                     "default": True})
 
 
 # --------------------------------------------------------------------------- helpers
@@ -276,7 +293,7 @@ class Wizard(QWidget):
                 self.inputs[oid] = r
                 l.addWidget(r)
 
-        if os.path.exists(KDELITE):
+        if os.path.exists(KDELITE) and not XFCE:
             radios("Desktop", [("kde-lite", "KDE Lite   —   recommended: switches off KDE extras you don't need, "
                                             "uses less RAM"),
                                ("kde-full", "Full KDE   —   everything KDE normally runs")], "kde-lite")
@@ -426,7 +443,8 @@ class Wizard(QWidget):
         free = free_mb()
         rows = "".join(f"<tr><td>{it['name']}</td><td align='right'>{fmt_mb(it.get('mb', 0))}</td></tr>"
                        for it in p["items"])
-        look = (["KDE Lite" if self.checked("kde-lite") else "Full KDE"] if os.path.exists(KDELITE) else []) + [("Devium Dark theme" if self.checked("style-deviumdark") else
+        look = (["KDE Lite" if self.checked("kde-lite") else "Full KDE"]
+                if os.path.exists(KDELITE) and not XFCE else []) + [("Devium Dark theme" if self.checked("style-deviumdark") else
                  ("Devium" if self.checked("style-devium") else "Base KDE") + " theme, " +
                  ("dark" if self.checked("theme-dark") else "light")),
                 f"{p['shell']['name']} shell",
@@ -487,7 +505,8 @@ class Wizard(QWidget):
             if it["id"] in [x["id"] for x in cat.PAGES[1]["items"]] and it.get("desktop"):
                 lines.append(f"xdg-mime default {q(it['desktop'])} inode/directory")
             if it["id"] in [x["id"] for x in cat.PAGES[2]["items"]] and it.get("exec"):
-                lines.append(f"kwriteconfig6 --file kdeglobals --group General --key TerminalApplication {q(it['exec'])}")
+                lines.append(f"kwriteconfig6 --file kdeglobals --group General --key TerminalApplication {q(it['exec'])} 2>/dev/null")
+                lines.append(f"mkdir -p ~/.config/xfce4 && printf 'TerminalEmulator=%s\\n' {q(it['exec'])} > ~/.config/xfce4/helpers.rc")
                 lines.append(f"kwriteconfig6 --file kdeglobals --group General --key TerminalService {q(it['desktop'])}")
         # editor extensions for the chosen languages
         for ed in ("vscodium", "vscode"):
@@ -546,6 +565,12 @@ class Wizard(QWidget):
             scheme = "DeviumLight" if light else "Devium"
             lines.append("kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile Devium.profile")
         # fastfetch keeps its own colours (/etc/xdg/fastfetch), so it looks the same with every theme
+        if XFCE:
+            gtk = "Adwaita" if self.checked("style-kde") else ("Arc-Lighter" if light else "Arc-Dark")
+            icons = "Adwaita" if self.checked("style-kde") else ("Papirus-Light" if light else "Papirus-Dark")
+            lines.append(f"xfconf-query -c xsettings -p /Net/ThemeName -s {gtk}; "
+                         f"xfconf-query -c xsettings -p /Net/IconThemeName -s {icons}; "
+                         f"xfconf-query -c xfwm4 -p /general/theme -s {gtk if gtk != 'Adwaita' else 'Default'}")
         lines.append(f"plasma-apply-colorscheme {scheme}; "
                      f"plasma-apply-desktoptheme {'breeze-light' if light else 'breeze-dark'}")
         # KDE Lite / Full KDE (KDElite only changes your own settings and can be undone)
@@ -630,7 +655,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Devium Setup")
     app.setDesktopFileName("devium-setup-wizard")
-    app.setStyleSheet(ui.STYLE)
+    ui.style_app(app)
     w = Wizard()
     w.show()
     sys.exit(app.exec())

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Install Devium
+Comment=Install Devium to this computer's disk
+Exec=devium-install
+Icon=devium
+Terminal=false
+Categories=System;

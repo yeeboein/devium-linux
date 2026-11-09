@@ -10,8 +10,12 @@ if [[ -z ${DEVIUM_TEXT_INSTALLER:-} && -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]] &&
 fi
 
 if [[ -z ${DEVIUM_IN_TERMINAL:-} && -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]]; then
-    exec env DEVIUM_IN_TERMINAL=1 konsole --hide-menubar -p tabtitle="Install Devium" \
-        -e sudo --preserve-env=DEVIUM_IN_TERMINAL "$0"
+    if command -v konsole >/dev/null; then
+        exec env DEVIUM_IN_TERMINAL=1 konsole --hide-menubar -p tabtitle="Install Devium" \
+            -e sudo --preserve-env=DEVIUM_IN_TERMINAL "$0"
+    fi
+    exec env DEVIUM_IN_TERMINAL=1 xfce4-terminal --title="Install Devium" \
+        -x sudo --preserve-env=DEVIUM_IN_TERMINAL "$0"
 fi
 [[ $EUID -eq 0 ]] || exec sudo "$0" "$@"
 

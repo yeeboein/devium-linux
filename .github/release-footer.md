@@ -2,7 +2,7 @@
 
 ### Download
 
-Download `devium-kdeplasma-<version>-x86_64.iso` below and follow the
+Download **Devium KDE Plasma** (`devium-kdeplasma-<version>-x86_64.iso`) or the lighter **Devium Xfce** (`devium-xfce-<version>-x86_64.iso`) below, and follow the
 [guide](https://github.com/yeeboein/devium-linux/blob/main/docs/GUIDE.md).
 
 If the ISO comes in parts (`.iso.000`, `.iso.001`, ...), download all parts and join them:

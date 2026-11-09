@@ -166,7 +166,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Devium Updater")
     app.setDesktopFileName("devium-updater")
-    app.setStyleSheet(ui.STYLE)
+    ui.style_app(app)
     w = Updater()
     w.show()
     sys.exit(app.exec())
