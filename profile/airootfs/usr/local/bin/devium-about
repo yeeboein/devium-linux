@@ -16,7 +16,7 @@ class About(QWidget):
         super().__init__()
         self.setWindowTitle("About Devium")
         self.setWindowIcon(ui.app_icon())
-        self.setFixedWidth(520)
+        self.setMinimumWidth(540)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(28, 24, 28, 20)
         lay.setSpacing(10)
@@ -58,6 +58,7 @@ class About(QWidget):
         close.clicked.connect(self.close)
         row.addWidget(close)
         lay.addLayout(row)
+        self.resize(540, self.sizeHint().height() + 20)
 
 
 def main():
