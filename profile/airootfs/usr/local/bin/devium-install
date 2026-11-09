@@ -66,7 +66,8 @@ json.dump({
 }, open(cfg, "w"), indent=2)
 PY
 
-archinstall --config "$CFG"
+# --skip-ntp: do not hang waiting for the clock to sync (VMs often never report "synced")
+archinstall --config "$CFG" --skip-ntp
 status=$?
 echo
 if [[ $status -eq 0 ]]; then
