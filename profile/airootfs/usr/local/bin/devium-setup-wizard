@@ -389,7 +389,8 @@ class Wizard(QWidget):
         pac, fl, aur, svcs, groups, ext = [], [], [], [], [], []
         mb = 0
         for it in items:
-            already = all(installed(p) for p in it.get("pacman", [])) and not it.get("flatpak") and not it.get("aur")
+            already = (all(installed(p) for p in it.get("pacman", []))
+                       and not it.get("flatpak") and not it.get("aur") and not it.get("helper"))
             if not already:
                 mb += it.get("mb", 0)
             pac += [p for p in it.get("pacman", []) if p in self.avail]
@@ -454,6 +455,10 @@ class Wizard(QWidget):
         steps = []
         steps.append(("Installing packages and apps…", "pkexec",
                       ["/usr/lib/devium/devium-helper", "setup", plan_file]))
+        for it in p["items"]:
+            if it.get("helper"):
+                steps.append((f"Installing {it['name']}…", "pkexec",
+                              ["/usr/lib/devium/devium-helper", it["helper"]]))
         for pkg in p["aur"]:
             steps.append((f"Building {pkg} from the AUR…", "bash", ["-c", self.aur_script(pkg)]))
             steps.append((f"Installing {pkg}…", "bash", ["-c",

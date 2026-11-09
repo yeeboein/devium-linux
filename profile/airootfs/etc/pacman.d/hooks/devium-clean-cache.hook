@@ -9,5 +9,4 @@ Target = *
 [Action]
 Description = Cleaning old packages from the cache...
 When = PostTransaction
-Depends = pacman-contrib
-Exec = /usr/bin/paccache -rqk2
+Exec = /bin/sh -c 'command -v paccache >/dev/null && paccache -rqk2; exit 0'
