@@ -302,8 +302,8 @@ class Wizard(QWidget):
                "shell-zsh")
 
         l.addWidget(label("Extras", "h2"))
-        ap = QCheckBox(f"ArchPill   —   pill with time, music, battery; keeps the dock to just apps "
-                       f"({fmt_mb(cat.ARCHPILL['mb'])}, ~40 MB RAM)")
+        ap = QCheckBox(f"ArchPill   —   pill with time, music, battery; dock shows just apps "
+                       f"({fmt_mb(cat.ARCHPILL['mb'])})")
         ap.setChecked(True)
         ap.toggled.connect(self.update_total)
         self.inputs["archpill"] = ap
@@ -318,8 +318,8 @@ class Wizard(QWidget):
 
         radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey, pale accents, big floating dock"),
                          ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey, big floating dock"),
-                         ("style-kde", "Base KDE   —   KDE's standard Breeze look and full-width panel "
-                                       "(recommended if you want to customise)")],
+                         ("style-kde", "Base KDE   —   KDE's standard look and panel "
+                                       "(best if you want to customise)")],
                "style-devium")
         l.addWidget(label("The Devium fastfetch logo looks the same with every theme.", "subtitle"))
         l.addStretch(1)
