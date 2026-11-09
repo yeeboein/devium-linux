@@ -296,9 +296,11 @@ class Wizard(QWidget):
             l.addWidget(b)
 
         radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey with pale accents"),
+                         ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey (always dark)"),
                          ("style-kde", "Base KDE   —   KDE's standard Breeze look "
                                        "(recommended if you want to customise)")],
                "style-devium")
+        l.addWidget(label("The Devium fastfetch logo looks the same with every theme.", "subtitle"))
         l.addStretch(1)
         return scroll(inner)
 
@@ -420,8 +422,9 @@ class Wizard(QWidget):
         rows = "".join(f"<tr><td>{it['name']}</td><td align='right'>{fmt_mb(it.get('mb', 0))}</td></tr>"
                        for it in p["items"])
         look = [("Beginner" if self.checked("mode-beginner") else "Pro") + " mode",
-                ("Devium" if self.checked("style-devium") else "Base KDE") + " theme, " +
-                ("dark" if self.checked("theme-dark") else "light"),
+                ("Devium Dark theme" if self.checked("style-deviumdark") else
+                 ("Devium" if self.checked("style-devium") else "Base KDE") + " theme, " +
+                 ("dark" if self.checked("theme-dark") else "light")),
                 f"{p['shell']['name']} shell",
                 "ArchPill on" if self.checked("archpill") else "ArchPill off"]
         left = free - p["mb"]
@@ -513,8 +516,14 @@ class Wizard(QWidget):
             scheme = "BreezeLight" if light else "BreezeDark"
             lines.append("kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile ''")
             lines.append("kwriteconfig6 --file kdeglobals --group General --key AccentColor 61,174,233")
+        elif self.checked("style-deviumdark"):
+            light = False
+            scheme = "DeviumDark"
+            lines.append("kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile DeviumDark.profile")
         else:
             scheme = "DeviumLight" if light else "Devium"
+            lines.append("kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile Devium.profile")
+        # fastfetch keeps its own colours (/etc/xdg/fastfetch), so it looks the same with every theme
         lines.append(f"plasma-apply-colorscheme {scheme}; "
                      f"plasma-apply-desktoptheme {'breeze-light' if light else 'breeze-dark'}")
         # ArchPill

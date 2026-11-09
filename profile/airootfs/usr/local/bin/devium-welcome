@@ -352,6 +352,8 @@ class Welcome(QWidget):
                      lambda: firewall(False), "security-low"),
                 tile("Dark theme", "Easy on the eyes", lambda: theme(True), "weather-clear-night"),
                 tile("Light theme", "Bright and clean", lambda: theme(False), "weather-clear"),
+                tile("Devium Dark", "Deeper, darker blue-grey",
+                     lambda: ui.launch("plasma-apply-colorscheme", "DeviumDark"), "weather-clear-night"),
                 tile("Printers", "Add or manage printers",
                      lambda: self.go("systemsettings", "kcm_printer_manager"), "printer"),
                 tile("System Monitor", "See what's using CPU and memory",
