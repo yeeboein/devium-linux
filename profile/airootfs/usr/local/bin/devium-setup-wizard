@@ -275,9 +275,6 @@ class Wizard(QWidget):
                 self.inputs[oid] = r
                 l.addWidget(r)
 
-        radios("Mode", [("mode-beginner", "Beginner   —   big dock, tips, simple file manager"),
-                        ("mode-pro", "Pro   —   slim dock, Starship prompt, git aliases, split-view files")],
-               "mode-beginner")
         radios("Brightness", [("theme-dark", "Dark"), ("theme-light", "Light")], "theme-dark")
         radios("Terminal shell", [(f"shell-{s['id']}", f"{s['name']}   —   {s['desc']}") for s in cat.SHELLS],
                "shell-zsh")
@@ -297,9 +294,9 @@ class Wizard(QWidget):
             b.setStyleSheet("padding: 5px;")
             l.addWidget(b)
 
-        radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey with pale accents"),
-                         ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey (always dark)"),
-                         ("style-kde", "Base KDE   —   KDE's standard Breeze look "
+        radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey, pale accents, big floating dock"),
+                         ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey, big floating dock"),
+                         ("style-kde", "Base KDE   —   KDE's standard Breeze look and full-width panel "
                                        "(recommended if you want to customise)")],
                "style-devium")
         l.addWidget(label("The Devium fastfetch logo looks the same with every theme.", "subtitle"))
@@ -423,8 +420,7 @@ class Wizard(QWidget):
         free = free_mb()
         rows = "".join(f"<tr><td>{it['name']}</td><td align='right'>{fmt_mb(it.get('mb', 0))}</td></tr>"
                        for it in p["items"])
-        look = [("Beginner" if self.checked("mode-beginner") else "Pro") + " mode",
-                ("Devium Dark theme" if self.checked("style-deviumdark") else
+        look = [("Devium Dark theme" if self.checked("style-deviumdark") else
                  ("Devium" if self.checked("style-devium") else "Base KDE") + " theme, " +
                  ("dark" if self.checked("theme-dark") else "light")),
                 f"{p['shell']['name']} shell",
@@ -505,6 +501,12 @@ class Wizard(QWidget):
         launchers += ["applications:org.kde.kate.desktop", "applications:devium-snip.desktop",
                       "applications:org.kde.discover.desktop", "applications:devium-welcome.desktop"]
         hiding = "dodgewindows" if self.checked("dock-hide") else "none"
+        if self.checked("style-kde"):
+            dock_js = ("p.floating=false; p.alignment='left'; p.lengthMode='fill';"
+                       "p.height=2*Math.ceil(gridUnit*2.2/2);")
+        else:
+            dock_js = ("p.floating=true; p.alignment='center'; p.lengthMode='fit';"
+                       "p.height=2*Math.ceil(gridUnit*3.4/2);")
         # With ArchPill the pill shows time, battery, sound and network, so the dock keeps only
         # the start button and app icons. Without ArchPill the dock keeps its tray and clock.
         extras = ["org.kde.plasma.marginsseparator", "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock"]
@@ -513,14 +515,13 @@ class Wizard(QWidget):
                        " || ".join(f"w.type=='{t}'" for t in extras) + ") w.remove(); });")
         else:
             tray_js = "".join(f"if (p.widgets('{t}').length==0) p.addWidget('{t}');" for t in extras)
-        js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';"
+        js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';" + dock_js +
               "p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General'];"
               "w.writeConfig('launchers','" + ",".join(launchers) + "'); w.reloadConfig(); });"
               + tray_js + " });")
         lines.append(f"(qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)} "
                      f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
-        # mode + theme
-        lines.append("devium-mode " + ("pro" if self.checked("mode-pro") else "beginner"))
+        # theme (the Devium themes come with the big floating dock; Base KDE gets KDE's normal panel)
         light = self.checked("theme-light")
         if self.checked("style-kde"):
             # KDE's stock Breeze: the easiest starting point for your own customising

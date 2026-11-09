@@ -13,11 +13,11 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
 alias ls='ls --color=auto' grep='grep --color=auto' ll='ls -lah'
 alias update='devium-update-manager'
 
-DEVIUM_MODE="$(cat ~/.config/devium/mode 2>/dev/null || echo beginner)"
-if [[ $DEVIUM_MODE == pro ]]; then
-    alias gs='git status' ga='git add' gc='git commit' gp='git push' gl='git log --oneline --graph -20'
-    alias py='python' venv='python -m venv .venv && source .venv/bin/activate'
-    command -v starship >/dev/null && eval "$(starship init zsh)"
+alias gs='git status' ga='git add' gc='git commit' gp='git push' gl='git log --oneline --graph -20'
+alias py='python' venv='python -m venv .venv && source .venv/bin/activate'
+
+if command -v starship >/dev/null; then
+    eval "$(starship init zsh)"
 else
     PROMPT='%F{cyan}%B%n@%m%b%f %F{magenta}%~%f %# '
 fi
@@ -31,5 +31,5 @@ fi
 if [[ -z ${DEVIUM_FETCHED:-} ]] && command -v fastfetch >/dev/null; then
     export DEVIUM_FETCHED=1
     fastfetch
-    [[ $DEVIUM_MODE != pro ]] && print -P "  %F{8}Tip: type %F{cyan}update%F{8} to update. Start typing and press → to accept a suggestion.%f\n"
+    print -P "  %F{8}Type %F{cyan}support%F{8} to see helpful commands.%f\n"
 fi

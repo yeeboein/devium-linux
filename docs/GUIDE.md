@@ -135,7 +135,7 @@ On your first login:
 - **ArchPill** sets itself up (move the mouse to the top-centre of the screen).
 - **VS Code** gets its Python extension in the background.
 - **Devium Welcome** opens. Good first steps:
-  1. **Beginner / Pro** – pick how Devium should feel.
+  1. **Devium Setup** – pick your apps, tools, games and theme.
   2. **System → Restore points** – set up Timeshift, so you can undo a bad update.
   3. **Drivers** – install anything suggested for your computer (e.g. NVIDIA).
   4. **Update Manager** (Meta+U) – install the latest updates.

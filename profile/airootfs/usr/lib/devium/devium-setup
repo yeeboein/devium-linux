@@ -69,7 +69,7 @@ enable_services() {
     # TLP and power-profiles-daemon fight over the same settings: TLP wins.
     systemctl mask power-profiles-daemon.service >/dev/null 2>&1 || true
     systemctl mask systemd-rfkill.service systemd-rfkill.socket >/dev/null 2>&1 || true
-    # Daily "updates available" check for every user (can be turned off in Pro mode).
+    # Daily "updates available" check for every user.
     systemctl --global enable devium-update-check.timer >/dev/null 2>&1 || true
 }
 

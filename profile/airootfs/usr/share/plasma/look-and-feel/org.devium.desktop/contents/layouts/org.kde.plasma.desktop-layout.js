@@ -3,7 +3,7 @@
 
 var dock = new Panel;
 dock.location = "bottom";
-dock.height = 2 * Math.ceil(gridUnit * 3.4 / 2);   // big icons (Pro mode makes it slimmer)
+dock.height = 2 * Math.ceil(gridUnit * 3.4 / 2);   // big icons (part of the Devium theme)
 try { dock.floating = true; } catch (e) {}
 try { dock.alignment = "center"; } catch (e) {}
 try { dock.lengthMode = "fit"; } catch (e) {}       // only as wide as its icons
