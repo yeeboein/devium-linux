@@ -5,6 +5,11 @@ name: Build Devium ISO
 # Release notes come from docs/releases/<tag>.md when that file exists.
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish as a release with this name (e.g. beta3). Leave empty for a test build."
+        required: false
+        default: ""
   push:
     tags: ['v*', 'beta*']
 
@@ -17,6 +22,7 @@ jobs:
     timeout-minutes: 150
     env:
       EDITION: kdeplasma
+      RELEASE: ${{ github.event.inputs.release || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,13 +34,13 @@ jobs:
 
       - name: Pick the version
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then v="${GITHUB_REF_NAME#v}"; else v="$(date +%Y.%m.%d)"; fi
+          if [[ -n $RELEASE ]]; then v="${RELEASE#v}"; else v="$(date +%Y.%m.%d)"; fi
           echo "DEVIUM_VERSION=$v" >> "$GITHUB_ENV"
 
       - name: Build ISO in an Arch Linux container
         run: |
           sudo docker run --rm --privileged \
-            -e DEVIUM_VERSION -e DEVIUM_REF="${GITHUB_REF_NAME}" \
+            -e DEVIUM_VERSION -e DEVIUM_REF="${RELEASE:-$GITHUB_REF_NAME}" \
             -v "$PWD":/devium -w /devium \
             archlinux:latest \
             bash -c '
@@ -56,18 +62,18 @@ jobs:
           mv ./*.iso "$iso"
           sha256sum "$iso" > "$iso.sha256"
           # GitHub Releases allow at most 2 GB per file: split bigger ISOs into parts.
-          if [[ $GITHUB_REF == refs/tags/* && $(stat -c %s "$iso") -gt 2000000000 ]]; then
+          if [[ -n $RELEASE && $(stat -c %s "$iso") -gt 2000000000 ]]; then
             split -b 1900M -d -a 3 "$iso" "$iso."
             rm "$iso"
             echo "SPLIT=1" >> "$GITHUB_ENV"
           fi
           ls -lh
           cd ..
-          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          notes="docs/releases/${RELEASE}.md"
           { [[ -f $notes ]] && cat "$notes"; echo; cat .github/release-footer.md; } > release-notes.md
 
       - name: Upload ISO (Actions download)
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        if: env.RELEASE == ''
         uses: actions/upload-artifact@v4
         with:
           name: devium-iso
@@ -76,10 +82,12 @@ jobs:
           retention-days: 14
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: env.RELEASE != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE }}
+          target_commitish: ${{ github.sha }}
           name: Devium KDE Plasma ${{ env.DEVIUM_VERSION }}
           files: out/*
           body_path: release-notes.md
-          prerelease: ${{ startsWith(github.ref_name, 'beta') }}
+          prerelease: ${{ startsWith(env.RELEASE, 'beta') }}
