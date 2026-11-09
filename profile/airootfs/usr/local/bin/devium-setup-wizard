@@ -283,11 +283,13 @@ class Wizard(QWidget):
                "shell-zsh")
 
         l.addWidget(label("Extras", "h2"))
-        ap = QCheckBox(f"ArchPill   —   Dynamic-Island-style pill: time, music, battery "
+        ap = QCheckBox(f"ArchPill   —   pill with time, music, battery; keeps the dock to just apps "
                        f"({fmt_mb(cat.ARCHPILL['mb'])}, ~40 MB RAM)")
         ap.setChecked(True)
         ap.toggled.connect(self.update_total)
         self.inputs["archpill"] = ap
+        ap.setToolTip("With ArchPill, the dock shows only the start button and your apps: "
+                      "the pill shows the time, battery, sound and network instead.")
         dock = QCheckBox("Hide the dock when a window covers it")
         dock.setChecked(True)
         self.inputs["dock-hide"] = dock
@@ -503,9 +505,18 @@ class Wizard(QWidget):
         launchers += ["applications:org.kde.kate.desktop", "applications:devium-snip.desktop",
                       "applications:org.kde.discover.desktop", "applications:devium-welcome.desktop"]
         hiding = "dodgewindows" if self.checked("dock-hide") else "none"
+        # With ArchPill the pill shows time, battery, sound and network, so the dock keeps only
+        # the start button and app icons. Without ArchPill the dock keeps its tray and clock.
+        extras = ["org.kde.plasma.marginsseparator", "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock"]
+        if self.checked("archpill"):
+            tray_js = ("p.widgets().forEach(function(w){ if (" +
+                       " || ".join(f"w.type=='{t}'" for t in extras) + ") w.remove(); });")
+        else:
+            tray_js = "".join(f"if (p.widgets('{t}').length==0) p.addWidget('{t}');" for t in extras)
         js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';"
               "p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General'];"
-              "w.writeConfig('launchers','" + ",".join(launchers) + "'); w.reloadConfig(); }); });")
+              "w.writeConfig('launchers','" + ",".join(launchers) + "'); w.reloadConfig(); });"
+              + tray_js + " });")
         lines.append(f"(qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)} "
                      f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
         # mode + theme
