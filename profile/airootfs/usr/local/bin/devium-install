@@ -5,6 +5,8 @@ set -uo pipefail
 
 # Point-and-click installer (Calamares) when it's on the ISO; the text installer is the fallback.
 if [[ -z ${DEVIUM_TEXT_INSTALLER:-} && -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]] && command -v calamares >/dev/null; then
+    # Devium splash while the installer loads (closes itself when the installer appears)
+    python3 /usr/lib/devium/install-splash.py >/dev/null 2>&1 &
     exec sudo --preserve-env=DISPLAY,WAYLAND_DISPLAY,XDG_RUNTIME_DIR,XAUTHORITY,QT_QPA_PLATFORM \
         calamares -style breeze
 fi
@@ -49,8 +51,8 @@ if ! curl -fsI -m 8 https://archlinux.org >/dev/null 2>&1; then
 fi
 # Devium needs about 20 GB. Warn early instead of failing halfway through the install.
 biggest=$(lsblk -dbno SIZE,TYPE,RO 2>/dev/null | awk '$2=="disk" && $3==0 {print $1}' | sort -n | tail -n1)
-if [[ -n $biggest ]] && (( biggest < 20 * 1000**3 )); then
-    echo -e "${Y}Your biggest disk is only $(( biggest / 1000**3 )) GB.${N} Devium needs at least 20 GB."
+if [[ -n $biggest ]] && (( biggest < 12 * 1000**3 )); then
+    echo -e "${Y}Your biggest disk is only $(( biggest / 1000**3 )) GB.${N} Devium needs at least 12 GB."
     echo "In a virtual machine: shut it down and give it a bigger disk (30 GB is good)."
     pause; exit 1
 fi

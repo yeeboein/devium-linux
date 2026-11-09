@@ -121,7 +121,7 @@ timeshift #install
 noto-fonts
 noto-fonts-emoji #install
 ttf-jetbrains-mono
-ttf-jetbrains-mono-nerd #install
+ttf-nerd-fonts-symbols-mono #install
 
 # --- Shell ---
 zsh
@@ -130,7 +130,7 @@ zsh-syntax-highlighting
 zsh-completions #install
 
 # --- Coding (base; more in the Setup wizard) ---
-base-devel #install
+
 git #install
 neovim #install
 fastfetch #install
@@ -155,6 +155,7 @@ python-pillow #install
 python-yaml #install
 python-rich #install
 python-pyqt6
+python-qrcode
 
 # --- ArchPill (Dynamic-Island-style pill) ---
 qt6-svg #install

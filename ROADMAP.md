@@ -53,6 +53,9 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] Devium Xfce edition (editions/xfce, EDITION=xfce ./build.sh)
 - [x] Brave Origin (official build from Brave's GitHub releases)
 
+## beta5
+- [x] Installer fix (squashfs-tools, rsync), QR codes for links, install splash, storage trims, 12 GB minimum
+
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website

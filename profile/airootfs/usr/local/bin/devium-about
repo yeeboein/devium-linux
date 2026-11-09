@@ -46,7 +46,7 @@ class About(QWidget):
 
         row = QHBoxLayout()
         gh = QPushButton("Devium on GitHub")
-        gh.clicked.connect(lambda: ui.launch("xdg-open", "https://github.com/yeeboein/devium-linux"))
+        gh.clicked.connect(lambda: ui.open_link("https://github.com/yeeboein/devium-linux", self))
         row.addWidget(gh)
         row.addStretch(1)
         if ui.is_live():

@@ -31,7 +31,7 @@ def para(text):
     l = QLabel(text)
     l.setWordWrap(True)
     l.setTextFormat(Qt.TextFormat.RichText)
-    l.setOpenExternalLinks(True)
+    l.linkActivated.connect(lambda url: ui.open_link(url, l.window()))
     return l
 
 

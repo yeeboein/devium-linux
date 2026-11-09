@@ -34,4 +34,5 @@ file_permissions=(
   ["/usr/lib/devium/devium-helper"]="0:0:755"
   ["/usr/lib/devium/devium-setup"]="0:0:755"
   ["/usr/lib/devium/install-progress.py"]="0:0:755"
+  ["/usr/lib/devium/install-splash.py"]="0:0:755"
 )
