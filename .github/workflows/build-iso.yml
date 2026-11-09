@@ -50,7 +50,7 @@ jobs:
       - name: Name the ISO and add a checksum
         run: |
           cd out
-          sudo chown "$USER" ./*.iso
+          sudo chown -R "$USER" .
           iso="devium-${EDITION}-${DEVIUM_VERSION}-x86_64.iso"
           mv ./*.iso "$iso"
           sha256sum "$iso" > "$iso.sha256"
