@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Devium system setup.
 #
-#   devium-setup --live              run while the ISO is built (pacman hook, inside the new system)
-#   devium-setup --installed <dir>   run inside a freshly installed system; <dir> is a checkout
-#                                    of the devium-linux repo (used by devium-install)
+#   devium-setup --live              while the ISO is built (pacman hook, inside the new system)
+#   devium-setup --package           from the "devium-desktop" package's install script
+#                                    (files are already in place): system settings + services
+#   devium-setup --finish            after the installer made users and the bootloader:
+#                                    boot menu branding, boot animation, user defaults
+#   devium-setup --installed <dir>   copy Devium's files from a repo checkout, then --package
+#                                    (Devium Updater uses this with DEVIUM_REFRESH=1)
 #   devium-setup --os-release        (re)write /etc/os-release only
 set -uo pipefail
 
@@ -114,6 +118,60 @@ live_user() {
     chown -R devium:devium /home/devium
 }
 
+
+apply_overrides() {
+    # Files other packages also own (bash's skel, shadow's useradd defaults...) are shipped
+    # under /usr/share/devium/overrides and copied into place here.
+    local o=/usr/share/devium/overrides
+    [[ -d $o ]] && cp -a "$o"/. /
+}
+
+set_hostname() {
+    # archinstall's default computer name is "archlinux": use "devium" instead.
+    if [[ ! -s /etc/hostname || $(cat /etc/hostname) == archlinux ]]; then
+        echo devium > /etc/hostname
+        sed -i 's/\barchlinux\b/devium/g' /etc/hosts 2>/dev/null
+    fi
+}
+
+strip_live_repo() {
+    # The [devium] repo only exists on the live ISO; don't leave it in an installed system.
+    if [[ ! -d /opt/devium-repo ]] && grep -q '^\[devium\]' /etc/pacman.conf; then
+        sed -i '/^\[devium\]/,/^Server = file:\/\/\/opt\/devium-repo/d' /etc/pacman.conf
+    fi
+}
+
+package_setup() {
+    strip_live_repo
+    apply_overrides
+    write_os_release
+    set_hostname
+    setup_pacman
+    enable_services
+    systemctl enable devium-firstboot.service >/dev/null 2>&1
+    setup_firewall
+    setup_flathub
+    setup_archpill_source
+    systemctl set-default graphical.target >/dev/null 2>&1
+}
+
+finish_setup() {
+    strip_live_repo
+    set_hostname
+    brand_bootloader
+    for home in /home/*; do
+        [[ -d $home ]] || continue
+        owner="$(stat -c %U "$home")"
+        [[ $owner == root || $owner == UNKNOWN ]] && continue
+        cp -rn /etc/skel/. "$home"/ && chown -R "$owner:" "$home"
+        # zsh by default (users can pick fish or bash in the Setup wizard)
+        if [[ -x /usr/bin/zsh && ! -f $home/.config/devium/shell-chosen ]]; then
+            chsh -s /usr/bin/zsh "$owner" >/dev/null 2>&1
+        fi
+    done
+    mkdir -p /var/lib/devium && touch /var/lib/devium/finished
+}
+
 case "${1:-}" in
     --os-release)
         write_os_release
@@ -126,7 +184,19 @@ case "${1:-}" in
         setup_flathub
         setup_archpill_source
         live_user
+        # The installer copies Devium onto the new system from this local repo (no download).
+        if [[ -d /opt/devium-repo ]] && ! grep -q '^\[devium\]' /etc/pacman.conf; then
+            printf '\n[devium]\nSigLevel = Optional TrustAll\nServer = file:///opt/devium-repo\n' >> /etc/pacman.conf
+        fi
         systemctl set-default graphical.target >/dev/null 2>&1
+        ;;
+    --package)
+        package_setup
+        say "done"
+        ;;
+    --finish)
+        finish_setup
+        say "done"
         ;;
     --installed)
         src="${2:?usage: devium-setup --installed <repo dir>}"
@@ -141,40 +211,22 @@ case "${1:-}" in
             --exclude=./etc/polkit-1/rules.d/49-devium-live.rules \
             --exclude=./etc/sddm.conf.d/20-devium-live-autologin.conf \
             --exclude=./etc/systemd/journald.conf.d/volatile-storage.conf --exclude=./etc/systemd/logind.conf.d \
-            --exclude=./etc/systemd/system --exclude=./root \
+            --exclude=./etc/systemd/system/etc-pacman.d-gnupg.mount --exclude=./etc/systemd/system/pacman-init.service \
+            --exclude=./etc/systemd/system/multi-user.target.wants --exclude=./root \
             --exclude=./etc/pacman.d/hooks/zz-devium-live-setup.hook \
             --exclude=./etc/pacman.d/hooks/zzzz99-remove-custom-hooks-from-airootfs.hook \
             --exclude=./etc/pacman.d/hooks/uncomment-mirrors.hook \
             --exclude=./usr/share/applications/devium-install.desktop \
+            --exclude=./usr/share/applications/devium-about-live.desktop \
             -cf - . | tar -C / --no-same-owner -xf -
-        chmod 755 /usr/local/bin/devium-* /usr/lib/devium/devium-* 2>/dev/null
-        [[ -f $src/.devium-release ]] && cp "$src/.devium-release" /etc/devium-release
-        write_os_release
-        # archinstall's default computer name is "archlinux": use "devium" instead.
-        if [[ ! -s /etc/hostname || $(cat /etc/hostname) == archlinux ]]; then
-            echo devium > /etc/hostname
-            sed -i 's/\barchlinux\b/devium/g' /etc/hosts 2>/dev/null
-        fi
-        setup_pacman
-        enable_services
-        brand_bootloader
-        setup_firewall
-        setup_flathub
-        setup_archpill_source
-        # Give users created by the installer the Devium defaults (not on Devium Updater refreshes).
+        chmod 755 /usr/local/bin/devium-* /usr/local/bin/support /usr/lib/devium/devium-* 2>/dev/null
+        package_setup
         [[ -n ${DEVIUM_REFRESH:-} ]] && { say "done"; exit 0; }
-        for home in /home/*; do
-            [[ -d $home ]] || continue
-            owner="$(stat -c %U "$home")"
-            cp -rn /etc/skel/. "$home"/ && chown -R "$owner:" "$home"
-            # zsh by default (users can pick fish or bash in the Setup wizard)
-            [[ -x /usr/bin/zsh ]] && chsh -s /usr/bin/zsh "$owner" >/dev/null 2>&1
-        done
-        systemctl set-default graphical.target >/dev/null 2>&1
+        finish_setup
         say "done"
         ;;
     *)
-        sed -n '2,8p' "$0"
+        sed -n '2,12p' "$0"
         exit 1
         ;;
 esac

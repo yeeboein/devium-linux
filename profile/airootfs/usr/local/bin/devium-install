@@ -49,14 +49,11 @@ echo
 read -r -p "Start the installer? [y/N] " ans
 [[ ${ans,,} == y* ]] || exit 0
 
-source /etc/devium-release 2>/dev/null
-REPO="${DEVIUM_REPO:-https://github.com/yeeboein/devium-linux}"
-REF="${DEVIUM_REF:-main}"
 CFG=/tmp/devium-archinstall.json
 
-python3 - "$CFG" "$REPO" "$REF" <<'PY'
+python3 - "$CFG" <<'PY'
 import json, sys
-cfg, repo, ref = sys.argv[1:]
+cfg = sys.argv[1]
 pkgs = [l.strip() for l in open("/usr/share/devium/install-packages.txt") if l.strip()]
 json.dump({
     "hostname": "devium",
@@ -66,12 +63,9 @@ json.dump({
     "kernels": ["linux"],
     "swap": True,
     "ntp": True,
-    "custom_commands": [
-        "pacman -S --needed --noconfirm git",
-        f"rm -rf /root/devium-src && git clone --depth 1 -b {ref} {repo} /root/devium-src",
-        "bash /root/devium-src/profile/airootfs/usr/lib/devium/devium-setup --installed /root/devium-src",
-        "rm -rf /root/devium-src",
-    ],
+    # Devium's own files come from the devium-desktop package on this ISO (see build.sh);
+    # this only finishes the job once users and the bootloader exist.
+    "custom_commands": ["/usr/lib/devium/devium-setup --finish"],
 }, open(cfg, "w"), indent=2)
 PY
 

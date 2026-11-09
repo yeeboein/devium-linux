@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=About Devium
+Comment=What Devium is, its version and the people who make it
+Exec=devium-about
+Icon=devium
+Terminal=false
+Categories=System;
+Keywords=about;devium;version;credits;developers;

@@ -154,7 +154,8 @@ class Welcome(QWidget):
                  ("Apps", "plasmadiscover", self.apps_page()),
                  ("Drivers", "hwinfo", self.drivers_page()),
                  ("System", "preferences-system", self.system_page()),
-                 ("Shortcuts", "input-keyboard", self.shortcuts_page())]
+                 ("Shortcuts", "input-keyboard", self.shortcuts_page()),
+                 ("Developers", "user-identity", page(ui.developers_widget()))]
         self.nav.setIconSize(QSize(22, 22))
         for name, icon, w in pages:
             QListWidgetItem(QIcon.fromTheme(icon), name, self.nav)
@@ -315,6 +316,10 @@ class Welcome(QWidget):
                      lambda: firewall(False), "security-low"),
                 tile("Dark theme", "Easy on the eyes", lambda: theme(True), "weather-clear-night"),
                 tile("Light theme", "Bright and clean", lambda: theme(False), "weather-clear"),
+                tile("KDE Lite", "Use less RAM: switch off KDE extras (log out to apply)",
+                     lambda: self.go("bash", "/opt/kdelite/kdelite", "apply", name="KDElite"), "speedometer"),
+                tile("Full KDE", "Turn KDE's extras back on (log out to apply)",
+                     lambda: self.go("bash", "/opt/kdelite/kdelite", "revert", name="KDElite"), "kde"),
                 tile("Devium Dark", "Deeper, darker blue-grey",
                      lambda: ui.launch("plasma-apply-colorscheme", "DeviumDark"), "weather-clear-night"),
                 tile("Printers", "Add or manage printers",
@@ -377,6 +382,8 @@ class Welcome(QWidget):
 
 def main():
     if "--autostart" in sys.argv:
+        if ui.is_live():
+            return   # the live preview shows About Devium instead
         if os.path.exists(os.path.join(CONFIG, "welcome-hide")):
             return
         # On a fresh install, Devium Setup opens first; Welcome waits until next login.

@@ -11,6 +11,25 @@ LOG="$STATE/firstrun.log"
 exec >>"$LOG" 2>&1
 echo "=== devium-firstrun $(date)"
 
+# --- Live ISO: a simple preview with just "Install Devium" and "About Devium" ----
+if [[ -d /run/archiso ]]; then
+    if [[ ! -f $STATE/live-dock-done ]]; then
+        sleep 4   # let Plasma finish drawing the dock
+        js="panels().forEach(function(p){ if (p.location!='bottom') return;
+              p.widgets().forEach(function(w){
+                if (w.type=='org.kde.plasma.kickoff') w.remove();
+                if (w.type=='org.kde.plasma.icontasks') { w.currentConfigGroup=['General'];
+                  w.writeConfig('launchers','applications:devium-install.desktop,applications:devium-about.desktop');
+                  w.reloadConfig(); } }); });"
+        for q in qdbus6 qdbus; do
+            command -v $q >/dev/null && $q org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$js" && break
+        done
+        touch "$STATE/live-dock-done"
+    fi
+    devium-about &
+    exit 0
+fi
+
 # --- ArchPill ---------------------------------------------------------------
 # On installed systems ArchPill is optional: the Setup wizard installs it if picked.
 if [[ ! -f $STATE/archpill-done ]] && command -v qs >/dev/null; then

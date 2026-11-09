@@ -80,3 +80,79 @@ def launch(*cmd: str) -> bool:
 
 
 HELPER = ["pkexec", "/usr/lib/devium/devium-helper"]
+
+
+# ---------------------------------------------------------------------------- developers
+DEVELOPERS = [
+    # name, role, picture, link
+    ("Yeeboein", "Owner", "/usr/share/devium/credits/yeeboein.png", "https://github.com/yeeboein"),
+]
+CREDITS = [
+    ("ArchPill", "Dynamic-Island-style pill", "https://github.com/yeeboein/archpill"),
+    ("KDElite", "Lighter KDE Plasma", "https://github.com/yeeboein/kdelite"),
+    ("Arch Linux", "The base system", "https://archlinux.org"),
+    ("KDE Plasma", "The desktop", "https://kde.org/plasma-desktop"),
+]
+
+
+def round_pixmap(path, size):
+    from PyQt6.QtGui import QPainter, QPainterPath
+    src = QPixmap(path)
+    if src.isNull():
+        src = QPixmap(LOGO)
+    src = src.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                     Qt.TransformationMode.SmoothTransformation)
+    out = QPixmap(size, size)
+    out.fill(Qt.GlobalColor.transparent)
+    p = QPainter(out)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    clip = QPainterPath()
+    clip.addEllipse(0, 0, size, size)
+    p.setClipPath(clip)
+    p.fillRect(0, 0, size, size, Qt.GlobalColor.white)
+    p.drawPixmap(0, 0, src)
+    p.end()
+    return out
+
+
+def developers_widget():
+    """Cards for each developer, then credits for the projects Devium is built on."""
+    w = QWidget()
+    col = QVBoxLayout(w)
+    col.setContentsMargins(0, 0, 0, 0)
+    t = QLabel("Developers")
+    t.setObjectName("h2")
+    col.addWidget(t)
+    for name, role, pic, link in DEVELOPERS:
+        card = QWidget()
+        card.setObjectName("devcard")
+        card.setStyleSheet(f"QWidget#devcard {{ border: 1px solid palette(mid); border-radius: 14px; }}")
+        row = QHBoxLayout(card)
+        row.setContentsMargins(12, 10, 12, 10)
+        img = QLabel()
+        img.setPixmap(round_pixmap(pic, 64))
+        row.addWidget(img)
+        txt = QLabel(f"<b style='font-size:13pt'>{name}</b><br>"
+                     f"<span style='color:{ACCENT}'>{role}</span><br>"
+                     f"<a href='{link}' style='color:#8a93a6'>{link.replace('https://', '')}</a>")
+        txt.setOpenExternalLinks(True)
+        row.addWidget(txt, 1)
+        col.addWidget(card)
+    c = QLabel("Built with")
+    c.setObjectName("h2")
+    col.addWidget(c)
+    links = QLabel("<br>".join(f"<a href='{u}' style='color:{ACCENT}'>{n}</a> &nbsp;—&nbsp; {d}"
+                               for n, d, u in CREDITS))
+    links.setOpenExternalLinks(True)
+    col.addWidget(links)
+    return w
+
+
+def devium_version():
+    try:
+        for line in open("/etc/devium-release"):
+            if line.startswith("DEVIUM_VERSION="):
+                return line.strip().split("=", 1)[1]
+    except OSError:
+        pass
+    return "beta"

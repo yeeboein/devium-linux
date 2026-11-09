@@ -39,3 +39,16 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] ISOs published as GitHub Releases per edition ("KDE Plasma")
 - [x] Remove network-boot (PXE) options from the ISO
 - [x] Rename "Arch Linux" boot entries to Devium on installed systems
+
+## beta3 (done)
+- [x] devium-desktop package on the ISO: installs no longer depend on GitHub; first-boot safety net
+- [x] Live ISO shows only Install Devium + About Devium; extras removed from the ISO
+- [x] Installer progress bar, disk size check, no time-sync hang
+- [x] About Devium + Developers section
+- [x] KDE Lite / Full KDE choice (KDElite)
+- [x] Gaming page, Devium Dark, support command
+
+## Next
+- [ ] Point-and-click installer (Calamares)
+- [ ] Brave Origin (when a package source exists)
+- [ ] Maybe: Devium Xfce edition for very old laptops

@@ -28,6 +28,7 @@ file_permissions=(
   ["/usr/local/bin/devium-firstrun"]="0:0:755"
   ["/usr/local/bin/devium-new-project"]="0:0:755"
   ["/usr/local/bin/support"]="0:0:755"
+  ["/usr/local/bin/devium-about"]="0:0:755"
   ["/usr/local/bin/devium-setup-wizard"]="0:0:755"
   ["/usr/local/bin/devium-updater"]="0:0:755"
   ["/usr/lib/devium/devium-helper"]="0:0:755"

@@ -15,10 +15,10 @@ This guide takes you from nothing to a working Devium system. No Linux experienc
 
 ## 1. Download the ISO
 
-1. Sign in to GitHub and open **https://github.com/yeeboein/devium-linux/actions**.
-2. Click the newest **Build Devium ISO** run with a green tick ✅.
-3. Scroll to **Artifacts** at the bottom and click **devium-iso**.
-4. Unzip the download. Inside is `devium-YYYY.MM.DD-x86_64.iso` (about 2–3 GB).
+1. Open **https://github.com/yeeboein/devium-linux/releases** and pick the newest release (e.g. **beta3**).
+2. Under **Assets**, download `devium-kdeplasma-<version>-x86_64.iso`.
+
+(Test builds: Actions tab → newest **Build Devium ISO** run with a green tick → **Artifacts** → **devium-iso**.)
 
 > No green run, or the download expired (14 days)? Click **Build Devium ISO** → **Run workflow** and wait 30–60 minutes.
 
@@ -49,7 +49,8 @@ A virtual machine (VM) runs Devium in a window on your current computer. Nothing
 - **GNOME Boxes / virt-manager (Linux):** create a new VM from the ISO, give it 4 GB RAM.
 
 When it boots, pick **Devium Live** in the menu (it starts on its own after 10 seconds).
-You'll land on the Devium desktop. The **Welcome** app opens by itself.
+You'll land on the Devium preview desktop. **About Devium** opens by itself, and the dock has
+just two buttons: **Install Devium** and **About Devium**.
 
 - Live user: **devium**, password: **devium**
 - Nothing is saved in the live system after a restart.

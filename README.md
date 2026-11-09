@@ -12,6 +12,14 @@
   <sub>Desktop mock-up: mountain wallpaper, floating dock, ArchPill, fastfetch and Devium Welcome.</sub>
 </p>
 
+### Developers
+
+<table><tr><td><img src="profile/airootfs/usr/share/devium/credits/yeeboein.png" width="72" style="border-radius:50%"></td>
+<td><b>Yeeboein</b><br>Owner<br><a href="https://github.com/yeeboein">github.com/yeeboein</a></td></tr></table>
+
+Built with [ArchPill](https://github.com/yeeboein/archpill), [KDElite](https://github.com/yeeboein/kdelite),
+[Arch Linux](https://archlinux.org) and [KDE Plasma](https://kde.org/plasma-desktop).
+
 ### Devium Setup: pick only what you want
 
 <p align="center">
@@ -54,13 +62,17 @@
 
 📖 **New here? Follow the step-by-step [Devium guide](docs/GUIDE.md)** (download, VM, USB, install, troubleshooting).
 
-### Option A: build on GitHub (no Arch machine needed)
+### Option A: download a release
+
+Get the latest ISO from the [Releases page](https://github.com/yeeboein/devium-linux/releases) (beta3 and newer).
+
+### Option B: build on GitHub (no Arch machine needed)
 
 1. Open the repo's **Actions** tab → **Build Devium ISO** → **Run workflow** (pick this branch).
 2. Wait ~30–60 minutes.
 3. Download **devium-iso** from the finished run (it's a zip containing the `.iso`).
 
-### Option B: build on Arch Linux
+### Option C: build on Arch Linux
 
 ```bash
 git clone https://github.com/yeeboein/devium-linux.git
