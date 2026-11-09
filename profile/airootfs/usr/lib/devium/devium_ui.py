@@ -181,7 +181,7 @@ def developers_widget():
         txt = QLabel(f"<b style='font-size:13pt'>{name}</b><br>"
                      f"<span style='color:{ACCENT}'>{role}</span><br>"
                      f"<a href='{link}' style='color:#8a93a6'>{link.replace('https://', '')}</a>")
-        txt.setOpenExternalLinks(True)
+        txt.linkActivated.connect(lambda url: open_link(url, w))
         row.addWidget(txt, 1)
         col.addWidget(card)
     c = QLabel("Built with")
@@ -189,7 +189,7 @@ def developers_widget():
     col.addWidget(c)
     links = QLabel("<br>".join(f"<a href='{u}' style='color:{ACCENT}'>{n}</a> &nbsp;—&nbsp; {d}"
                                for n, d, u in CREDITS))
-    links.setOpenExternalLinks(True)
+    links.linkActivated.connect(lambda url: open_link(url, w))
     links.setMinimumHeight(links.sizeHint().height() + 8)
     col.addWidget(links)
     return w
@@ -203,3 +203,86 @@ def devium_version():
     except OSError:
         pass
     return "beta"
+
+
+# ---------------------------------------------------------------------------- links / QR codes
+def has_browser():
+    """Is there a web browser to open links with? (The live ISO and fresh installs have none.)"""
+    import subprocess
+    try:
+        out = subprocess.run(["xdg-settings", "get", "default-web-browser"],
+                             capture_output=True, text=True, timeout=3).stdout.strip()
+    except Exception:
+        out = ""
+    if out:
+        return True
+    return any(shutil.which(b) for b in ("firefox", "brave", "brave-origin", "chromium", "google-chrome-stable",
+                                         "vivaldi-stable", "librewolf", "epiphany", "falkon"))
+
+
+def qr_pixmap(text, size=220):
+    """Draw a QR code for `text` (needs python-qrcode; returns None without it)."""
+    try:
+        import qrcode
+    except ImportError:
+        return None
+    from PyQt6.QtGui import QColor, QPainter
+    qr = qrcode.QRCode(border=2, error_correction=qrcode.constants.ERROR_CORRECT_M)
+    qr.add_data(text)
+    qr.make(fit=True)
+    m = qr.get_matrix()
+    n = len(m)
+    cell = max(1, size // n)
+    pix = QPixmap(cell * n, cell * n)
+    pix.fill(QColor("white"))
+    p = QPainter(pix)
+    for y, row in enumerate(m):
+        for x, on in enumerate(row):
+            if on:
+                p.fillRect(x * cell, y * cell, cell, cell, QColor("#1b2026"))
+    p.end()
+    return pix
+
+
+def open_link(url, parent=None):
+    """Open a link. With no browser installed, show a QR code to open it on your phone instead."""
+    from PyQt6.QtWidgets import QDialog, QPushButton
+    browser = has_browser()
+    dlg = QDialog(parent)
+    dlg.setWindowTitle("Open on your phone")
+    lay = QVBoxLayout(dlg)
+    lay.setContentsMargins(24, 20, 24, 18)
+    title = QLabel("Scan with your phone's camera")
+    title.setObjectName("h2")
+    title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    lay.addWidget(title)
+    img = QLabel()
+    img.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    pix = qr_pixmap(url)
+    if pix:
+        img.setPixmap(pix)
+    else:
+        img.setText("(QR code unavailable)")
+    lay.addWidget(img)
+    link = QLabel(url)
+    link.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    link.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+    link.setStyleSheet(f"color: {ACCENT};")
+    lay.addWidget(link)
+    if not browser:
+        note = QLabel("No web browser is installed yet. Pick one in Devium Setup after installing.")
+        note.setObjectName("subtitle")
+        note.setWordWrap(True)
+        note.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(note)
+    row = QHBoxLayout()
+    if browser:
+        op = QPushButton("Open in browser")
+        op.setObjectName("primary")
+        op.clicked.connect(lambda: (launch("xdg-open", url), dlg.accept()))
+        row.addWidget(op)
+    close = QPushButton("Close")
+    close.clicked.connect(dlg.accept)
+    row.addWidget(close)
+    lay.addLayout(row)
+    dlg.exec()

@@ -77,7 +77,8 @@ class Updater(QWidget):
         lay.addWidget(self.status)
 
         self.notes = QTextBrowser()
-        self.notes.setOpenExternalLinks(True)
+        self.notes.setOpenLinks(False)
+        self.notes.anchorClicked.connect(lambda u: ui.open_link(u.toString(), self))
         lay.addWidget(self.notes, 1)
 
         self.progress = QProgressBar()
@@ -133,7 +134,7 @@ class Updater(QWidget):
 
     def download_iso(self):
         url = (self.release or {}).get("html_url") or self.info["DEVIUM_REPO"] + "/releases"
-        ui.launch("xdg-open", url)
+        ui.open_link(url, self)
 
     def update(self):
         tag = self.release["tag_name"]

@@ -5,4 +5,5 @@ Comment=Install Devium to this computer's disk
 Exec=devium-install
 Icon=devium
 Terminal=false
+StartupNotify=false
 Categories=System;
