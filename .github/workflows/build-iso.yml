@@ -44,7 +44,7 @@ jobs:
       - name: Build ISO in an Arch Linux container
         run: |
           sudo docker run --rm --privileged \
-            -e DEVIUM_VERSION -e DEVIUM_REF="${RELEASE:-$GITHUB_REF_NAME}" -e EDITIONS \
+            -e DEVIUM_VERSION="$DEVIUM_VERSION" -e DEVIUM_REF="${RELEASE:-$GITHUB_REF_NAME}" -e EDITIONS="$EDITIONS" \
             -v "$PWD":/devium -w /devium \
             archlinux:latest \
             bash -c '
@@ -56,6 +56,7 @@ jobs:
                 "https://fastly.mirror.pkgbuild.com/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist &&
               pacman -Syu --noconfirm --needed archiso git &&
               git config --global --add safe.directory /devium &&
+              [ -n "$EDITIONS" ] || { echo "No editions to build"; exit 1; }
               for ed in $EDITIONS; do
                 echo "===== Building the $ed edition ====="
                 EDITION=$ed OUT_DIR=/devium/out/$ed ./build.sh --clean || exit 1
