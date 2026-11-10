@@ -335,12 +335,28 @@ class Wizard(QWidget):
         self.inputs["archpill"] = ap
         ap.setToolTip("With ArchPill, the dock shows only the start button and your apps: "
                       "the pill shows the time, battery, sound and network instead.")
+        qsbox = QCheckBox(f"Quickshell   ({fmt_mb(0 if installed('quickshell') else cat.ARCHPILL['mb'])})")
+        qsbox.setToolTip("The toolkit ArchPill runs on. Ticked automatically when ArchPill is ticked.")
+        qsbox.setChecked(True)
+        qsbox.toggled.connect(self.update_total)
+        self.inputs["quickshell"] = qsbox
+
+        def archpill_toggled(on):
+            if on:
+                qsbox.setChecked(True)
+            qsbox.setEnabled(not on)    # ArchPill needs it, so it can't be unticked while ArchPill is on
+        ap.toggled.connect(archpill_toggled)
+        archpill_toggled(ap.isChecked())
         dock = QCheckBox("Hide the dock when a window covers it")
         dock.setChecked(True)
         self.inputs["dock-hide"] = dock
-        for b in (ap, dock):
+        for b in (ap, qsbox, dock):
             b.setStyleSheet("padding: 5px;")
             l.addWidget(b)
+            if b is qsbox:
+                hint = label("Needed for ArchPill (ticked automatically when ArchPill is on)", "subtitle")
+                hint.setContentsMargins(30, 0, 0, 4)
+                l.addWidget(hint)
 
         radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey, pale accents, big floating dock"),
                          ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey, big floating dock"),
@@ -348,8 +364,52 @@ class Wizard(QWidget):
                                        "(best if you want to customise)")],
                "style-devium")
         l.addWidget(label("The Devium fastfetch logo looks the same with every theme.", "subtitle"))
+        l.addWidget(self.theme_previews())
         l.addStretch(1)
         return scroll(inner)
+
+    def theme_previews(self):
+        """Clickable previews: Devium (dark), Devium (light), Devium Dark, Base KDE."""
+        from PyQt6.QtWidgets import QGridLayout
+        cards = [("devium", "Devium", ("style-devium", "theme-dark")),
+                 ("devium-light", "Devium (light)", ("style-devium", "theme-light")),
+                 ("devium-dark", "Devium Dark", ("style-deviumdark", "theme-dark")),
+                 ("base-kde", "Base KDE", ("style-kde", None))]
+        box = QWidget()
+        grid = QGridLayout(box)
+        grid.setContentsMargins(0, 8, 0, 0)
+        self.preview_cards = []
+        for i, (img, name, pick) in enumerate(cards):
+            card = QLabel()
+            pix = QPixmap(f"/usr/share/devium/previews/{img}.png")
+            if not pix.isNull():
+                small = pix.scaledToWidth(220, Qt.TransformationMode.SmoothTransformation)
+                card.setPixmap(small)
+                card.setFixedSize(small.width() + 10, small.height() + 10)   # outline hugs the picture
+            card.setCursor(Qt.CursorShape.PointingHandCursor)
+            card.setToolTip(f"Use {name}")
+            cap = label(name, None)
+            cap.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            def clicked(_e, pick=pick):
+                self.inputs[pick[0]].setChecked(True)
+                if pick[1]:
+                    self.inputs[pick[1]].setChecked(True)
+                self.update_previews()
+            card.mousePressEvent = clicked
+            grid.addWidget(card, (i // 2) * 2, i % 2)
+            grid.addWidget(cap, (i // 2) * 2 + 1, i % 2)
+            self.preview_cards.append((card, pick))
+        for key in ("style-devium", "style-deviumdark", "style-kde", "theme-dark", "theme-light"):
+            if key in self.inputs:
+                self.inputs[key].toggled.connect(lambda _on: self.update_previews())
+        self.update_previews()
+        return box
+
+    def update_previews(self):
+        for card, (style, bright) in getattr(self, "preview_cards", []):
+            on = self.checked(style) and (bright is None or self.checked(bright))
+            card.setStyleSheet(f"border: 3px solid {ui.ACCENT if on else 'transparent'}; border-radius: 14px; padding: 2px;")
 
     def summary_page(self):
         self.summary_w = QWidget()
@@ -452,7 +512,7 @@ class Wizard(QWidget):
         pac += shell["pacman"]
         if shell["pacman"] and not installed(shell["pacman"][0]):
             mb += shell["mb"]
-        if self.checked("archpill") and not installed("quickshell"):
+        if (self.checked("quickshell") or self.checked("archpill")) and not installed("quickshell"):
             pac += cat.ARCHPILL["pacman"]
             mb += cat.ARCHPILL["mb"]
         if aur:
@@ -480,7 +540,8 @@ class Wizard(QWidget):
                  ("Devium" if self.checked("style-devium") else "Base KDE") + " theme, " +
                  ("dark" if self.checked("theme-dark") else "light")),
                 f"{p['shell']['name']} shell",
-                "ArchPill on" if self.checked("archpill") else "ArchPill off"]
+                "ArchPill on" if self.checked("archpill") else "ArchPill off",
+                "Quickshell" if self.checked("quickshell") else "no Quickshell"]
         left = free - p["mb"]
         warn = ""
         if p["mb"] > free - 1024:
