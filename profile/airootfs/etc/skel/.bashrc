@@ -15,9 +15,8 @@ else
     PS1='\[\e[1;36m\]\u@\h\[\e[0m\] \[\e[1;35m\]\w\[\e[0m\] \$ '
 fi
 
-# Show the Devium logo once per terminal window.
-if [[ -z ${DEVIUM_FETCHED:-} ]] && command -v fastfetch >/dev/null; then
-    export DEVIUM_FETCHED=1
-    fastfetch
-    echo -e "  \e[2mType \e[0;36msupport\e[0;2m to see helpful commands.\e[0m\n"
+# fastfetch only runs when you type it. The first terminal you ever open shows one short tip.
+if [[ ! -e ~/.config/devium/terminal-tip-shown ]]; then
+    mkdir -p ~/.config/devium && touch ~/.config/devium/terminal-tip-shown
+    echo -e "\e[2mTip: type \e[0;36msupport\e[0;2m for helpful commands, or \e[0;36mfastfetch\e[0;2m to show your system info.\e[0m"
 fi

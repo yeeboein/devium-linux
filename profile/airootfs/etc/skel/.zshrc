@@ -28,8 +28,8 @@ fi
 [[ -f /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
     source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-if [[ -z ${DEVIUM_FETCHED:-} ]] && command -v fastfetch >/dev/null; then
-    export DEVIUM_FETCHED=1
-    fastfetch
-    print -P "  %F{8}Type %F{cyan}support%F{8} to see helpful commands.%f\n"
+# fastfetch only runs when you type it. The first terminal you ever open shows one short tip.
+if [[ ! -e ~/.config/devium/terminal-tip-shown ]]; then
+    mkdir -p ~/.config/devium && touch ~/.config/devium/terminal-tip-shown
+    print -P "%F{8}Tip: type %F{cyan}support%F{8} for helpful commands, or %F{cyan}fastfetch%F{8} to show your system info.%f"
 fi
