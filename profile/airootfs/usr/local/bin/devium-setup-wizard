@@ -196,9 +196,6 @@ class Wizard(QWidget):
         self.next_btn.setEnabled(True)
         if w is self.summary_w:
             self.fill_summary()
-            # Don't start an install that can't fit on the disk.
-            if self.plan()["mb"] > free_mb() - 1024:
-                self.next_btn.setEnabled(False)
         self.update_total()
 
     def step_clicked(self, item):
@@ -208,8 +205,24 @@ class Wizard(QWidget):
         else:
             self.steps.setCurrentRow(self.stack.currentIndex())
 
+    def not_enough_space(self, needed_mb=None):
+        """Tell the user there isn't enough space and send them back to the start of the wizard."""
+        free = free_mb()
+        need = f"about {fmt_mb(needed_mb)[6:]}" if needed_mb else "more space than is free"
+        QMessageBox.warning(
+            self, "Not enough space",
+            f"Your picks need {need}, but only {free / 1024:.1f} GB is free on this disk "
+            "(Devium keeps 1 GB spare).\n\n"
+            "Pick fewer or smaller things - games and Flathub apps are the biggest - "
+            "or free up space with Update Manager first.")
+        self.queue = []
+        self.go(0)
+
     def next(self):
         if self.stack.currentWidget() is self.summary_w:
+            needed = self.plan()["mb"]
+            if needed > free_mb() - 1024:
+                return self.not_enough_space(needed)
             self.start_install()
         else:
             self.go(self.stack.currentIndex() + 1)
@@ -360,10 +373,16 @@ class Wizard(QWidget):
         tip = label("Tip: this can take a while on slow internet. You can keep using your computer.",
                     "subtitle")
         l.addWidget(tip)
+        row = QHBoxLayout()
         self.details_btn = QPushButton("Show details")
         self.details_btn.setCheckable(True)
         self.details_btn.setFixedWidth(140)
-        l.addWidget(self.details_btn)
+        row.addWidget(self.details_btn)
+        row.addStretch(1)
+        self.cancel_btn = QPushButton("Cancel install")
+        self.cancel_btn.clicked.connect(self.cancel_install)
+        row.addWidget(self.cancel_btn)
+        l.addLayout(row)
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log.setVisible(False)
@@ -606,7 +625,29 @@ class Wizard(QWidget):
         lines.append(f"mkdir -p {q(CONFIG)} && touch {q(DONE_MARKER)}")
         return "\n".join(lines)
 
+    def cancel_install(self):
+        r = QMessageBox.question(
+            self, "Cancel install?",
+            "Stop installing your picks?\n\nAnything already installed stays on your computer - "
+            "you can remove it later by running Devium Setup again.")
+        if r != QMessageBox.StandardButton.Yes:
+            return
+        self.cancelled = True
+        self.queue = []
+        self.cancel_btn.setEnabled(False)
+        self.install_status.setText("Cancelling…")
+        proc = getattr(self, "proc", None)
+        if proc and proc.state() != QProcess.ProcessState.NotRunning:
+            if proc.program() == "pkexec":
+                # pacman/flatpak run as root: ask the helper to stop them cleanly (no password needed
+                # again right after the first prompt)
+                QProcess.startDetached("pkexec", ["/usr/lib/devium/devium-helper", "cancel"])
+            else:
+                proc.terminate()
+
     def run_next(self):
+        if getattr(self, "cancelled", False):
+            return self.after_cancel()
         if not self.queue:
             return self.finished()
         lbl, prog, args = self.queue.pop(0)
@@ -630,7 +671,22 @@ class Wizard(QWidget):
             self.install_status.setText(self.install_status.text().split("   (")[0] +
                                         f"   (package {m[-1][0]} of {m[-1][1]})")
 
+    def after_cancel(self):
+        self.cancelled = False
+        self.cancel_btn.setEnabled(True)
+        QMessageBox.information(self, "Install cancelled",
+                                "Installing was cancelled. You're back at the start of Devium Setup: "
+                                "pick again whenever you like.")
+        self.go(0)
+
     def step_done(self, code, _status):
+        if getattr(self, "cancelled", False):
+            return self.after_cancel()
+        # pacman ran out of disk space part-way: say so and start over
+        recent = self.log.toPlainText()[-4000:]
+        if code != 0 and ("not enough free disk space" in recent or "No space left on device" in recent):
+            self.cancelled = False
+            return self.not_enough_space()
         if code in (126, 127) and self.proc.program() == "pkexec":
             self.queue = []
             QMessageBox.information(self, "Cancelled", "Nothing was installed. You can run Devium Setup "
@@ -655,8 +711,8 @@ class Wizard(QWidget):
 
     def closeEvent(self, ev):
         if self.queue or (getattr(self, "proc", None) and self.proc.state() != QProcess.ProcessState.NotRunning):
-            QMessageBox.information(self, "Still installing", "Please wait until installing has finished.")
             ev.ignore()
+            self.cancel_install()
             return
         # Closing early still counts as "seen", so it doesn't pop up at every login.
         os.makedirs(CONFIG, exist_ok=True)

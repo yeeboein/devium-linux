@@ -61,6 +61,8 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 
 ## beta8 (planned)
 - [x] No "Disks & Devices" pop-up on the live preview while installing
+- [x] Devium Setup: Cancel install button; "Not enough space" sends you back to the start
+- [x] Devium Setup: descriptions wrap (nothing cut off), no duplicate "(included)"
 - [ ] Installer fixes from the beta7 test
 - [ ] Blank Devium (still choose Devium / Devium Dark / Base KDE)
 - [ ] Devium Setup any time: shows installed packages, add or remove
