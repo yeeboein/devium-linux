@@ -379,7 +379,8 @@ class Welcome(QWidget):
                 return
             setup = ("pkexec /usr/lib/devium/devium-helper archpill-deps && "
                      "{ [ -d ~/archpill ] || cp -r /opt/archpill ~/archpill; } && "
-                     "cd ~/archpill && ./install.sh --no-packages")
+                     "cd ~/archpill && ./install.sh --no-packages; "
+                     "pgrep -f 'qs -c archpill' >/dev/null || QS_APP_ID=archpill qs -c archpill -n -d")
             os.makedirs(CONFIG, exist_ok=True)
             open(os.path.join(CONFIG, "archpill-wanted"), "w").close()
             subprocess.Popen(["sh", "-c", setup], start_new_session=True)

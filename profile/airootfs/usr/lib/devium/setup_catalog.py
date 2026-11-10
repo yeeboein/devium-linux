@@ -22,6 +22,8 @@ PAGES = [
              "flatpak": ["com.brave.Browser"], "desktop": "com.brave.Browser.desktop", "default": True},
             {"id": "braveorigin", "name": "Brave Origin", "desc": "Minimal Brave: no Rewards, Wallet, VPN or AI", "mb": 350, "helper": "brave-origin",
              "pacman": ["unzip", "curl"], "desktop": "brave-origin.desktop"},
+            {"id": "helium", "name": "Helium", "desc": "Private and fast, ad blocker built in (Chromium-based)",
+             "mb": 350, "aur": ["helium-browser-bin"], "desktop": "auto:helium"},
             {"id": "firefox", "name": "Firefox", "desc": "Popular and privacy-friendly", "mb": 250,
              "pacman": ["firefox"], "desktop": "firefox.desktop"},
             {"id": "chrome", "name": "Google Chrome", "desc": "Works best with Google services", "mb": 350,

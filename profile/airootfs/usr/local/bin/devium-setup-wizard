@@ -537,7 +537,12 @@ class Wizard(QWidget):
         # default browser / file manager / terminal
         for it in p["items"]:
             if it["id"] in [x["id"] for x in cat.PAGES[0]["items"]] and it.get("desktop"):
-                lines.append(f"xdg-settings set default-web-browser {q(it['desktop'])}")
+                if it["desktop"].startswith("auto:"):   # find the desktop file the package installed
+                    key = it["desktop"][5:]
+                    lines.append(f"d=$(ls /usr/share/applications | grep -i {q(key)} | head -n1); "
+                                 "[ -n \"$d\" ] && xdg-settings set default-web-browser \"$d\"")
+                else:
+                    lines.append(f"xdg-settings set default-web-browser {q(it['desktop'])}")
             if it["id"] in [x["id"] for x in cat.PAGES[1]["items"]] and it.get("desktop"):
                 lines.append(f"xdg-mime default {q(it['desktop'])} inode/directory")
             if it["id"] in [x["id"] for x in cat.PAGES[2]["items"]] and it.get("exec"):
@@ -622,6 +627,8 @@ class Wizard(QWidget):
             lines.append("if command -v qs >/dev/null && [ -d /opt/archpill ]; then "
                          "[ -d ~/archpill ] || cp -r /opt/archpill ~/archpill; "
                          "(cd ~/archpill && ./install.sh --no-packages); fi")
+            lines.append("command -v qs >/dev/null && ! pgrep -f 'qs -c archpill' >/dev/null && "
+                         "(QS_APP_ID=archpill setsid qs -c archpill -n -d >/dev/null 2>&1 &)")
         else:
             lines.append(f"rm -f {q(os.path.join(CONFIG, 'archpill-wanted'))}")
             lines.append("[ -x ~/archpill/uninstall.sh ] && ~/archpill/uninstall.sh")

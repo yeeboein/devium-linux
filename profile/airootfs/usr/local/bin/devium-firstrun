@@ -72,6 +72,8 @@ if [[ ! -f $STATE/archpill-done ]] && command -v qs >/dev/null; then
     if [[ -x $HOME/archpill/install.sh ]]; then
         # Packages are already part of Devium, so skip that step.
         (cd "$HOME/archpill" && ./install.sh --no-packages) && touch "$STATE/archpill-done"
+        # start it now (install.sh starts it too when it can see the desktop)
+        pgrep -f 'qs -c archpill' >/dev/null || (QS_APP_ID=archpill setsid qs -c archpill -n -d >/dev/null 2>&1 &)
     fi
 fi
 
