@@ -33,12 +33,12 @@ if XFCE:
                 if it["id"] == "dolphin":
                     it.update(pacman=["dolphin"], mb=80, default=False, desc="Powerful KDE file manager")
                 if it["id"] == "thunar":
-                    it.update(pacman=[], mb=0, default=True, desc="Light and simple (included)")
+                    it.update(pacman=[], mb=0, default=True, desc="Light and simple")
         if page["id"] == "terminal":
             for it in page["items"]:
                 if it["id"] == "konsole":
                     it.update(pacman=["konsole"], mb=40, default=False, desc="KDE's full-featured terminal")
-            page["items"].insert(0, {"id": "xfceterm", "name": "Xfce Terminal", "desc": "Simple and light (included)",
+            page["items"].insert(0, {"id": "xfceterm", "name": "Xfce Terminal", "desc": "Simple and light",
                                      "mb": 0, "exec": "xfce4-terminal", "desktop": "xfce4-terminal.desktop",
                                      "default": True})
 
@@ -102,7 +102,7 @@ class Wizard(QWidget):
         super().__init__()
         self.setWindowTitle("Devium Setup")
         self.setWindowIcon(ui.app_icon())
-        self.resize(940, 640)
+        self.resize(960, 720)
         self.inputs = {}       # item id -> QCheckBox / QRadioButton
         self.items = {}        # item id -> item dict
         self.queue = []
@@ -125,6 +125,11 @@ class Wizard(QWidget):
         self.steps.setObjectName("nav")
         self.steps.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.steps.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.steps.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.steps.setStyleSheet("QListWidget#nav::item { padding: 6px 12px; margin: 0px 4px; }"
+                                 "QScrollBar:vertical { background: transparent; width: 8px; }"
+                                 "QScrollBar::handle:vertical { background: #3b4450; border-radius: 4px; }"
+                                 "QScrollBar::add-line, QScrollBar::sub-line { height: 0px; }")
         self.steps.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.steps.itemClicked.connect(self.step_clicked)
         sl.addWidget(self.steps, 1)

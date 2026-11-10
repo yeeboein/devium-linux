@@ -39,7 +39,7 @@ PAGES = [
         "id": "filemanager", "title": "File manager", "single": True,
         "intro": "The app for browsing your files and folders. Your pick opens from the dock and from folders.",
         "items": [
-            {"id": "dolphin", "name": "Dolphin", "desc": "Powerful: tabs, split view, terminal panel (included)",
+            {"id": "dolphin", "name": "Dolphin", "desc": "Powerful: tabs, split view, terminal panel",
              "mb": 0, "desktop": "org.kde.dolphin.desktop", "default": True},
             {"id": "thunar", "name": "Thunar", "desc": "Very light and simple", "mb": 15,
              "pacman": ["thunar", "thunar-volman", "gvfs"], "desktop": "thunar.desktop"},
@@ -57,7 +57,7 @@ PAGES = [
         "id": "terminal", "title": "Terminal", "single": True,
         "intro": "The window for typing commands. It opens with Ctrl+Alt+T and from the dock.",
         "items": [
-            {"id": "konsole", "name": "Konsole", "desc": "Full-featured: tabs, split panes, profiles (included)",
+            {"id": "konsole", "name": "Konsole", "desc": "Full-featured: tabs, split panes, profiles",
              "mb": 0, "exec": "konsole", "desktop": "org.kde.konsole.desktop", "default": True},
             {"id": "kitty", "name": "Kitty", "desc": "Fast and very customisable", "mb": 30,
              "pacman": ["kitty"], "exec": "kitty", "desktop": "kitty.desktop"},
