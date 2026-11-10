@@ -193,8 +193,12 @@ class Wizard(QWidget):
         self.next_btn.setVisible(not last_steps)
         self.next_btn.setText("Install my picks" if w is self.summary_w else
                               "Let's go" if i == 0 else "Next")
+        self.next_btn.setEnabled(True)
         if w is self.summary_w:
             self.fill_summary()
+            # Don't start an install that can't fit on the disk.
+            if self.plan()["mb"] > free_mb() - 1024:
+                self.next_btn.setEnabled(False)
         self.update_total()
 
     def step_clicked(self, item):
@@ -268,15 +272,19 @@ class Wizard(QWidget):
             if it.get("pacman") and not set(it["pacman"]) <= self.avail:
                 continue   # not in the repos (anymore)
             self.items[it["id"]] = it
-            text = f"{it['name']}   —   {it['desc']}   ({fmt_mb(it.get('mb', 0))})"
-            box = QRadioButton(text) if page["single"] else QCheckBox(text)
+            # name and size on the button, the description on its own wrapped line underneath,
+            # so long descriptions are never cut off
+            box = (QRadioButton if page["single"] else QCheckBox)(f"{it['name']}   ({fmt_mb(it.get('mb', 0))})")
             box.setChecked(bool(it.get("default")))
-            box.setStyleSheet("padding: 6px;")
+            box.setStyleSheet("padding: 4px 4px 0px 4px; font-weight: 600;")
             box.toggled.connect(self.update_total)
             if group:
                 group.addButton(box)
             self.inputs[it["id"]] = box
             l.addWidget(box)
+            desc = label(it["desc"], "subtitle")
+            desc.setContentsMargins(30, 0, 0, 6)
+            l.addWidget(desc)
         l.addStretch(1)
         return scroll(inner)
 
@@ -456,7 +464,11 @@ class Wizard(QWidget):
                 "ArchPill on" if self.checked("archpill") else "ArchPill off"]
         left = free - p["mb"]
         warn = ""
-        if left < free * 0.1 or left < 2048:
+        if p["mb"] > free - 1024:
+            warn = ("<p style='color:#e89ca0'><b>Not enough space.</b> Your picks need about "
+                    f"{fmt_mb(p['mb'])}, but only {free / 1024:.1f} GB is free (Devium keeps 1 GB spare). "
+                    "Click <b>Back</b> and untick some of the bigger items, like games or Flathub apps.</p>")
+        elif left < free * 0.1 or left < 2048:
             warn = ("<p style='color:#f59e0b'><b>Warning:</b> this would leave very little free space. "
                     "Consider unticking some of the bigger items.</p>")
         self.summary_text.setText(
