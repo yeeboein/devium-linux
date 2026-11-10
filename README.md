@@ -33,6 +33,11 @@ Real screenshots from an installed Devium (beta7):
   <img src="docs/screenshots/real/setup-11-summary.png" width="45%">
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/real/terminal-fastfetch.png" width="70%"><br>
+  <sub>The terminal on an installed Devium: type <code>fastfetch</code> for the DEVIUM logo and system info.</sub>
+</p>
+
 More in [docs/screenshots/real](docs/screenshots/real).
 
 ---
