@@ -139,6 +139,22 @@ PAGES = [
              "pacman": ["python-pytest", "python-black", "ruff", "mypy"], "default": True},
             {"id": "py-ai", "name": "AI / machine learning", "desc": "scikit-learn, PyTorch (CPU) - large",
              "mb": 1500, "pacman": ["python-scikit-learn", "python-pytorch"]},
+            {"id": "py-math", "name": "Maths and science", "desc": "sympy, networkx, statsmodels", "mb": 80,
+             "pacman": ["python-sympy", "python-networkx", "python-statsmodels"]},
+            {"id": "py-images", "name": "Images and video", "desc": "OpenCV, imageio, scikit-image", "mb": 250,
+             "pacman": ["python-opencv", "python-imageio", "python-scikit-image"]},
+            {"id": "py-games", "name": "Games", "desc": "pygame, arcade-style 2D games", "mb": 20,
+             "pacman": ["python-pygame"]},
+            {"id": "py-gui", "name": "Desktop apps (GUI)", "desc": "Tkinter, PyQt6, PySide6", "mb": 60,
+             "pacman": ["tk", "python-pyqt6", "pyside6"]},
+            {"id": "py-cli", "name": "Command-line tools", "desc": "click, typer, tqdm, colorama", "mb": 10,
+             "pacman": ["python-click", "python-typer", "python-tqdm", "python-colorama"]},
+            {"id": "py-db", "name": "Databases", "desc": "SQLAlchemy, psycopg (PostgreSQL), redis", "mb": 30,
+             "pacman": ["python-sqlalchemy", "python-psycopg", "python-redis"]},
+            {"id": "py-web-scrape", "name": "Automation and scraping", "desc": "httpx, lxml, Selenium, schedule",
+             "mb": 40, "pacman": ["python-httpx", "python-lxml", "python-selenium", "python-schedule"]},
+            {"id": "py-docs", "name": "Files and documents", "desc": "openpyxl (Excel), python-docx, PyPDF, Markdown",
+             "mb": 20, "pacman": ["python-openpyxl", "python-docx", "python-pypdf", "python-markdown"]},
         ],
     },
     {
@@ -154,16 +170,29 @@ PAGES = [
             {"id": "docker", "name": "Docker", "desc": "Run apps in containers (starts only when used)", "mb": 450,
              "pacman": ["docker", "docker-compose", "docker-buildx"], "services": ["docker.socket"],
              "group": "docker"},
-            {"id": "ollama", "name": "Ollama", "desc": "Run AI chatbots on your own computer (models download later)",
-             "mb": 100, "pacman": ["ollama"], "services": ["ollama.service"]},
-            {"id": "alpaca", "name": "Alpaca", "desc": "A simple chat app for Ollama", "mb": 50,
-             "flatpak": ["com.jeffser.Alpaca"]},
             {"id": "continue", "name": "AI coding helper", "desc": "Continue extension for VSCodium/VS Code (works with Ollama)",
              "mb": 20, "ext": ["continue.continue"]},
             {"id": "sqlite", "name": "DB Browser for SQLite", "desc": "Look inside databases", "mb": 30,
              "pacman": ["sqlitebrowser"]},
             {"id": "yay", "name": "yay (AUR helper)", "desc": "Install community packages from the AUR", "mb": 15,
              "aur": ["yay-bin"]},
+        ],
+    },
+    {
+        "id": "ai", "title": "Local AI", "single": True,
+        "intro": "Run an AI chatbot on your own computer: private, offline, no account. It uses a lot of "
+                 "memory and disk, so only pick one if you want it. Models that don't fit your RAM are hidden.",
+        "items": [
+            {"id": "ai-none", "name": "No local AI", "desc": "Skip this (you can add it later from Devium Setup)",
+             "mb": 0, "default": True},
+            {"id": "ai-llama1b", "name": "Llama 3.2 1B", "desc": "Tiny and quick, basic answers (needs 4 GB RAM)",
+             "mb": 1400, "min_ram": 4, "model": "llama3.2:1b"},
+            {"id": "ai-llama3b", "name": "Llama 3.2 3B", "desc": "Good everyday helper (needs 8 GB RAM)",
+             "mb": 2100, "min_ram": 8, "model": "llama3.2:3b"},
+            {"id": "ai-qwencoder", "name": "Qwen 2.5 Coder 7B", "desc": "Strong at writing and explaining code (needs 16 GB RAM)",
+             "mb": 4800, "min_ram": 16, "model": "qwen2.5-coder:7b"},
+            {"id": "ai-llama8b", "name": "Llama 3.1 8B", "desc": "Smartest here, slower (needs 16 GB RAM)",
+             "mb": 4900, "min_ram": 16, "model": "llama3.1:8b"},
         ],
     },
     {
@@ -193,7 +222,7 @@ PAGES = [
         ],
     },
     {
-        "id": "apps", "title": "Apps", "single": False,
+        "id": "apps", "title": "Packages", "single": False,
         "intro": "Popular apps from Flathub. They run in a sandbox, so they can't break your system. "
                  "The first one also downloads about 500 MB of shared files.",
         "items": [
@@ -223,3 +252,7 @@ SHELLS = [
 ]
 ARCHPILL = {"id": "archpill", "mb": 60, "pacman": ["quickshell", "qt6-svg", "qt6-declarative", "upower",
                                                    "brightnessctl", "libnotify"]}
+
+MAGNIFY = {"id": "magnify", "mb": 30, "pacman": ["gtk4", "gtk4-layer-shell", "python-gobject", "python-cairo",
+                                                 "python-xlib"]}
+AI_EXTRAS = {"pacman": ["ollama"], "flatpak": ["com.jeffser.Alpaca"], "services": ["ollama.service"], "mb": 150}

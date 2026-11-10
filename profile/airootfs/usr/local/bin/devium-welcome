@@ -151,7 +151,7 @@ class Welcome(QWidget):
         pages = [("Home", "go-home", self.home_page()),
                  ("Setup wizard", "tools-wizard", self.wizard_page()),
                  ("Coding", "applications-development", self.coding_page()),
-                 ("Apps", "plasmadiscover", self.apps_page()),
+                 ("Packages", "plasmadiscover", self.apps_page()),
                  ("Drivers", "hwinfo", self.drivers_page()),
                  ("System", "preferences-system", self.system_page()),
                  ("Shortcuts", "input-keyboard", self.shortcuts_page()),

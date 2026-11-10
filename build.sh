@@ -96,6 +96,11 @@ say "Downloading KDElite"
 git clone --depth 1 https://github.com/yeeboein/kdelite.git "$STAGE/airootfs/opt/kdelite" \
     || warn "Could not download KDElite; the KDE Lite option will be hidden."
 
+# 3c. Bundle linux-magnify (https://github.com/yeeboein/linux-magnify), the macOS-style dock option.
+say "Downloading linux-magnify"
+git clone --depth 1 https://github.com/yeeboein/linux-magnify.git "$STAGE/airootfs/opt/linux-magnify" \
+    || warn "Could not download linux-magnify; the Magnify dock option will be hidden."
+
 # 4. Release info (used by the installer to fetch Devium's files for the new system).
 repo_url="https://github.com/yeeboein/devium-linux"
 repo_ref="$(git -C "$HERE" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"

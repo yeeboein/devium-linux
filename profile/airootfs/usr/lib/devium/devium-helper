@@ -160,6 +160,8 @@ def arr(name, items, rx):
     print(f"{name}=(" + " ".join(shlex.quote(i) for i in items) + ")")
 arr("PKGS", p.get("pacman", []), ok_pkg)
 arr("APPS", p.get("flatpak", []), ok_app)
+arr("RMPKGS", p.get("remove", []), ok_pkg)
+arr("RMAPPS", p.get("remove_flatpak", []), ok_app)
 print("SVCS=(" + " ".join(s for s in p.get("services", []) if s in ok_svc) + ")")
 print("GRPS=(" + " ".join(g for g in p.get("groups", []) if g in ok_grp) + ")")
 user = p.get("user", "")
@@ -169,6 +171,18 @@ print("SETUP_SHELL=" + shlex.quote(sh if sh in ok_shell else ""))
 PY
 )"
         fail=0
+        if (( ${#RMPKGS[@]} )); then
+            pacman_unlock || exit 1
+            step "Removing ${#RMPKGS[@]} packages"
+            pacman -Rns --noconfirm "${RMPKGS[@]}" 2>/dev/null || for x in "${RMPKGS[@]}"; do
+                pacman -Rns --noconfirm "$x" || echo "Kept $x (something else still needs it)"
+            done
+        fi
+        if (( ${#RMAPPS[@]} )); then
+            step "Removing ${#RMAPPS[@]} apps"
+            for app in "${RMAPPS[@]}"; do flatpak uninstall --system -y --noninteractive "$app"; done
+            flatpak uninstall --system -y --noninteractive --unused
+        fi
         if (( ${#PKGS[@]} )); then
             pacman_unlock || exit 1
             step "Installing ${#PKGS[@]} packages"

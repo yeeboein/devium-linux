@@ -79,6 +79,39 @@ def available_packages(names):
     return set(re.findall(r"^Name\s*:\s*(\S+)", r.stdout, re.M))
 
 
+def ram_gb():
+    try:
+        for line in open("/proc/meminfo"):
+            if line.startswith("MemTotal:"):
+                return int(line.split()[1]) / 1024 / 1024
+    except OSError:
+        pass
+    return 8
+
+
+_FLATPAKS = None
+
+
+def flatpak_installed(app):
+    global _FLATPAKS
+    if _FLATPAKS is None:
+        try:
+            out = subprocess.run(["flatpak", "list", "--app", "--columns=application"],
+                                 capture_output=True, text=True, timeout=10).stdout
+            _FLATPAKS = set(out.split())
+        except Exception:
+            _FLATPAKS = set()
+    return app in _FLATPAKS
+
+
+def base_packages():
+    """Packages every Devium install has: never removed by Devium Setup."""
+    try:
+        return {l.strip() for l in open("/usr/share/devium/install-packages.txt") if l.strip()}
+    except OSError:
+        return set()
+
+
 def label(text, obj=None, wrap=True):
     l = QLabel(text)
     l.setWordWrap(wrap)
@@ -104,6 +137,7 @@ class Wizard(QWidget):
         self.setWindowIcon(ui.app_icon())
         self.resize(960, 720)
         self.inputs = {}       # item id -> QCheckBox / QRadioButton
+        self.was_installed = set()   # items already installed when Devium Setup opened
         self.items = {}        # item id -> item dict
         self.queue = []
 
@@ -281,14 +315,28 @@ class Wizard(QWidget):
         l.addWidget(label(page["title"], "h2"))
         l.addWidget(label(page["intro"], "subtitle"))
         group = QButtonGroup(self) if page["single"] else None
+        ram = ram_gb()
+        fits = [it for it in page["items"] if it.get("min_ram") and it["min_ram"] <= ram + 0.5]
+        best = max(fits, key=lambda it: it["min_ram"])["id"] if fits else None
         for it in page["items"]:
             if it.get("pacman") and not set(it["pacman"]) <= self.avail:
                 continue   # not in the repos (anymore)
+            if it.get("min_ram") and it["min_ram"] > ram + 0.5:
+                continue   # AI model too big for this computer's memory
             self.items[it["id"]] = it
             # name and size on the button, the description on its own wrapped line underneath,
             # so long descriptions are never cut off
             box = (QRadioButton if page["single"] else QCheckBox)(f"{it['name']}   ({fmt_mb(it.get('mb', 0))})")
-            box.setChecked(bool(it.get("default")))
+            already = (not page["single"] and (it.get("pacman") or it.get("flatpak"))
+                       and all(installed(x) for x in it.get("pacman", []))
+                       and all(flatpak_installed(x) for x in it.get("flatpak", [])))
+            if already:
+                # Running Devium Setup again: installed things start ticked; untick to remove them
+                self.was_installed.add(it["id"])
+                box.setText(box.text() + "   ✓ installed")
+            box.setChecked(bool(it.get("default")) or bool(already))
+            if it["id"] == best:
+                box.setText(box.text() + "   ★ best fit for your RAM")
             box.setStyleSheet("padding: 4px 4px 0px 4px; font-weight: 600;")
             box.toggled.connect(self.update_total)
             if group:
@@ -347,14 +395,22 @@ class Wizard(QWidget):
             qsbox.setEnabled(not on)    # ArchPill needs it, so it can't be unticked while ArchPill is on
         ap.toggled.connect(archpill_toggled)
         archpill_toggled(ap.isChecked())
+        mag = QCheckBox(f"Magnify dock   ({fmt_mb(cat.MAGNIFY['mb'])})")
+        mag.setToolTip("linux-magnify: a macOS-style dock whose icons grow as your mouse moves over them")
+        mag.toggled.connect(self.update_total)
+        self.inputs["magnify"] = mag
         dock = QCheckBox("Hide the dock when a window covers it")
         dock.setChecked(True)
         self.inputs["dock-hide"] = dock
-        for b in (ap, qsbox, dock):
+        for b in (ap, qsbox, mag, dock):
             b.setStyleSheet("padding: 5px;")
             l.addWidget(b)
             if b is qsbox:
                 hint = label("Needed for ArchPill (ticked automatically when ArchPill is on)", "subtitle")
+                hint.setContentsMargins(30, 0, 0, 4)
+                l.addWidget(hint)
+            if b is mag:
+                hint = label("macOS-style dock: icons grow as your mouse moves over them (linux-magnify)", "subtitle")
                 hint.setContentsMargins(30, 0, 0, 4)
                 l.addWidget(hint)
 
@@ -498,8 +554,9 @@ class Wizard(QWidget):
         pac, fl, aur, svcs, groups, ext = [], [], [], [], [], []
         mb = 0
         for it in items:
-            already = (all(installed(p) for p in it.get("pacman", []))
-                       and not it.get("flatpak") and not it.get("aur") and not it.get("helper"))
+            already = (it["id"] in self.was_installed or
+                       (all(installed(p) for p in it.get("pacman", []))
+                        and not it.get("flatpak") and not it.get("aur") and not it.get("helper")))
             if not already:
                 mb += it.get("mb", 0)
             pac += [p for p in it.get("pacman", []) if p in self.avail]
@@ -515,10 +572,32 @@ class Wizard(QWidget):
         if (self.checked("quickshell") or self.checked("archpill")) and not installed("quickshell"):
             pac += cat.ARCHPILL["pacman"]
             mb += cat.ARCHPILL["mb"]
+        ai = next((it for it in items if it.get("model")), None)
+        if ai:
+            pac += cat.AI_EXTRAS["pacman"]
+            fl += cat.AI_EXTRAS["flatpak"]
+            svcs += cat.AI_EXTRAS["services"]
+            mb += cat.AI_EXTRAS["mb"]
+        if self.checked("magnify") and not installed("gtk4-layer-shell"):
+            pac += cat.MAGNIFY["pacman"]
+            mb += cat.MAGNIFY["mb"]
+        # Unticked things that were installed: remove them (never Devium's base packages,
+        # never packages another ticked item still needs)
+        keep = base_packages() | {x for it in items for x in it.get("pacman", [])}
+        rm_pac, rm_fl, freed = [], [], 0
+        for iid in self.was_installed:
+            if not self.checked(iid):
+                it = self.items[iid]
+                rm_pac += [x for x in it.get("pacman", []) if x not in keep]
+                rm_fl += it.get("flatpak", [])
+                freed += it.get("mb", 0)
         if aur:
             pac += ["base-devel", "git"]
         dedupe = lambda xs: list(dict.fromkeys(xs))
         return {"items": items, "pacman": dedupe(pac), "flatpak": dedupe(fl), "aur": dedupe(aur),
+                "remove": dedupe(rm_pac), "remove_flatpak": dedupe(rm_fl), "freed": freed,
+                "removed_items": [self.items[i]["name"] for i in self.was_installed if not self.checked(i)],
+                "ai": ai,
                 "services": dedupe(svcs), "groups": dedupe(groups), "ext": dedupe(ext),
                 "shell": shell, "mb": mb}
 
@@ -535,6 +614,9 @@ class Wizard(QWidget):
         free = free_mb()
         rows = "".join(f"<tr><td>{it['name']}</td><td align='right'>{fmt_mb(it.get('mb', 0))}</td></tr>"
                        for it in p["items"])
+        if p["removed_items"]:
+            rows += "".join(f"<tr><td style='color:#e89ca0'>Remove: {n}</td><td align='right'>frees space</td></tr>"
+                            for n in p["removed_items"])
         look = (["KDE Lite" if self.checked("kde-lite") else "Full KDE"]
                 if os.path.exists(KDELITE) and not XFCE else []) + [("Devium Dark theme" if self.checked("style-deviumdark") else
                  ("Devium" if self.checked("style-devium") else "Base KDE") + " theme, " +
@@ -565,6 +647,7 @@ class Wizard(QWidget):
         plan_file = os.path.join("/tmp", f"devium-setup-{os.getuid()}.json")
         with open(plan_file, "w") as f:
             json.dump({"user": getpass.getuser(), "pacman": p["pacman"], "flatpak": p["flatpak"],
+                       "remove": p["remove"], "remove_flatpak": p["remove_flatpak"],
                        "services": p["services"], "groups": p["groups"], "shell": p["shell"]["path"]}, f)
         self.p = p
         steps = []
@@ -620,6 +703,19 @@ class Wizard(QWidget):
                                  "cp /usr/share/devium/vscode-settings.json ~/.config/VSCodium/User/settings.json")
                 for e in p["ext"]:
                     lines.append(f"command -v {cli} >/dev/null && {cli} --install-extension {q(e)} --force")
+        if p.get("ai"):
+            model = p["ai"]["model"]
+            lines.append("for i in $(seq 1 30); do curl -fs http://127.0.0.1:11434 >/dev/null && break; sleep 1; done")
+            lines.append(f"command -v ollama >/dev/null && ollama pull {q(model)}")
+        if self.checked("magnify"):
+            lines.append("if [ -d /opt/linux-magnify ]; then rm -rf ~/.cache/linux-magnify-src && "
+                         "cp -r /opt/linux-magnify ~/.cache/linux-magnify-src && "
+                         "(cd ~/.cache/linux-magnify-src && printf 'y\\ny\\n' | ./install.sh); fi")
+            # make room for it: the Plasma dock hides itself until you move to the screen edge
+            js_hide = "panels().forEach(function(p){ if (p.location=='bottom') p.hiding='autohide'; });"
+            lines.append(f"qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js_hide)} "
+                         ">/dev/null 2>&1")
+            lines.append("pgrep -f linux_magnify >/dev/null || (setsid ~/.local/bin/linux-magnify >/dev/null 2>&1 &)")
         if "rust" in chosen:
             lines.append("command -v rustup >/dev/null && rustup default stable")
         # dock: swap Konsole / Dolphin launchers for the chosen apps, add the editor, dock auto-hide
