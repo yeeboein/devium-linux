@@ -11,6 +11,7 @@
 #   devium-helper refresh TAG       update Devium's own files to release TAG (Devium Updater)
 #   devium-helper brave-origin      install or update Brave Origin (official build from Brave)
 #   devium-helper cancel            stop a running Devium Setup install cleanly
+#   devium-helper archpill-deps     install what ArchPill needs (Quickshell and friends)
 set -uo pipefail
 export LC_ALL=C.UTF-8 TERM=dumb
 
@@ -211,6 +212,11 @@ PY
         ;;
     brave-origin)
         brave_origin
+        ;;
+    archpill-deps)
+        pacman_unlock || exit 1
+        step "Installing Quickshell for ArchPill"
+        pacman -Sy --needed --noconfirm quickshell qt6-svg qt6-declarative upower brightnessctl libnotify
         ;;
     cancel)
         # SIGINT lets pacman and flatpak stop cleanly (pacman removes its lock file)

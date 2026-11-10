@@ -47,6 +47,19 @@ if [[ -d /run/archiso ]]; then
     exit 0
 fi
 
+# --- ArchPill: install Quickshell automatically if ArchPill is wanted but it's missing ---
+if ! command -v qs >/dev/null && [[ ! -d /run/archiso ]] && \
+   [[ -f $STATE/archpill-wanted || -d ${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/archpill || -d $HOME/archpill ]]; then
+    notify-send --app-name="Devium" --icon=devium "Setting up ArchPill" \
+        "Installing Quickshell, which ArchPill needs. You may be asked for your password." 2>/dev/null
+    if pkexec /usr/lib/devium/devium-helper archpill-deps; then
+        rm -f "$STATE/archpill-done"   # so ArchPill gets set up below
+    else
+        notify-send --app-name="Devium" --icon=devium "ArchPill not set up" \
+            "Quickshell couldn't be installed (no internet or not enough space?). Devium will try again at the next login." 2>/dev/null
+    fi
+fi
+
 # --- ArchPill ---------------------------------------------------------------
 # On installed systems ArchPill is optional: the Setup wizard installs it if picked.
 if [[ ! -f $STATE/archpill-done ]] && command -v qs >/dev/null; then

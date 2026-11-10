@@ -617,10 +617,13 @@ class Wizard(QWidget):
         lines.append(f"mkdir -p {q(CONFIG)} && touch {q(os.path.join(CONFIG, 'shell-chosen'))}")
         # ArchPill
         if self.checked("archpill"):
+            lines.append(f"touch {q(os.path.join(CONFIG, 'archpill-wanted'))}")
+            lines.append("command -v qs >/dev/null || pkexec /usr/lib/devium/devium-helper archpill-deps")
             lines.append("if command -v qs >/dev/null && [ -d /opt/archpill ]; then "
                          "[ -d ~/archpill ] || cp -r /opt/archpill ~/archpill; "
                          "(cd ~/archpill && ./install.sh --no-packages); fi")
         else:
+            lines.append(f"rm -f {q(os.path.join(CONFIG, 'archpill-wanted'))}")
             lines.append("[ -x ~/archpill/uninstall.sh ] && ~/archpill/uninstall.sh")
         lines.append(f"mkdir -p {q(CONFIG)} && touch {q(DONE_MARKER)}")
         return "\n".join(lines)

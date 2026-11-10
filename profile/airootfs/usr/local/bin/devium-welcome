@@ -372,7 +372,18 @@ class Welcome(QWidget):
     def archpill_settings(self):
         qs = shutil.which("qs") or shutil.which("quickshell")
         if not qs:
-            return missing(self, "ArchPill (quickshell)")
+            r = QMessageBox.question(self, "Install ArchPill?",
+                                     "ArchPill needs Quickshell, which isn't installed yet. Install it now? "
+                                     "(about 60 MB)")
+            if r != QMessageBox.StandardButton.Yes:
+                return
+            setup = ("pkexec /usr/lib/devium/devium-helper archpill-deps && "
+                     "{ [ -d ~/archpill ] || cp -r /opt/archpill ~/archpill; } && "
+                     "cd ~/archpill && ./install.sh --no-packages")
+            os.makedirs(CONFIG, exist_ok=True)
+            open(os.path.join(CONFIG, "archpill-wanted"), "w").close()
+            subprocess.Popen(["sh", "-c", setup], start_new_session=True)
+            return
         subprocess.Popen(["sh", "-c",
                           f"{qs} -c archpill ipc call archpill openSettings || "
                           f"(QS_APP_ID=archpill {qs} -c archpill -n -d; sleep 2; "
