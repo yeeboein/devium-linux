@@ -149,6 +149,7 @@ tar -C "$STAGE/airootfs" \
     --exclude=./etc/mkinitcpio.conf.d --exclude=./etc/sudoers.d \
     --exclude=./etc/polkit-1 --exclude=./etc/sddm.conf.d/20-devium-live-autologin.conf \
     --exclude=./etc/lightdm/lightdm.conf.d/20-devium-live-autologin.conf --exclude=./usr/share/devium/xfce/live \
+    --exclude=./etc/udev/rules.d/90-devium-live-quiet-disks.rules \
     --exclude=./etc/systemd/journald.conf.d/volatile-storage.conf --exclude=./etc/systemd/logind.conf.d \
     --exclude=./etc/systemd/system/etc-pacman.d-gnupg.mount --exclude=./etc/systemd/system/pacman-init.service \
     --exclude=./etc/systemd/system/multi-user.target.wants --exclude=./root \

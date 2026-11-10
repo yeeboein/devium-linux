@@ -59,6 +59,14 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 ## beta7
 - [x] Installer packages step fixed (devium-desktop installed with --overwrite after it, live keyring copied), no auto-lock on the live preview
 
+## beta8 (planned)
+- [x] No "Disks & Devices" pop-up on the live preview while installing
+- [ ] Installer fixes from the beta7 test
+- [ ] Blank Devium (still choose Devium / Devium Dark / Base KDE)
+- [ ] Devium Setup any time: shows installed packages, add or remove
+- [ ] Rename "Apps" to "Packages"
+- [ ] devium-ram, easy backup, export/import setup, support search + "support fix"
+
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website
