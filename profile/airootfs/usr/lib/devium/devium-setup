@@ -186,6 +186,8 @@ finish_setup() {
     done
     # The installer leaves a copy of every downloaded package (1.5-2 GB): remove them.
     find /var/cache/pacman/pkg -maxdepth 1 -type f -name '*.pkg.tar.*' -delete 2>/dev/null
+    # never leave the installer's package manager lock behind
+    pgrep -x pacman >/dev/null || rm -f /var/lib/pacman/db.lck
     mkdir -p /var/lib/devium && touch /var/lib/devium/finished
 }
 

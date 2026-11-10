@@ -18,6 +18,24 @@ export LC_ALL=C.UTF-8 TERM=dumb
 
 step() { printf '\n### %s\n' "$*"; }
 
+# pacman allows one install at a time (/var/lib/pacman/db.lck). Wait for a real one to finish;
+# remove a leftover lock when no pacman is running (e.g. after an interrupted install).
+pacman_unlock() {
+    local i
+    for i in $(seq 1 60); do
+        [[ -e /var/lib/pacman/db.lck ]] || return 0
+        if ! pgrep -x pacman >/dev/null; then
+            echo "Removing a leftover package manager lock."
+            rm -f /var/lib/pacman/db.lck
+            return 0
+        fi
+        (( i == 1 )) && echo "Another install is running - waiting for it to finish..."
+        sleep 1
+    done
+    echo "Another install is still running. Try again when it has finished."
+    return 1
+}
+
 snapshot() {
     if command -v timeshift >/dev/null && [[ -s /etc/timeshift/timeshift.json ]] \
        && grep -q '"backup_device_uuid" *: *"[^"]' /etc/timeshift/timeshift.json; then
@@ -81,6 +99,7 @@ DESK
 case "${1:-}" in
     update)
         snapshot "Before update $(date '+%Y-%m-%d %H:%M')"
+        pacman_unlock || exit 1
         step "Updating the keyring"
         pacman -Sy --needed --noconfirm archlinux-keyring || exit 1
         step "Updating system packages"
@@ -109,6 +128,7 @@ case "${1:-}" in
         for p in "$@"; do
             [[ $p =~ ^[a-z0-9@._+-]+$ ]] || { echo "bad package name: $p"; exit 1; }
         done
+        pacman_unlock || exit 1
         step "Installing: $*"
         pacman -Sy --needed --noconfirm "$@"
         ;;
@@ -149,6 +169,7 @@ PY
 )"
         fail=0
         if (( ${#PKGS[@]} )); then
+            pacman_unlock || exit 1
             step "Installing ${#PKGS[@]} packages"
             pacman -Sy --needed --noconfirm "${PKGS[@]}" || fail=1
         fi
@@ -204,6 +225,7 @@ PY
             [[ $f == /tmp/devium-aur/*.pkg.tar.zst && $f != *..* && -f $f ]] || { echo "refusing: $f"; exit 1; }
         done
         step "Installing $(basename -a "$@" | tr '\n' ' ')"
+        pacman_unlock || exit 1
         pacman -U --needed --noconfirm "$@"
         ;;
     *)
