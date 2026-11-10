@@ -184,6 +184,8 @@ class Welcome(QWidget):
         items += [
             tile("Update Manager", "Get the latest updates (Meta+U)",
                  lambda: self.go("devium-update-manager"), "system-software-update"),
+            tile("Devium Tools", "App Manager, speed, battery, privacy and help (Meta+T)",
+                 lambda: self.go("devium-tools", name="Devium Tools"), "preferences-system"),
             tile("Discover", "Find and install apps",
                  lambda: self.go("plasma-discover", name="Discover"), "plasmadiscover"),
             tile("New Python project", "Folder, venv, git and VS Code in one click",

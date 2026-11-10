@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""devium-ram: what is using your memory.
+
+  devium-ram            top programs by memory right now, and a plain-English verdict
+  devium-ram --sample   record one sample (a timer runs this every 10 minutes) so
+                        Devium Tools > App Manager can show each app's average RAM
+"""
+import json
+import os
+import sys
+import time
+
+DATA = os.path.expanduser("~/.local/share/devium/ram-samples.json")
+
+
+def meminfo():
+    m = {}
+    for line in open("/proc/meminfo"):
+        k, v = line.split(":", 1)
+        m[k] = int(v.split()[0]) * 1024
+    return m
+
+
+def processes():
+    """{program name: total resident memory in bytes} for this user's programs."""
+    uid = os.getuid()
+    out = {}
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            if os.stat(f"/proc/{pid}").st_uid != uid and uid != 0:
+                continue
+            exe = os.path.basename(os.readlink(f"/proc/{pid}/exe")).replace(" (deleted)", "")
+            with open(f"/proc/{pid}/statm") as f:
+                rss = int(f.read().split()[1]) * os.sysconf("SC_PAGE_SIZE")
+        except (OSError, ValueError, IndexError):
+            continue
+        out[exe] = out.get(exe, 0) + rss
+    return out
+
+
+def human(b):
+    for unit in ("B", "KB", "MB", "GB"):
+        if b < 1024 or unit == "GB":
+            return f"{b:.0f} {unit}" if unit in ("B", "KB") else f"{b:.1f} {unit}"
+        b /= 1024
+
+
+def sample():
+    try:
+        data = json.load(open(DATA))
+    except (OSError, ValueError):
+        data = {}
+    for name, rss in processes().items():
+        tot, n = data.get(name, [0, 0])
+        # keep a rolling average over the last ~500 samples
+        if n >= 500:
+            tot, n = tot * 499 / 500, 499
+        data[name] = [tot + rss, n + 1]
+    os.makedirs(os.path.dirname(DATA), exist_ok=True)
+    tmp = DATA + ".tmp"
+    json.dump(data, open(tmp, "w"))
+    os.replace(tmp, DATA)
+
+
+def averages():
+    """{program name: average bytes while running}"""
+    try:
+        return {k: t / n for k, (t, n) in json.load(open(DATA)).items() if n}
+    except (OSError, ValueError):
+        return {}
+
+
+def main():
+    if "--sample" in sys.argv:
+        sample()
+        return
+    if "-h" in sys.argv or "--help" in sys.argv:
+        print(__doc__)
+        return
+    m = meminfo()
+    total, avail = m["MemTotal"], m["MemAvailable"]
+    used = total - avail
+    pct = used * 100 / total
+    print(f"\n  Memory: {human(used)} used of {human(total)} ({pct:.0f}%)")
+    swap = m.get("SwapTotal", 0) - m.get("SwapFree", 0)
+    if swap:
+        print(f"  Swap/zram in use: {human(swap)}")
+    print()
+    top = sorted(processes().items(), key=lambda x: -x[1])[:12]
+    for name, rss in top:
+        bar = "#" * max(1, int(rss * 30 / total))
+        print(f"  {name[:22]:<22} {human(rss):>9}  {bar}")
+    print()
+    if pct > 90:
+        print("  Verdict: memory is almost full. Close the top program, or run: devium-helper lowram on")
+    elif pct > 70:
+        print("  Verdict: getting busy. Fine for now; close big apps if things slow down.")
+    else:
+        print("  Verdict: plenty of free memory.")
+    print()
+
+
+if __name__ == "__main__":
+    main()

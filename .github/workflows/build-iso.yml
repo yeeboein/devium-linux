@@ -42,9 +42,13 @@ jobs:
           echo "DEVIUM_VERSION=$v" >> "$GITHUB_ENV"
 
       - name: Build ISO in an Arch Linux container
+        env:
+          DEVIUM_REPORT_WEBHOOK: ${{ secrets.DEVIUM_REPORT_WEBHOOK }}
+          DEVIUM_DISCORD_INVITE: ${{ vars.DEVIUM_DISCORD_INVITE }}
         run: |
           sudo docker run --rm --privileged \
             -e DEVIUM_VERSION="$DEVIUM_VERSION" -e DEVIUM_REF="${RELEASE:-$GITHUB_REF_NAME}" -e EDITIONS="$EDITIONS" \
+            -e DEVIUM_REPORT_WEBHOOK="$DEVIUM_REPORT_WEBHOOK" -e DEVIUM_DISCORD_INVITE="$DEVIUM_DISCORD_INVITE" \
             -v "$PWD":/devium -w /devium \
             archlinux:latest \
             bash -c '

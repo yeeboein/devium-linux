@@ -65,9 +65,21 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] Devium Setup: descriptions wrap (nothing cut off), no duplicate "(included)"
 - [ ] Installer fixes from the beta7 test
 - [ ] Blank Devium (still choose Devium / Devium Dark / Base KDE)
-- [ ] Devium Setup any time: shows installed packages, add or remove
-- [ ] Rename "Apps" to "Packages"
-- [ ] devium-ram, easy backup, export/import setup, support search + "support fix"
+- [x] Devium Setup any time: installed things start ticked, untick to remove them
+- [x] Rename "Apps" to "Packages"
+- [x] More Python library sets (maths, images, games, GUIs, CLIs, databases, scraping, documents)
+- [x] Local AI (optional): Ollama + Alpaca, model picked to fit your RAM
+- [x] Magnify dock option (linux-magnify)
+- [x] Devium Tools: Devium Hub, App Manager (size, average RAM, remove), Safe Updates (Arch news,
+      undo last update, automatic updates), Make it faster, Low-RAM mode, battery health and charge
+      limit, privacy, printers and scanners, Docker/Podman, Git/GitHub connect, Coming from Windows
+      (copy your files), accessibility, language, Get help
+- [x] Report a problem: goes to the Devium Discord (webhook from a GitHub secret)
+- [x] Low-RAM mode turns on by itself on 4 GB computers; zram tuned to your RAM
+- [x] Disk encryption option in the installer
+- [x] Translations: Irish (Gaeilge), Spanish, French, German
+- [x] devium-ram, support search, "support fix"
+- [ ] Easy backup, export/import setup, stricter disk check
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

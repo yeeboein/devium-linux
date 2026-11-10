@@ -112,6 +112,17 @@ DEVIUM_REF=${DEVIUM_REF:-$repo_ref}
 DEVIUM_EDITION=$EDITION
 EOF
 
+# 4a. Report a problem (Devium Tools) sends to a Discord webhook. The URL is a GitHub secret
+#     (DEVIUM_REPORT_WEBHOOK), never stored in the repository. Without it, reports open a GitHub issue.
+mkdir -p "$STAGE/airootfs/etc/devium"
+if [[ ${DEVIUM_REPORT_WEBHOOK:-} == https://discord.com/api/webhooks/* ]]; then
+    printf '%s\n' "$DEVIUM_REPORT_WEBHOOK" > "$STAGE/airootfs/etc/devium/report-webhook"
+    say "Problem reports go to Discord"
+fi
+if [[ ${DEVIUM_DISCORD_INVITE:-} == https://discord.* ]]; then
+    printf '%s\n' "$DEVIUM_DISCORD_INVITE" > "$STAGE/airootfs/etc/devium/discord-invite"
+fi
+
 # 4b. Build the point-and-click installer (Calamares) from the AUR into Devium's local repo.
 build_aur() {   # build_aur <package>: build as an unprivileged user, install it, keep the package
     local name="$1" dir="$WORK/aur/$1" cache="$HERE/.aur-cache"

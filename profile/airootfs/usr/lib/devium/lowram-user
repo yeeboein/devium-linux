@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Desktop side of Low-RAM mode (runs as you, no password): lowram-user on|off
+on=${1:-on}
+kw=$(command -v kwriteconfig6 || command -v kwriteconfig5)
+if [[ -n $kw ]]; then
+    if [[ $on == on ]]; then
+        $kw --file kdeglobals --group KDE --key AnimationDurationFactor 0
+        $kw --file kwinrc --group Plugins --key blurEnabled false
+        $kw --file kwinrc --group Plugins --key contrastEnabled false
+        $kw --file kwinrc --group Compositing --key LatencyPolicy High
+        $kw --file baloofilerc --group "Basic Settings" --key Indexing-Enabled false
+        command -v balooctl6 >/dev/null && balooctl6 disable >/dev/null 2>&1
+        $kw --file kded5rc --group Module-browserintegrationreminder --key autoload false
+    else
+        $kw --file kdeglobals --group KDE --key AnimationDurationFactor 1
+        $kw --file kwinrc --group Plugins --key blurEnabled true
+        $kw --file kwinrc --group Plugins --key contrastEnabled true
+        $kw --file kwinrc --group Compositing --key LatencyPolicy --delete
+        $kw --file baloofilerc --group "Basic Settings" --key Indexing-Enabled true
+        command -v balooctl6 >/dev/null && balooctl6 enable >/dev/null 2>&1
+    fi
+    qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1
+elif command -v xfconf-query >/dev/null; then
+    # Xfce: no compositor shadows/animations when low on memory
+    xfconf-query -c xfwm4 -p /general/use_compositing -s $([[ $on == on ]] && echo false || echo true)
+fi
+mkdir -p ~/.config/devium
+[[ $on == on ]] && touch ~/.config/devium/low-ram-applied || rm -f ~/.config/devium/low-ram-applied

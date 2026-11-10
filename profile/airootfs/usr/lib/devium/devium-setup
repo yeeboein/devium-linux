@@ -188,7 +188,29 @@ finish_setup() {
     find /var/cache/pacman/pkg -maxdepth 1 -type f -name '*.pkg.tar.*' -delete 2>/dev/null
     # never leave the installer's package manager lock behind
     pgrep -x pacman >/dev/null || rm -f /var/lib/pacman/db.lck
+    ram_settings
     mkdir -p /var/lib/devium && touch /var/lib/devium/finished
+}
+
+# Settings chosen from how much memory the computer has (Low-RAM mode, beta8)
+ram_settings() {
+    local kb gb
+    kb=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
+    gb=$(( (kb + 524288) / 1048576 ))
+    # Compressed memory (zram) helps every computer; smaller machines get a bigger share
+    local share="ram / 2"; (( gb <= 4 )) && share="ram"
+    cat > /etc/systemd/zram-generator.conf <<EOF
+[zram0]
+zram-size = min($share, 8192)
+compression-algorithm = zstd
+EOF
+    printf 'vm.swappiness=100\nvm.vfs_cache_pressure=50\n' > /etc/sysctl.d/90-devium-faster.conf
+    systemctl enable fstrim.timer >/dev/null 2>&1
+    if (( gb <= 4 )); then
+        say "only ${gb} GB of memory: turning on Low-RAM mode"
+        mkdir -p /etc/devium && touch /etc/devium/low-ram
+        systemctl mask packagekit.service >/dev/null 2>&1
+    fi
 }
 
 case "${1:-}" in

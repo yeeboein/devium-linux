@@ -1,0 +1,1161 @@
+#!/usr/bin/env python3
+"""Devium Tools: App Manager, updates, speed, battery, privacy, printers, developer tools,
+help for people coming from Windows, accessibility, language and support - in one app.
+
+  devium-tools            open on the Home page (Devium Hub)
+  devium-tools <page>     open a page: apps, updates, speed, battery, privacy, printers,
+                          developer, windows, accessibility, language, help, report
+"""
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+import urllib.request
+
+sys.path.insert(0, "/usr/lib/devium")
+
+from PyQt6.QtCore import QProcess, Qt, QTimer
+from PyQt6.QtGui import QFont, QGuiApplication, QIcon
+from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QFormLayout, QFrame,
+                             QGridLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+                             QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
+                             QProgressBar, QPushButton, QScrollArea, QSizePolicy, QSlider, QStackedWidget,
+                             QTextEdit, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+
+import devium_ui as ui
+from devium_i18n import LANGUAGES, T, current as current_language, set_language
+
+HELPER = "/usr/lib/devium/devium-helper"
+WEBHOOK_FILE = "/etc/devium/report-webhook"
+REPO = "https://github.com/yeeboein/devium-linux"
+KDE = shutil.which("plasmashell") is not None
+
+
+# ---------------------------------------------------------------------------- small helpers
+def run(cmd, timeout=15):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
+    except Exception:
+        return ""
+
+
+def read(path, default=""):
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError:
+        return default
+
+
+def human(b):
+    b = float(b)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if b < 1024 or unit == "TB":
+            return f"{b:.0f} {unit}" if unit in ("B", "KB") else f"{b:.1f} {unit}"
+        b /= 1024
+
+
+def meminfo():
+    m = {}
+    for line in read("/proc/meminfo").splitlines():
+        k, v = line.split(":", 1)
+        m[k] = int(v.split()[0]) * 1024
+    return m
+
+
+def ram_gb():
+    return meminfo().get("MemTotal", 8 << 30) / (1 << 30)
+
+
+def kwrite(file, group, key, value):
+    tool = shutil.which("kwriteconfig6") or shutil.which("kwriteconfig5")
+    if tool:
+        subprocess.run([tool, "--file", file, "--group", group, "--key", key, str(value)])
+
+
+def kread(file, group, key, default=""):
+    tool = shutil.which("kreadconfig6") or shutil.which("kreadconfig5")
+    if not tool:
+        return default
+    return run([tool, "--file", file, "--group", group, "--key", key, "--default", default]).strip()
+
+
+def kwin_reconfigure():
+    subprocess.run("qdbus6 org.kde.KWin /KWin reconfigure", shell=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def in_terminal(command):
+    """Open a terminal window running a command, and keep it open afterwards."""
+    keep = f"{command}; echo; read -rp 'Press Enter to close...' _"
+    for term, args in (("konsole", ["--hold", "-e", "bash", "-c"]), ("xfce4-terminal", ["--hold", "-x", "bash", "-c"]),
+                       ("kitty", ["bash", "-c"]), ("alacritty", ["-e", "bash", "-c"]), ("foot", ["bash", "-c"])):
+        if shutil.which(term):
+            subprocess.Popen([term] + args + [keep if term not in ("konsole", "xfce4-terminal") else command],
+                             start_new_session=True)
+            return True
+    return False
+
+
+def label(text, obj=None, wrap=True, rich=False):
+    l = QLabel(text)
+    if obj:
+        l.setObjectName(obj)
+    l.setWordWrap(wrap)
+    if rich:
+        l.setTextFormat(Qt.TextFormat.RichText)
+        l.setOpenExternalLinks(False)
+        l.linkActivated.connect(lambda url: ui.open_link(url))
+    return l
+
+
+def button(text, slot, primary=False, icon=None):
+    b = QPushButton(text)
+    if primary:
+        b.setObjectName("primary")
+    if icon:
+        b.setIcon(QIcon.fromTheme(icon))
+    b.clicked.connect(slot)
+    return b
+
+
+def card(*widgets):
+    f = QFrame()
+    f.setObjectName("card")
+    f.setStyleSheet("QFrame#card { border: 1px solid palette(mid); border-radius: 12px; background: palette(base); }")
+    l = QVBoxLayout(f)
+    l.setContentsMargins(16, 12, 16, 12)
+    for w in widgets:
+        if isinstance(w, QHBoxLayout):
+            l.addLayout(w)
+        else:
+            l.addWidget(w)
+    return f
+
+
+def row(*widgets, stretch=True):
+    r = QHBoxLayout()
+    for w in widgets:
+        r.addWidget(w)
+    if stretch:
+        r.addStretch(1)
+    return r
+
+
+class Page(QScrollArea):
+    """A scrolling page with a title, a short explanation and a column of content."""
+
+    def __init__(self, title, intro):
+        super().__init__()
+        self.setWidgetResizable(True)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        inner = QWidget()
+        self.col = QVBoxLayout(inner)
+        self.col.setContentsMargins(24, 18, 24, 18)
+        self.col.setSpacing(10)
+        self.col.addWidget(label(title, "title"))
+        self.col.addWidget(label(intro, "subtitle"))
+        self.setWidget(inner)
+        self.loaded = False
+
+    def add(self, w):
+        if isinstance(w, QHBoxLayout):
+            self.col.addLayout(w)
+        else:
+            self.col.addWidget(w)
+        return w
+
+    def finish(self):
+        self.col.addStretch(1)
+
+    def on_show(self):
+        """Called the first time (and every time) the page is opened."""
+
+
+class RunDialog(QDialog):
+    """Run a command (usually the root helper), show what it does, report the result."""
+
+    def __init__(self, parent, title, program, args, done=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.resize(640, 380)
+        self.done_cb = done
+        l = QVBoxLayout(self)
+        self.status = label(T("Working..."), "h2")
+        l.addWidget(self.status)
+        self.bar = QProgressBar()
+        self.bar.setRange(0, 0)
+        l.addWidget(self.bar)
+        self.log = QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setFont(QFont("monospace"))
+        l.addWidget(self.log, 1)
+        self.close_btn = button(T("Close"), self.accept)
+        self.close_btn.setEnabled(False)
+        l.addLayout(row(self.close_btn))
+        self.proc = QProcess(self)
+        self.proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.proc.readyReadStandardOutput.connect(self.more)
+        self.proc.finished.connect(self.finished)
+        self.proc.start(program, args)
+
+    def more(self):
+        text = bytes(self.proc.readAllStandardOutput()).decode(errors="replace")
+        self.log.insertPlainText(text)
+        self.log.ensureCursorVisible()
+        steps = re.findall(r"^### (.+)$", text, re.M)
+        if steps:
+            self.status.setText(steps[-1])
+
+    def finished(self, code, _status):
+        self.bar.setRange(0, 1)
+        self.bar.setValue(1)
+        self.status.setText(T("Done") if code == 0 else T("Something went wrong") + f" (code {code})")
+        self.close_btn.setEnabled(True)
+        if self.done_cb:
+            self.done_cb(code)
+
+
+def root(parent, title, *args, done=None):
+    """Run a devium-helper action as root (asks for the password once)."""
+    RunDialog(parent, title, "pkexec", [HELPER, *args], done).exec()
+
+
+# ---------------------------------------------------------------------------- Home (Devium Hub)
+class HomePage(Page):
+    def __init__(self, win):
+        super().__init__(T("Devium Tools"), T("Everything to look after your computer, in one place."))
+        self.win = win
+        self.status = self.add(label("", rich=True))
+        grid = QGridLayout()
+        grid.setSpacing(10)
+        tiles = [
+            ("Devium Setup", "Add or remove apps and the look", "system-software-install",
+             lambda: ui.launch("devium-setup-wizard")),
+            (T("App Manager"), "Size, RAM and remove apps", "view-list-details",
+             lambda: win.go("apps")),
+            ("Update Manager", "Install updates with a restore point first", "system-software-update",
+             lambda: ui.launch("devium-update-manager")),
+            ("Devium Updater", "Get new Devium versions", "devium",
+             lambda: ui.launch("devium-updater")),
+            (T("Make it faster"), "Safe tweaks for speed and memory", "speedometer", lambda: win.go("speed")),
+            (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
+            ("Devium Welcome", "Tips, shortcuts and first steps", "help-about", lambda: ui.launch("devium-welcome")),
+            ("About Devium", "Version, credits and links", "devium", lambda: ui.launch("devium-about")),
+        ]
+        for i, (name, desc, icon, act) in enumerate(tiles):
+            b = QPushButton(f"  {name}\n  {desc}")
+            b.setObjectName("tile")
+            b.setIcon(QIcon.fromTheme(icon, ui.app_icon()))
+            b.setIconSize(b.iconSize() * 2)
+            b.setMinimumHeight(64)
+            b.setToolTip(desc)
+            b.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+            b.clicked.connect(act)
+            grid.addWidget(b, i // 2, i % 2)
+        self.add(label("Devium Hub", "h2"))
+        w = QWidget()
+        w.setLayout(grid)
+        self.add(w)
+        links = label(f"<a href='{REPO}/blob/main/docs/GUIDE.md'>Guide</a> &nbsp;·&nbsp; "
+                      f"<a href='{REPO}/releases'>Releases</a> &nbsp;·&nbsp; "
+                      f"<a href='{REPO}'>GitHub</a> &nbsp;·&nbsp; "
+                      f"<a href='https://wiki.archlinux.org'>Arch Wiki</a>", rich=True)
+        invite = read("/etc/devium/discord-invite")
+        if invite.startswith("https://discord."):
+            links.setText(links.text() + f" &nbsp;·&nbsp; <a href='{invite}'>Discord</a>")
+        self.add(links)
+        self.finish()
+
+    def on_show(self):
+        m = meminfo()
+        du = shutil.disk_usage("/")
+        used_ram = m["MemTotal"] - m["MemAvailable"]
+        self.status.setText(
+            f"<b>Devium {ui.devium_version()}</b> &nbsp; · &nbsp; Disk: {human(du.free)} free of {human(du.total)}"
+            f" &nbsp; · &nbsp; Memory: {human(used_ram)} used of {human(m['MemTotal'])}")
+
+
+# ---------------------------------------------------------------------------- App Manager
+class AppsPage(Page):
+    def __init__(self, win):
+        super().__init__(T("App Manager"),
+                         "Everything you installed, with how much disk it uses and how much memory it uses on "
+                         "average while running (measured in the background every 10 minutes). Devium's own "
+                         "system packages are not listed, so you can't break anything here.")
+        self.search = QLineEdit()
+        self.search.setPlaceholderText(T("Search") + "...")
+        self.search.textChanged.connect(self.filter)
+        self.add(row(self.search, button(T("Refresh"), self.load, icon="view-refresh"),
+                     button("Add apps (Devium Setup)", lambda: ui.launch("devium-setup-wizard"), icon="list-add"),
+                     stretch=False))
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels([T("Name"), T("Size"), T("Average RAM"), T("Type")])
+        self.tree.setRootIsDecorated(False)
+        self.tree.setSortingEnabled(True)
+        self.tree.setMinimumHeight(340)
+        h = self.tree.header()
+        h.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.tree.itemSelectionChanged.connect(self.selected)
+        self.add(self.tree)
+        self.detail = self.add(label("", "subtitle"))
+        self.rm = button(T("Remove"), self.remove, icon="edit-delete")
+        self.rm.setEnabled(False)
+        self.total = label("", "subtitle")
+        self.add(row(self.rm, self.total))
+
+    def on_show(self):
+        if not self.loaded:
+            self.loaded = True
+            QTimer.singleShot(50, self.load)
+
+    def load(self):
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        self.tree.clear()
+        base = set(read("/usr/share/devium/install-packages.txt").split())
+        ram = {}
+        try:
+            data = json.load(open(os.path.expanduser("~/.local/share/devium/ram-samples.json")))
+            ram = {k: t / n for k, (t, n) in data.items() if n}
+        except (OSError, ValueError):
+            pass
+        pkgs = [p for p in run(["pacman", "-Qeq"]).split() if p not in base]
+        total = 0
+        if pkgs:
+            info = run(["pacman", "-Qi", *pkgs], timeout=60)
+            files = run(["pacman", "-Ql", *pkgs], timeout=60)
+            exes = {}
+            for line in files.splitlines():
+                pkg, _, path = line.partition(" ")
+                if path.startswith(("/usr/bin/", "/opt/")) and not path.endswith("/"):
+                    exes.setdefault(pkg, set()).add(os.path.basename(path))
+            for block in info.strip().split("\n\n"):
+                f = dict(re.findall(r"^([A-Za-z ]+?)\s*: (.*)$", block, re.M))
+                name = f.get("Name", "")
+                size = self.parse_size(f.get("Installed Size", "0 B"))
+                total += size
+                r = [ram[e] for e in exes.get(name, ()) if e in ram]
+                self.add_row(name, f.get("Description", ""), size, max(r) if r else None, "Package", name)
+        for line in run(["flatpak", "list", "--app", "--columns=application,name,size"]).splitlines():
+            parts = line.split("\t")
+            if len(parts) < 3:
+                continue
+            app, name, size = parts[0], parts[1], self.parse_size(parts[2].replace("\xa0", " "))
+            total += size
+            guess = app.split(".")[-1].lower()
+            r = [v for k, v in ram.items() if k.lower() == guess]
+            self.add_row(name, app, size, r[0] if r else None, "Flatpak", app)
+        self.tree.sortByColumn(1, Qt.SortOrder.DescendingOrder)
+        self.total.setText(f"{self.tree.topLevelItemCount()} apps, {human(total)} in total")
+        QApplication.restoreOverrideCursor()
+
+    @staticmethod
+    def parse_size(text):
+        m = re.match(r"([\d.,]+)\s*([KMGT]?i?B|bytes)?", text.strip())
+        if not m:
+            return 0
+        n = float(m.group(1).replace(",", "."))
+        unit = (m.group(2) or "B")[0].upper()
+        return int(n * {"B": 1, "K": 1 << 10, "M": 1 << 20, "G": 1 << 30, "T": 1 << 40}.get(unit, 1))
+
+    def add_row(self, name, desc, size, ram, kind, ident):
+        it = QTreeWidgetItem([name, human(size), human(ram) if ram else T("not measured yet"), kind])
+        it.setData(1, Qt.ItemDataRole.UserRole, size)
+        it.setData(0, Qt.ItemDataRole.UserRole, (kind, ident, desc))
+        it.setToolTip(0, desc)
+        self.tree.addTopLevelItem(it)
+
+    def filter(self, text):
+        text = text.lower()
+        for i in range(self.tree.topLevelItemCount()):
+            it = self.tree.topLevelItem(i)
+            desc = it.data(0, Qt.ItemDataRole.UserRole)[2]
+            it.setHidden(bool(text) and text not in it.text(0).lower() and text not in desc.lower())
+
+    def selected(self):
+        items = self.tree.selectedItems()
+        self.rm.setEnabled(bool(items))
+        if items:
+            kind, ident, desc = items[0].data(0, Qt.ItemDataRole.UserRole)
+            self.detail.setText(f"{ident}: {desc}")
+
+    def remove(self):
+        it = self.tree.selectedItems()[0]
+        kind, ident, _ = it.data(0, Qt.ItemDataRole.UserRole)
+        if QMessageBox.question(self, T("Remove"), f"Remove {it.text(0)} and free {it.text(1)}?") \
+                != QMessageBox.StandardButton.Yes:
+            return
+        args = ["remove", ident] if kind == "Package" else ["remove-flatpak", ident]
+        root(self, f"{T('Remove')} {it.text(0)}", *args, done=lambda code: code == 0 and self.load())
+
+
+# ---------------------------------------------------------------------------- Updates (Safe Updates)
+class UpdatesPage(Page):
+    def __init__(self, win):
+        super().__init__(T("Updates"),
+                         "Safe Updates: Devium makes a restore point before every update (when Timeshift is set "
+                         "up), remembers the old versions so you can undo, and shows Arch Linux news first - "
+                         "sometimes an update needs you to do something by hand.")
+        self.news = self.add(label(T("Arch Linux news") + "...", rich=True))
+        self.add(row(button(T("Install updates"), lambda: ui.launch("devium-update-manager"), True,
+                            "system-software-update"),
+                     button(T("Undo last update"), self.undo, icon="edit-undo"),
+                     button("Make a restore point", lambda: root(self, "Restore point", "snapshot"),
+                            icon="document-save")))
+        self.auto = QCheckBox(T("Automatic updates") + " (daily, on mains power, restore point first)")
+        self.auto.setChecked(run(["systemctl", "is-enabled", "devium-autoupdate.timer"]).strip() == "enabled")
+        self.auto.toggled.connect(self.toggle_auto)
+        self.add(card(self.auto, label(
+            "Arch Linux has no separate \"security only\" updates: every fix comes with the normal updates. "
+            "So automatic updates install everything, quietly, once a day. You can undo the last one here.",
+            "subtitle")))
+        self.finish()
+
+    def on_show(self):
+        if self.loaded:
+            return
+        self.loaded = True
+        self.proc = QProcess(self)
+        self.proc.finished.connect(self.got_news)
+        self.proc.start("curl", ["-fsL", "--max-time", "15", "https://archlinux.org/feeds/news/"])
+
+    def last_update(self):
+        last = 0
+        try:
+            for line in open("/var/log/pacman.log", errors="replace"):
+                if "starting full system upgrade" in line:
+                    last = line[1:20]
+        except OSError:
+            pass
+        return str(last) if last else ""
+
+    def got_news(self, code, _s):
+        import xml.etree.ElementTree as ET
+        from email.utils import parsedate_to_datetime
+        raw = bytes(self.proc.readAllStandardOutput())
+        if code != 0 or not raw:
+            self.news.setText("<b>" + T("Arch Linux news") + "</b><br>Could not load the news (offline?).")
+            return
+        last = self.last_update()
+        html = "<b>" + T("Arch Linux news") + "</b><br>"
+        warn = False
+        try:
+            for item in ET.fromstring(raw).iter("item"):
+                title = item.findtext("title", "")
+                link = item.findtext("link", "")
+                when = parsedate_to_datetime(item.findtext("pubDate", ""))
+                new = last and when.strftime("%Y-%m-%dT%H:%M:%S") > last
+                warn |= bool(new)
+                colour = "#e8cd96" if new else "palette(text)"
+                html += (f"<span style='color:{colour}'>{when:%d %b %Y}{' NEW' if new else ''}</span> "
+                         f"<a href='{link}'>{title}</a><br>")
+                if html.count("<br>") > 6:
+                    break
+        except Exception:
+            html += "Could not read the news."
+        if warn:
+            html += ("<br><span style='color:#e8cd96'><b>There is news since your last update. Read it before "
+                     "updating: it may need a manual step.</b></span>")
+        self.news.setText(html)
+
+    def undo(self):
+        log = read("/var/lib/devium/last-update.txt")
+        if not log:
+            QMessageBox.information(self, T("Undo last update"), "There is no update to undo yet.")
+            return
+        n = len(log.splitlines())
+        if QMessageBox.question(self, T("Undo last update"),
+                                f"Put back the old versions of {n} packages from the last update?") \
+                == QMessageBox.StandardButton.Yes:
+            root(self, T("Undo last update"), "undo-update")
+
+    def toggle_auto(self, on):
+        r = subprocess.run(["pkexec", HELPER, "autoupdate", "on" if on else "off"])
+        if r.returncode != 0:
+            self.auto.blockSignals(True)
+            self.auto.setChecked(not on)
+            self.auto.blockSignals(False)
+
+
+# ---------------------------------------------------------------------------- Speed and memory
+def apply_lowram_user(on):
+    """The desktop side of Low-RAM mode (no password needed)."""
+    subprocess.run(["/usr/lib/devium/lowram-user", "on" if on else "off"])
+
+
+class SpeedPage(Page):
+    def __init__(self, win):
+        super().__init__(T("Speed and memory"),
+                         "See what is using your memory, and make Devium lighter. Every change here is safe and "
+                         "can be switched back.")
+        self.mem = self.add(label("", rich=True))
+        self.top = QPlainTextEdit()
+        self.top.setReadOnly(True)
+        self.top.setFont(QFont("monospace"))
+        self.top.setMaximumHeight(220)
+        self.add(self.top)
+        self.add(row(button(T("Refresh"), self.on_show, icon="view-refresh"),
+                     button("System Monitor", lambda: ui.launch("plasma-systemmonitor"), icon="utilities-system-monitor")))
+        self.add(card(label(T("Make it faster"), "h2"),
+                      label("Turns on compressed memory (zram), weekly SSD trim, a faster boot and cleans old logs "
+                            "and caches.", "subtitle"),
+                      row(button(T("Make it faster"), lambda: root(self, T("Make it faster"), "faster"), True,
+                                 "speedometer"))))
+        gb = ram_gb()
+        self.low = QCheckBox(T("Low-RAM mode"))
+        self.low.setChecked(os.path.exists("/etc/devium/low-ram"))
+        self.low.toggled.connect(self.toggle_low)
+        rec = ("Recommended for this computer" if gb <= 4.5 else "Not needed on this computer") + f" ({gb:.0f} GB RAM)"
+        self.add(card(self.low, label("Turns off animations, blur and file indexing, stops background app-store "
+                                      "checks, and uses compressed memory. " + rec + ".", "subtitle")))
+        self.finish()
+
+    def on_show(self):
+        m = meminfo()
+        used = m["MemTotal"] - m["MemAvailable"]
+        pct = used * 100 / m["MemTotal"]
+        colour = "#e89ca0" if pct > 90 else "#e8cd96" if pct > 70 else ui.ACCENT
+        self.mem.setText(f"<b>Memory:</b> <span style='color:{colour}'>{human(used)} used</span> of "
+                         f"{human(m['MemTotal'])} ({pct:.0f}%)")
+        self.top.setPlainText(run(["/usr/local/bin/devium-ram"]).strip("\n"))
+
+    def toggle_low(self, on):
+        r = subprocess.run(["pkexec", HELPER, "lowram", "on" if on else "off"])
+        if r.returncode == 0:
+            apply_lowram_user(on)
+        else:
+            self.low.blockSignals(True)
+            self.low.setChecked(not on)
+            self.low.blockSignals(False)
+
+
+# ---------------------------------------------------------------------------- Battery
+class BatteryPage(Page):
+    def __init__(self, win):
+        super().__init__(T("Battery"),
+                         "Battery health and a charge limit. Stopping at 80% makes a laptop battery that's "
+                         "always plugged in last years longer.")
+        self.info = self.add(label("", rich=True))
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.setRange(50, 100)
+        self.slider.setSingleStep(5)
+        self.slider.setPageStep(5)
+        self.value = label("", wrap=False)
+        self.slider.valueChanged.connect(lambda v: self.value.setText(f"{v}%" if v < 100 else "No limit"))
+        self.apply = button("Apply", self.set_limit, True)
+        self.limit_card = self.add(card(label(T("Charge limit"), "h2"),
+                                        row(self.slider, self.value, self.apply, stretch=False),
+                                        label("Not every laptop supports this. ThinkPad, ASUS, Dell, Lenovo "
+                                              "and Framework usually do.", "subtitle")))
+        self.finish()
+
+    def on_show(self):
+        bats = sorted(glob.glob("/sys/class/power_supply/BAT*"))
+        if not bats:
+            self.info.setText("No battery found - this looks like a desktop computer or a virtual machine.")
+            self.limit_card.hide()
+            return
+        html = ""
+        writable = False
+        for b in bats:
+            full = read(f"{b}/energy_full") or read(f"{b}/charge_full")
+            design = read(f"{b}/energy_full_design") or read(f"{b}/charge_full_design")
+            health = f"{int(full) * 100 / int(design):.0f}%" if full and design and int(design) else "unknown"
+            html += (f"<b>{os.path.basename(b)}</b>: {read(b + '/capacity', '?')}% charged, "
+                     f"{read(b + '/status', '').lower()} &nbsp;·&nbsp; <b>{T('Battery health')}:</b> {health}")
+            cycles = read(f"{b}/cycle_count")
+            if cycles and cycles != "0":
+                html += f" &nbsp;·&nbsp; {cycles} charge cycles"
+            html += "<br>"
+            limit = read(f"{b}/charge_control_end_threshold")
+            if limit:
+                writable = True
+                self.slider.setValue(int(limit))
+        self.info.setText(html)
+        self.limit_card.setEnabled(writable)
+        if not writable:
+            self.value.setText("Not supported on this laptop")
+
+    def set_limit(self):
+        root(self, T("Charge limit"), "charge-limit", str(self.slider.value()))
+
+
+# ---------------------------------------------------------------------------- Privacy
+class PrivacyPage(Page):
+    def __init__(self, win):
+        super().__init__(T("Privacy"),
+                         "Devium collects nothing about you and sends nothing anywhere. A problem report is only "
+                         "sent when you press Send, and you see exactly what goes in it.")
+        self.boxes = {}
+        items = [
+            ("firewall", T("Firewall"), "Blocks incoming connections you didn't ask for.",
+             lambda: run(["systemctl", "is-active", "ufw"]).strip() == "active"),
+            ("mac", "Random Wi-Fi address", "Networks and shops can't track your laptop by its hardware address.",
+             lambda: os.path.exists("/etc/NetworkManager/conf.d/90-devium-mac.conf")),
+            ("location", "Location services", "Lets apps ask where you are (used for night colour and weather).",
+             lambda: run(["systemctl", "is-enabled", "geoclue"]).strip() != "masked"),
+        ]
+        for key, name, desc, state in items:
+            box = QCheckBox(name)
+            box.setChecked(state())
+            box.toggled.connect(lambda on, k=key, b=box: self.toggle(k, on, b))
+            self.add(card(box, label(desc, "subtitle")))
+        if KDE:
+            self.recent = QCheckBox("Remember recently opened files")
+            self.recent.setChecked(kread("kdeglobals", "RecentDocuments", "UseRecent", "true") != "false")
+            self.recent.toggled.connect(lambda on: kwrite("kdeglobals", "RecentDocuments", "UseRecent",
+                                                          "true" if on else "false"))
+            self.add(card(self.recent, row(button("Clear the list now", self.clear_recent))))
+            kwrite("PlasmaUserFeedback", "Global", "FeedbackLevel", 0)   # KDE feedback: off
+        self.finish()
+
+    def toggle(self, key, on, box):
+        if subprocess.run(["pkexec", HELPER, "privacy", key, "on" if on else "off"]).returncode != 0:
+            box.blockSignals(True)
+            box.setChecked(not on)
+            box.blockSignals(False)
+
+    def clear_recent(self):
+        for p in glob.glob(os.path.expanduser("~/.local/share/RecentDocuments/*")) + \
+                [os.path.expanduser("~/.local/share/recently-used.xbel")]:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+        QMessageBox.information(self, T("Privacy"), "Recent files cleared.")
+
+
+# ---------------------------------------------------------------------------- Printers and scanners
+class PrintersPage(Page):
+    def __init__(self, win):
+        super().__init__(T("Printers and scanners"),
+                         "One click installs everything for printing and scanning. Most network (Wi-Fi) and USB "
+                         "printers then show up by themselves - no drivers to hunt for.")
+        self.state = self.add(label(""))
+        self.add(row(button(T("Set up printing"), lambda: root(self, T("Set up printing"), "printers",
+                                                              done=lambda c: self.on_show()), True, "printer")))
+        self.add(row(button("Printer settings", self.settings, icon="configure"),
+                     button("Scan a document", self.scan, icon="scanner")))
+        self.add(label("Tip: HP printers work even better with the \"hplip\" package; Brother and Epson have "
+                       "drivers in the AUR (search for your model).", "subtitle"))
+        self.finish()
+
+    def on_show(self):
+        ok = shutil.which("lpstat") is not None
+        printers = run(["lpstat", "-e"]).split() if ok else []
+        self.state.setText("Printing is set up. " + (f"Printers: {', '.join(printers)}" if printers else
+                                                      "No printers found yet - turn yours on and wait a minute.")
+                           if ok else "Printing is not set up yet.")
+
+    def settings(self):
+        ui.launch("kcmshell6", "kcm_printer_manager") or ui.launch("system-config-printer") or \
+            ui.open_link("http://localhost:631", self)
+
+    def scan(self):
+        ui.launch("skanpage") or ui.launch("simple-scan") or \
+            QMessageBox.information(self, "Scan", "Press \"Set up printing\" first.")
+
+
+# ---------------------------------------------------------------------------- Developer
+class GitDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle(T("Connect Git and GitHub"))
+        self.resize(560, 420)
+        l = QVBoxLayout(self)
+        l.addWidget(label("1. Your name and email go on every commit you make.", "h2"))
+        f = QFormLayout()
+        self.name = QLineEdit(run(["git", "config", "--global", "user.name"]).strip())
+        self.email = QLineEdit(run(["git", "config", "--global", "user.email"]).strip())
+        self.email.setPlaceholderText("Use your GitHub email, or the private one from GitHub > Settings > Emails")
+        f.addRow(T("Name"), self.name)
+        f.addRow("Email", self.email)
+        l.addLayout(f)
+        l.addWidget(label("2. A key lets you push to GitHub without typing a password.", "h2"))
+        self.key_info = label("", "subtitle")
+        l.addWidget(self.key_info)
+        l.addLayout(row(button("Save and make my key", self.save, True),
+                        button("Copy key and open GitHub", self.copy_open, icon="edit-copy")))
+        l.addWidget(label("3. On GitHub, paste the key into the box and press \"Add SSH key\". Then:", "h2"))
+        self.test_out = label("", "subtitle")
+        l.addLayout(row(button("Test the connection", self.test, icon="network-connect")))
+        l.addWidget(self.test_out)
+        l.addStretch(1)
+        l.addLayout(row(button(T("Close"), self.accept)))
+        self.key = os.path.expanduser("~/.ssh/id_ed25519")
+        self.refresh()
+
+    def refresh(self):
+        self.key_info.setText("You already have a key." if os.path.exists(self.key + ".pub")
+                              else "You don't have a key yet.")
+
+    def save(self):
+        if self.name.text().strip():
+            subprocess.run(["git", "config", "--global", "user.name", self.name.text().strip()])
+        if self.email.text().strip():
+            subprocess.run(["git", "config", "--global", "user.email", self.email.text().strip()])
+        subprocess.run(["git", "config", "--global", "init.defaultBranch", "main"])
+        if not os.path.exists(self.key):
+            os.makedirs(os.path.dirname(self.key), mode=0o700, exist_ok=True)
+            subprocess.run(["ssh-keygen", "-t", "ed25519", "-N", "", "-C", self.email.text().strip() or "devium",
+                            "-f", self.key], capture_output=True)
+        self.refresh()
+
+    def copy_open(self):
+        if not os.path.exists(self.key + ".pub"):
+            self.save()
+        QGuiApplication.clipboard().setText(read(self.key + ".pub"))
+        ui.open_link("https://github.com/settings/ssh/new", self)
+
+    def test(self):
+        r = subprocess.run(["ssh", "-T", "-o", "StrictHostKeyChecking=accept-new", "-o", "BatchMode=yes",
+                            "git@github.com"], capture_output=True, text=True, timeout=20)
+        m = re.search(r"Hi (\S+)!", r.stderr + r.stdout)
+        self.test_out.setText(f"Connected to GitHub as {m.group(1)}." if m else
+                              "Not connected yet. Did you add the key on GitHub?")
+
+
+class DeveloperPage(Page):
+    def __init__(self, win):
+        super().__init__(T("Developer"), "Connect to GitHub, and run apps in containers with Docker or Podman.")
+        self.add(card(label(T("Connect Git and GitHub"), "h2"),
+                      label("Set your name and email, make an SSH key, add it to GitHub and test it - step by step.",
+                            "subtitle"),
+                      row(button(T("Connect Git and GitHub"), lambda: GitDialog(self).exec(), True, "git"))))
+        self.engine = label("", "subtitle")
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels([T("Name"), "Image", "Status"])
+        self.tree.setRootIsDecorated(False)
+        self.tree.setMaximumHeight(200)
+        self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        user = os.environ.get("USER") or run(["id", "-un"]).strip()
+        self.add(card(label(T("Containers"), "h2"), self.engine, self.tree,
+                      row(button("Install Docker", lambda: root(self, "Docker", "containers", user, "docker",
+                                                                done=lambda c: self.on_show())),
+                          button("Install Podman", lambda: root(self, "Podman", "containers", user, "podman",
+                                                                done=lambda c: self.on_show())),
+                          button("Stop selected", self.stop, icon="media-playback-stop"),
+                          button(T("Refresh"), self.on_show, icon="view-refresh"))))
+        self.finish()
+
+    def tool(self):
+        return "docker" if shutil.which("docker") else "podman" if shutil.which("podman") else None
+
+    def on_show(self):
+        self.tree.clear()
+        t = self.tool()
+        if not t:
+            self.engine.setText("No container engine yet. Docker is the most common; Podman needs no background "
+                                "service and no root.")
+            return
+        out = run([t, "ps", "-a", "--format", "{{.Names}}\t{{.Image}}\t{{.Status}}"])
+        if not out and t == "docker":
+            self.engine.setText("Docker is installed. If nothing shows, log out and in again (to join the docker "
+                                "group).")
+        else:
+            self.engine.setText(f"Using {t}. Containers on this computer:")
+        for line in out.splitlines():
+            self.tree.addTopLevelItem(QTreeWidgetItem(line.split("\t")))
+
+    def stop(self):
+        t = self.tool()
+        for it in self.tree.selectedItems():
+            subprocess.run([t, "stop", it.text(0)], capture_output=True)
+        self.on_show()
+
+
+# ---------------------------------------------------------------------------- Coming from Windows
+WINDOWS_APPS = [
+    ("File Explorer", "Dolphin (Files)", "Meta+E"),
+    ("Start menu", "App launcher", "Meta"),
+    ("Task Manager", "System Monitor", "Ctrl+Esc"),
+    ("Control Panel / Settings", "System Settings", ""),
+    ("Microsoft Store", "Discover / Devium Setup", ""),
+    ("Notepad", "Kate", ""),
+    ("Command Prompt / PowerShell", "Konsole (terminal)", "Ctrl+Alt+T"),
+    ("Snipping Tool", "Spectacle", "Print / Meta+Shift+S"),
+    ("Microsoft Office", "LibreOffice (Devium Setup > Packages)", ""),
+    ("Photos", "Gwenview", ""),
+    ("Paint", "KolourPaint, or Krita / GIMP", ""),
+    ("Windows Update", "Update Manager", "Meta+U"),
+    ("Lock the screen (Win+L)", "Lock the screen", "Meta+L"),
+    ("Show the desktop (Win+D)", "Peek at the desktop", "Meta+D"),
+    ("Close a window (Alt+F4)", "Close a window", "Alt+F4"),
+]
+
+
+class WindowsPage(Page):
+    def __init__(self, win):
+        super().__init__(T("Coming from Windows"),
+                         "Where to find the things you know, the same shortcuts, and a way to copy your files "
+                         "over from a Windows drive.")
+        t = QTreeWidget()
+        t.setHeaderLabels(["On Windows", "On Devium", "Shortcut"])
+        t.setRootIsDecorated(False)
+        for r in WINDOWS_APPS:
+            t.addTopLevelItem(QTreeWidgetItem(list(r)))
+        t.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        t.setMinimumHeight(330)
+        self.add(t)
+        self.drives = QComboBox()
+        self.users = QComboBox()
+        self.add(card(label("Copy my files from Windows", "h2"),
+                      label("Copies Documents, Pictures, Music, Videos, Desktop and Downloads from a Windows drive "
+                            "on this computer into the same folders here (in a \"From Windows\" folder). Nothing "
+                            "on Windows is changed.", "subtitle"),
+                      row(QLabel("Drive:"), self.drives, button("Look for Windows", self.find_drives)),
+                      row(QLabel("User:"), self.users, button("Copy my files", self.copy, True))))
+        self.finish()
+
+    def find_drives(self):
+        self.drives.clear()
+        try:
+            data = json.loads(run(["lsblk", "-J", "-p", "-o", "NAME,FSTYPE,SIZE,LABEL,MOUNTPOINT"]))
+        except ValueError:
+            return
+        def walk(devs):
+            for d in devs:
+                if d.get("fstype") == "ntfs":
+                    self.drives.addItem(f"{d['name']}  {d.get('label') or ''}  {d.get('size')}", d)
+                walk(d.get("children", []))
+        walk(data.get("blockdevices", []))
+        if not self.drives.count():
+            QMessageBox.information(self, "Windows", "No Windows drive found on this computer.")
+            return
+        self.drives.currentIndexChanged.connect(self.find_users)
+        self.find_users()
+
+    def mountpoint(self):
+        d = self.drives.currentData()
+        if not d:
+            return None
+        if d.get("mountpoint"):
+            return d["mountpoint"]
+        out = run(["udisksctl", "mount", "-b", d["name"], "-o", "ro"], timeout=30)
+        m = re.search(r" at (.+?)\.?$", out.strip())
+        if m:
+            d["mountpoint"] = m.group(1)
+            return d["mountpoint"]
+        QMessageBox.warning(self, "Windows", "Could not open that drive. If Windows uses Fast Startup or "
+                                             "BitLocker, turn it off in Windows first.")
+        return None
+
+    def find_users(self):
+        self.users.clear()
+        mp = self.mountpoint()
+        if not mp:
+            return
+        for u in sorted(glob.glob(os.path.join(mp, "Users", "*"))):
+            if os.path.basename(u) not in ("Public", "Default", "Default User", "All Users") and os.path.isdir(u):
+                self.users.addItem(os.path.basename(u), u)
+
+    def copy(self):
+        src = self.users.currentData()
+        if not src:
+            return
+        parts = []
+        for folder in ("Documents", "Pictures", "Music", "Videos", "Desktop", "Downloads"):
+            dest = os.path.expanduser(f"~/{folder}/From Windows")
+            parts.append(f"if [ -d '{src}/{folder}' ]; then echo '### Copying {folder}'; mkdir -p '{dest}' && "
+                         f"cp -rnv --no-preserve=mode,ownership '{src}/{folder}/.' '{dest}/' 2>&1 | tail -n 3; fi")
+        RunDialog(self, "Copy my files from Windows", "bash", ["-c", "; ".join(parts) + "; echo '### Done'"]).exec()
+
+
+# ---------------------------------------------------------------------------- Accessibility
+class AccessibilityPage(Page):
+    def __init__(self, win):
+        super().__init__(T("Accessibility"), "Make Devium easier to see, hear and use.")
+        self.opts = []
+        dpi = kread("kcmfonts", "General", "forceFontDPI", "0") if KDE else \
+            run(["xfconf-query", "-c", "xsettings", "-p", "/Xft/DPI"]).strip()
+        self.make(T("Larger text"), "Makes all text and icons about 25% bigger (log out and in to see it everywhere).",
+                  dpi not in ("", "0", "96", "-1"), self.big_text)
+        self.make(T("Screen reader"), "Orca reads out what's on the screen. Turn it on or off any time with "
+                  "Meta+Alt+S.", kread("kaccessrc", "ScreenReader", "Enabled", "false") == "true", self.reader)
+        if KDE:
+            self.make(T("Zoom"), "Zoom in with Meta and + (plus), out with Meta and - (minus).",
+                      kread("kwinrc", "Plugins", "zoomEnabled", "false") == "true", self.zoom)
+            self.make(T("Sticky keys"), "Press shortcut keys one after another instead of together.",
+                      kread("kaccessrc", "Keyboard", "StickyKeys", "false") == "true", self.sticky)
+            self.make(T("Reduce motion"), "Turns off animations.",
+                      kread("kdeglobals", "KDE", "AnimationDurationFactor", "1") == "0", self.motion)
+        self.finish()
+
+    def make(self, name, desc, state, fn):
+        b = QCheckBox(name)
+        b.setChecked(state)
+        b.toggled.connect(fn)
+        self.add(card(b, label(desc, "subtitle")))
+
+    def big_text(self, on):
+        if KDE:
+            kwrite("kcmfonts", "General", "forceFontDPI", 120 if on else 0)
+            kwrite("kdeglobals", "KScreen", "ScaleFactor", 1.25 if on else 1)
+        else:
+            subprocess.run(["xfconf-query", "-c", "xsettings", "-p", "/Xft/DPI", "-n", "-t", "int",
+                            "-s", "120" if on else "96"])
+
+    def reader(self, on):
+        if on and not shutil.which("orca"):
+            root(self, T("Screen reader"), "install", "orca", "espeak-ng")
+        kwrite("kaccessrc", "ScreenReader", "Enabled", "true" if on else "false")
+        if on and shutil.which("orca"):
+            subprocess.Popen(["orca"], start_new_session=True)
+        elif not on:
+            subprocess.run(["pkill", "-x", "orca"])
+
+    def zoom(self, on):
+        kwrite("kwinrc", "Plugins", "zoomEnabled", "true" if on else "false")
+        kwin_reconfigure()
+
+    def sticky(self, on):
+        kwrite("kaccessrc", "Keyboard", "StickyKeys", "true" if on else "false")
+        subprocess.run("qdbus6 org.kde.kaccess /kaccess reloadConfig", shell=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def motion(self, on):
+        kwrite("kdeglobals", "KDE", "AnimationDurationFactor", 0 if on else 1)
+
+
+# ---------------------------------------------------------------------------- Language
+class LanguagePage(Page):
+    def __init__(self, win):
+        super().__init__(T("Language"),
+                         "The language of the Devium apps. Irish (Gaeilge), Spanish, French and German so far - "
+                         "help translate on GitHub!")
+        self.box = QComboBox()
+        for code, name in LANGUAGES.items():
+            self.box.addItem(name, code)
+        self.box.setCurrentIndex(list(LANGUAGES).index(current_language()))
+        self.box.currentIndexChanged.connect(self.changed)
+        self.note = label("", "subtitle")
+        self.add(row(self.box))
+        self.add(self.note)
+        self.add(card(label("Whole desktop", "h2"),
+                      label("To change the language of the whole desktop and the other apps (Gaeilge included), "
+                            "open System Settings > Region & Language, add the language and log out.", "subtitle"),
+                      row(button("Region & Language", self.region, icon="preferences-desktop-locale"))))
+        self.finish()
+
+    def changed(self):
+        set_language(self.box.currentData())
+        self.note.setText(T("Restart the app to see the new language."))
+
+    def region(self):
+        ui.launch("systemsettings", "kcm_regionandlang")
+
+
+# ---------------------------------------------------------------------------- Get help + Report a problem
+def system_summary():
+    m = meminfo()
+    gpu = ", ".join(l.split(": ", 1)[-1] for l in run(["lspci"]).splitlines() if " VGA " in l or "3D controller" in l)
+    return "\n".join([
+        f"Devium {ui.devium_version()} ({ui.edition()})",
+        f"Kernel {os.uname().release}",
+        f"RAM {human(m['MemTotal'])}, disk free {human(shutil.disk_usage('/').free)}",
+        f"CPU {next((l.split(':', 1)[1].strip() for l in read('/proc/cpuinfo').splitlines() if l.startswith('model name')), '?')}",
+        f"GPU {gpu or '?'}",
+        f"Desktop {os.environ.get('XDG_CURRENT_DESKTOP', '?')} ({os.environ.get('XDG_SESSION_TYPE', '?')})",
+        f"Virtual machine: {run(['systemd-detect-virt']).strip() or 'no'}",
+    ])
+
+
+class ReportDialog(QDialog):
+    LIMIT_FILE = os.path.expanduser("~/.cache/devium/last-report")
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle(T("Report a problem"))
+        self.resize(620, 560)
+        l = QVBoxLayout(self)
+        l.addWidget(label("Tell the Devium team what went wrong. Your report goes to the Devium Discord, where "
+                          "the team reads it.", "subtitle"))
+        f = QFormLayout()
+        self.kind = QComboBox()
+        self.kind.addItems(["Bug", "Installer", "Devium Setup", "Looks / theme", "Hardware / drivers",
+                            "Idea / request", "Other"])
+        self.title = QLineEdit()
+        self.title.setPlaceholderText("e.g. Wi-Fi stops after sleep")
+        self.title.setMaxLength(120)
+        self.body = QTextEdit()
+        self.body.setPlaceholderText("What happened? What did you expect? Steps to make it happen again.")
+        self.contact = QLineEdit()
+        self.contact.setPlaceholderText("Optional: your Discord name, so we can reply")
+        self.contact.setMaxLength(60)
+        f.addRow(T("Type"), self.kind)
+        f.addRow("Title", self.title)
+        f.addRow("Details", self.body)
+        f.addRow("Contact", self.contact)
+        l.addLayout(f)
+        self.sysinfo = QCheckBox("Add computer details (Devium version, RAM, graphics card - nothing personal)")
+        self.sysinfo.setChecked(True)
+        self.errors = QCheckBox("Add recent error messages")
+        l.addWidget(self.sysinfo)
+        l.addWidget(self.errors)
+        self.preview = QPlainTextEdit()
+        self.preview.setReadOnly(True)
+        self.preview.setMaximumHeight(110)
+        self.preview.setFont(QFont("monospace"))
+        l.addWidget(label("Exactly what will be sent with your report:", "subtitle"))
+        l.addWidget(self.preview)
+        for w in (self.sysinfo, self.errors):
+            w.toggled.connect(self.update_preview)
+        self.send_btn = button(T("Send"), self.send, True, "mail-send")
+        l.addLayout(row(self.send_btn, button(T("Cancel"), self.reject)))
+        self.update_preview()
+
+    def extras(self):
+        text = ""
+        if self.sysinfo.isChecked():
+            text += system_summary()
+        if self.errors.isChecked():
+            errs = run(["journalctl", "-b", "-p", "err", "-n", "15", "--no-pager", "-o", "cat"])
+            # strip anything that looks like an IP or MAC address, or an email
+            errs = re.sub(r"\b\d{1,3}(\.\d{1,3}){3}\b", "<ip>", errs)
+            errs = re.sub(r"\b([0-9a-f]{2}:){5}[0-9a-f]{2}\b", "<mac>", errs, flags=re.I)
+            errs = re.sub(r"\S+@\S+\.\S+", "<email>", errs)
+            errs = errs.replace(os.path.expanduser("~"), "~")
+            text += "\n\nRecent errors:\n" + (errs.strip() or "(none)")
+        return text
+
+    def update_preview(self):
+        self.preview.setPlainText(self.extras() or "(nothing extra)")
+
+    def send(self):
+        title, body = self.title.text().strip(), self.body.toPlainText().strip()
+        if len(title) < 4 or len(body) < 10:
+            QMessageBox.information(self, T("Report a problem"), "Please add a title and a few words about it.")
+            return
+        try:
+            if time.time() - os.path.getmtime(self.LIMIT_FILE) < 300:
+                QMessageBox.information(self, T("Report a problem"),
+                                        "You sent a report a moment ago. Please wait a few minutes.")
+                return
+        except OSError:
+            pass
+        url = read(WEBHOOK_FILE)
+        if not url.startswith("https://discord.com/api/webhooks/"):
+            # No Discord set up in this build: use GitHub instead
+            import urllib.parse
+            q = urllib.parse.urlencode({"title": f"[{self.kind.currentText()}] {title}",
+                                        "body": body + "\n\n```\n" + self.extras() + "\n```"})
+            ui.open_link(f"{REPO}/issues/new?{q}", self)
+            self.accept()
+            return
+
+        def clean(s):   # no pings, no fake mentions
+            return s.replace("@", "@​")
+        fields = [{"name": "Type", "value": self.kind.currentText(), "inline": True},
+                  {"name": "Version", "value": ui.devium_version(), "inline": True}]
+        if self.contact.text().strip():
+            fields.append({"name": "Contact", "value": clean(self.contact.text().strip()), "inline": True})
+        extra = self.extras()
+        desc = clean(body)[:3000]
+        if extra:
+            desc += "\n```\n" + clean(extra)[:900] + "\n```"
+        payload = {"username": "Devium Reports", "allowed_mentions": {"parse": []},
+                   "embeds": [{"title": clean(f"[{self.kind.currentText()}] {title}")[:250],
+                               "description": desc, "color": 0x8FB4D8, "fields": fields,
+                               "footer": {"text": "Sent from Devium Tools"}}]}
+        req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
+                                     headers={"Content-Type": "application/json", "User-Agent": "DeviumTools/1.0"})
+        try:
+            urllib.request.urlopen(req, timeout=15)
+        except Exception as e:
+            QMessageBox.warning(self, T("Report a problem"),
+                                f"Could not send the report ({e}). Check your internet, or report it on GitHub.")
+            return
+        os.makedirs(os.path.dirname(self.LIMIT_FILE), exist_ok=True)
+        open(self.LIMIT_FILE, "w").close()
+        QMessageBox.information(self, T("Report a problem"), "Thanks! Your report was sent to the Devium team.")
+        self.accept()
+
+
+class HelpPage(Page):
+    def __init__(self, win):
+        super().__init__(T("Get help"), "Fix common problems yourself, look up commands, or tell the Devium team.")
+        self.add(card(label(T("Fix common problems"), "h2"),
+                      label("Checks disk space, internet, failed services, the package manager, package keys, "
+                            "Flatpak and damaged packages - and repairs what it can.", "subtitle"),
+                      row(button(T("Fix common problems"), lambda: in_terminal("support fix"), True, "tools-wizard"))))
+        self.add(card(label(T("Open Support"), "h2"),
+                      label("Over 100 helpful commands, grouped by topic. In a terminal: support, support <topic> or "
+                            "support <word> to search.", "subtitle"),
+                      row(button(T("Open Support"), lambda: in_terminal("support | less -R"), icon="utilities-terminal"),
+                          button("Guide", lambda: ui.open_link(f"{REPO}/blob/main/docs/GUIDE.md", self),
+                                 icon="help-contents"))))
+        self.add(card(label(T("Report a problem"), "h2"),
+                      label("Something broken, or an idea? Send it to the Devium team.", "subtitle"),
+                      row(button(T("Report a problem"), lambda: ReportDialog(self).exec(), True, "tools-report-bug"))))
+        self.finish()
+
+
+# ---------------------------------------------------------------------------- window
+PAGES = [
+    ("home", T("Home"), "go-home", HomePage),
+    ("apps", T("App Manager"), "view-list-details", AppsPage),
+    ("updates", T("Updates"), "system-software-update", UpdatesPage),
+    ("speed", T("Speed and memory"), "speedometer", SpeedPage),
+    ("battery", T("Battery"), "battery", BatteryPage),
+    ("privacy", T("Privacy"), "security-high", PrivacyPage),
+    ("printers", T("Printers and scanners"), "printer", PrintersPage),
+    ("developer", T("Developer"), "code-context", DeveloperPage),
+    ("windows", T("Coming from Windows"), "computer", WindowsPage),
+    ("accessibility", T("Accessibility"), "preferences-desktop-accessibility", AccessibilityPage),
+    ("language", T("Language"), "preferences-desktop-locale", LanguagePage),
+    ("help", T("Get help"), "help-browser", HelpPage),
+]
+
+
+class Tools(QWidget):
+    def __init__(self, start="home"):
+        super().__init__()
+        self.setWindowTitle(T("Devium Tools"))
+        self.setWindowIcon(ui.app_icon())
+        self.resize(1000, 680)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(8, 8, 8, 8)
+        self.nav = QListWidget()
+        self.nav.setObjectName("nav")
+        self.nav.setFixedWidth(230)
+        self.stack = QStackedWidget()
+        self.pages = {}
+        for key, name, icon, cls in PAGES:
+            self.nav.addItem(QListWidgetItem(QIcon.fromTheme(icon), name))
+            page = cls(self)
+            self.pages[key] = page
+            self.stack.addWidget(page)
+        self.nav.currentRowChanged.connect(self.show_page)
+        lay.addWidget(self.nav)
+        lay.addWidget(self.stack, 1)
+        if start == "report":
+            self.go("help")
+            QTimer.singleShot(200, lambda: ReportDialog(self).exec())
+        else:
+            self.go(start if start in self.pages else "home")
+
+    def go(self, key):
+        self.nav.setCurrentRow(list(self.pages).index(key))
+
+    def show_page(self, i):
+        self.stack.setCurrentIndex(i)
+        self.stack.currentWidget().on_show()
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("Devium Tools")
+    app.setDesktopFileName("devium-tools")
+    ui.style_app(app)
+    w = Tools(sys.argv[1] if len(sys.argv) > 1 else "home")
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

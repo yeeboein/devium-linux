@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Name=Devium Tools
+Name[ga]=Uirlisí Devium
+Name[es]=Herramientas de Devium
+Name[fr]=Outils Devium
+Name[de]=Devium-Werkzeuge
+GenericName=App Manager, speed, battery, privacy and help
+Comment=Look after your computer: remove apps, make it faster, battery, privacy, printers, Git, help
+Exec=devium-tools
+Icon=devium
+Terminal=false
+Categories=System;Settings;
+Keywords=devium;tools;apps;remove;uninstall;storage;ram;memory;faster;battery;privacy;printer;scanner;docker;git;github;windows;accessibility;language;irish;gaeilge;support;help;report;bug;
+Actions=apps;report;
+
+[Desktop Action apps]
+Name=App Manager
+Exec=devium-tools apps
+
+[Desktop Action report]
+Name=Report a problem
+Exec=devium-tools report

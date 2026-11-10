@@ -8,18 +8,59 @@ T=$'\e[38;2;180;184;224m'   # lavender: section titles
 C=$'\e[38;2;150;178;208m'   # blue-grey: commands
 W=$'\e[38;2;232;205;150m'   # pale yellow: warnings
 
-section() { [[ -z $FILTER || ${1,,} == *"$FILTER"* ]] && { SHOW=1; printf "\n${B}${T}%s${N}\n" "$1"; } || SHOW=0; }
-cmd() { (( SHOW )) && printf "  ${C}%-34s${N} %s\n" "$1" "$2"; }
-note() { (( SHOW )) && printf "  ${D}%s${N}\n" "$1"; }
-
-FILTER="${1,,}"
+TOPICS="devium updates apps files system network git python coding help"
+FILTER="${*,,}"
 [[ $FILTER == -h || $FILTER == --help ]] && FILTER=""
 
+# support fix: check and repair the most common problems
+if [[ $FILTER == fix ]]; then
+    ok()   { printf "  ${C}OK${N}    %s\n" "$1"; }
+    bad()  { printf "  ${W}FIX${N}   %s\n" "$1"; }
+    printf "${B}${T}Devium support fix${N}  ${D}- checking the usual suspects${N}\n\n"
+    free=$(df -BG --output=avail / | tail -1 | tr -dc 0-9)
+    (( free >= 2 )) && ok "Disk space: ${free} GB free" || bad "Disk almost full (${free} GB). Try: devium-update-manager > Clean up, or Devium Tools > App Manager"
+    if ping -c1 -W3 archlinux.org >/dev/null 2>&1; then ok "Internet works"
+    else bad "No internet. Restarting the network..."; sudo systemctl restart NetworkManager; fi
+    failed=$(systemctl --failed --no-legend --plain 2>/dev/null | awk '{print $1}' | tr '\n' ' ')
+    [[ -z $failed ]] && ok "No failed system services" || bad "Failed services: $failed (see: journalctl -b -u <name>)"
+    echo
+    printf "  ${D}Repairs that need your password (package lock, keys, Flatpak):${N}\n"
+    pkexec /usr/lib/devium/devium-helper fix
+    if pgrep -x plasmashell >/dev/null && [[ ${2:-} == --desktop ]]; then
+        bad "Restarting the desktop panel"; (kquitapp6 plasmashell; setsid kstart plasmashell) >/dev/null 2>&1
+    fi
+    printf "\n  ${D}Still stuck? Devium Tools > Get help > Report a problem.${N}\n\n"
+    exit 0
+fi
+
+# A word that isn't a topic searches every command and description instead
+SEARCH=""
+if [[ -n $FILTER && " $TOPICS " != *" ${FILTER%% *} "* ]]; then SEARCH="$FILTER"; FILTER=""; fi
+TITLE=""
+section() {
+    TITLE="$1"; PRINTED=0
+    if [[ -n $SEARCH ]]; then SHOW=0; return; fi
+    [[ -z $FILTER || ${1,,} == *"$FILTER"* ]] && { SHOW=1; printf "\n${B}${T}%s${N}\n" "$1"; } || SHOW=0
+}
+cmd() {
+    if [[ -n $SEARCH ]]; then
+        [[ "${1,,} ${2,,}" == *"$SEARCH"* ]] || return 0
+        (( PRINTED )) || { printf "\n${B}${T}%s${N}\n" "$TITLE"; PRINTED=1; FOUND=1; }
+        printf "  ${C}%-34s${N} %s\n" "$1" "$2"; return 0
+    fi
+    (( SHOW )) && printf "  ${C}%-34s${N} %s\n" "$1" "$2"
+}
+note() { (( SHOW )) && printf "  ${D}%s${N}\n" "$1"; }
+
 printf "${B}${T}Devium support${N}  ${D}- helpful commands. Type ${N}${C}support <topic>${N}${D} to show one topic.${N}\n"
-printf "${D}Topics: devium, updates, apps, files, system, network, git, python, coding, help${N}\n"
+printf "${D}Topics: devium, updates, apps, files, system, network, git, python, coding, help.  Or search: ${N}${C}support wifi${N}${D}.  Fix problems: ${N}${C}support fix${N}\n"
 
 section "Devium"
 cmd "support"                         "Show this list"
+cmd "support <word>"                  "Search the list (e.g. support zip)"
+cmd "support fix"                     "Check and repair common problems"
+cmd "devium-tools"                    "App Manager, speed, battery, privacy, help"
+cmd "devium-ram"                      "What is using your memory"
 cmd "devium-welcome"                  "Open Devium Welcome (Meta+F1)"
 cmd "devium-setup-wizard"             "Pick apps, languages, games and theme"
 cmd "devium-update-manager  (update)" "Install updates with a progress bar (Meta+U)"
@@ -122,3 +163,4 @@ cmd "tldr <command>"                  "Short examples (pip install tldr)"
 note "Arch Wiki: https://wiki.archlinux.org   Devium: https://github.com/yeeboein/devium-linux"
 (( SHOW )) && printf "  ${W}Careful:${N} commands with ${C}sudo${N} change the system. Read them before pressing Enter.\n"
 echo
+[[ -n $SEARCH && -z ${FOUND:-} ]] && printf "  Nothing found for \"%s\". Try a shorter word, or: support\n\n" "$SEARCH"

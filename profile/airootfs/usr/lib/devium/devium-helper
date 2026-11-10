@@ -12,6 +12,10 @@
 #   devium-helper brave-origin      install or update Brave Origin (official build from Brave)
 #   devium-helper cancel            stop a running Devium Setup install cleanly
 #   devium-helper archpill-deps     install what ArchPill needs (Quickshell and friends)
+#   devium-helper remove PKG... | remove-flatpak APP    (App Manager)
+#   devium-helper undo-update       put back package versions from before the last update
+#   devium-helper faster | lowram on|off | charge-limit N | autoupdate on|off
+#   devium-helper printers | containers USER docker|podman | privacy KEY on|off
 set -uo pipefail
 export LC_ALL=C.UTF-8 TERM=dumb
 
@@ -101,6 +105,10 @@ case "${1:-}" in
     update)
         snapshot "Before update $(date '+%Y-%m-%d %H:%M')"
         pacman_unlock || exit 1
+        # Safe Updates: remember current versions so "Undo last update" can put them back
+        mkdir -p /var/lib/devium
+        pacman -Sy >/dev/null 2>&1
+        pacman -Qu 2>/dev/null | awk '{print $1, $2}' > /var/lib/devium/last-update.txt
         step "Updating the keyring"
         pacman -Sy --needed --noconfirm archlinux-keyring || exit 1
         step "Updating system packages"
@@ -248,6 +256,146 @@ PY
         pacman_unlock || exit 1
         pacman -U --needed --noconfirm "$@"
         ;;
+    fix)
+        # support fix: repairs that need root
+        pacman_unlock && echo "  OK    Package manager is free"
+        if pacman -Sy --needed --noconfirm archlinux-keyring >/dev/null 2>&1; then echo "  OK    Package keys are up to date"
+        else echo "  FIX   Re-creating package keys"; pacman-key --init && pacman-key --populate archlinux; fi
+        command -v flatpak >/dev/null && { flatpak repair --system >/dev/null 2>&1 && echo "  OK    Flatpak apps checked"; }
+        broken=$(pacman -Qkq 2>/dev/null | awk '{print $1}' | sort -u | head -20 | tr '\n' ' ')
+        [[ -z $broken ]] && echo "  OK    No damaged packages" || { echo "  FIX   Reinstalling: $broken"; pacman -S --noconfirm $broken; }
+        ;;
+    remove)
+        # Devium Tools > App Manager. Never removes Devium's base system.
+        shift
+        (( $# )) || { echo "nothing to remove"; exit 1; }
+        base=/usr/share/devium/install-packages.txt
+        for p in "$@"; do
+            [[ $p =~ ^[a-z0-9@._+-]+$ ]] || { echo "bad package name: $p"; exit 1; }
+            grep -qx "$p" "$base" 2>/dev/null && { echo "$p is part of Devium and can't be removed here."; exit 1; }
+        done
+        pacman_unlock || exit 1
+        step "Removing: $*"
+        pacman -Rns --noconfirm "$@"
+        ;;
+    remove-flatpak)
+        [[ ${2:-} =~ ^[A-Za-z0-9._-]+$ ]] || { echo "bad app id"; exit 1; }
+        step "Removing ${2}"
+        flatpak uninstall --system -y --noninteractive "$2" && flatpak uninstall --system -y --noninteractive --unused
+        ;;
+    undo-update)
+        # Safe Updates: put back the package versions from before the last update
+        log=/var/lib/devium/last-update.txt
+        [[ -s $log ]] || { echo "No update to undo yet."; exit 1; }
+        pacman_unlock || exit 1
+        files=()
+        while read -r name old; do
+            f=$(ls /var/cache/pacman/pkg/"$name"-"$old"-*.pkg.tar.zst 2>/dev/null | grep -v '\.sig$' | head -1)
+            [[ -n $f ]] && files+=("$f") || echo "Old version of $name is not in the cache any more."
+        done < "$log"
+        (( ${#files[@]} )) || { echo "Nothing could be put back."; exit 1; }
+        step "Putting back ${#files[@]} packages"
+        pacman -U --noconfirm "${files[@]}" && rm -f "$log"
+        ;;
+    faster)
+        # "Make it faster": safe tweaks only
+        step "Turning on compressed memory (zram)"
+        pacman -S --needed --noconfirm zram-generator >/dev/null && cat > /etc/systemd/zram-generator.conf <<'EOF'
+[zram0]
+zram-size = min(ram / 2, 8192)
+compression-algorithm = zstd
+EOF
+        systemctl daemon-reload; systemctl start systemd-zram-setup@zram0.service 2>/dev/null
+        step "Swap only when memory is nearly full"
+        printf 'vm.swappiness=100\nvm.vfs_cache_pressure=50\n' > /etc/sysctl.d/90-devium-faster.conf
+        sysctl -q --system
+        step "Weekly SSD trim"
+        systemctl enable --now fstrim.timer
+        step "Faster boot: no waiting for the network"
+        systemctl disable NetworkManager-wait-online.service 2>/dev/null
+        step "Cleaning old logs and caches"
+        journalctl --vacuum-size=100M
+        paccache -rk1 2>/dev/null
+        step "Done"
+        ;;
+    lowram)
+        # Low-RAM mode: on = lighter settings for computers with little memory
+        case "${2:-}" in
+            on)  "$0" faster >/dev/null
+                 mkdir -p /etc/devium && touch /etc/devium/low-ram
+                 systemctl mask --now packagekit.service 2>/dev/null
+                 echo "Low-RAM mode is on." ;;
+            off) rm -f /etc/devium/low-ram; systemctl unmask packagekit.service 2>/dev/null
+                 echo "Low-RAM mode is off." ;;
+            *) echo "usage: lowram on|off"; exit 1 ;;
+        esac
+        ;;
+    charge-limit)
+        # Battery: stop charging at N% (keeps the battery healthy). 100 = no limit.
+        n="${2:-}"; [[ $n =~ ^[0-9]+$ ]] && (( n >= 50 && n <= 100 )) || { echo "usage: charge-limit 50-100"; exit 1; }
+        done_one=0
+        for b in /sys/class/power_supply/BAT*; do
+            [[ -w $b/charge_control_end_threshold ]] || continue
+            echo "$n" > "$b/charge_control_end_threshold" && done_one=1
+        done
+        (( done_one )) || { echo "This laptop doesn't let Linux set a charge limit."; exit 1; }
+        cat > /etc/systemd/system/devium-charge-limit.service <<EOF
+[Unit]
+Description=Devium battery charge limit
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'for b in /sys/class/power_supply/BAT*; do echo $n > \$b/charge_control_end_threshold; done'
+[Install]
+WantedBy=multi-user.target
+EOF
+        systemctl daemon-reload; systemctl enable devium-charge-limit.service
+        echo "Charging now stops at $n%."
+        ;;
+    autoupdate)
+        case "${2:-}" in
+            on)  systemctl enable --now devium-autoupdate.timer && echo "Automatic updates are on (daily, with a restore point first)." ;;
+            off) systemctl disable --now devium-autoupdate.timer && echo "Automatic updates are off." ;;
+            *) echo "usage: autoupdate on|off"; exit 1 ;;
+        esac
+        ;;
+    printers)
+        pacman_unlock || exit 1
+        step "Installing printer and scanner support"
+        pacman -S --needed --noconfirm cups cups-pdf system-config-printer avahi nss-mdns sane sane-airscan \
+            simple-scan ghostscript gutenprint
+        systemctl enable --now cups.socket avahi-daemon.service
+        grep -q mdns_minimal /etc/nsswitch.conf || \
+            sed -i 's/^hosts: \(.*\)resolve/hosts: \1mdns_minimal [NOTFOUND=return] resolve/' /etc/nsswitch.conf
+        step "Done. Most network and USB printers now appear by themselves."
+        ;;
+    containers)
+        user="${2:-}"; [[ $user =~ ^[a-z_][a-z0-9_-]*$ ]] && id "$user" >/dev/null 2>&1 || { echo "bad user"; exit 1; }
+        case "${3:-docker}" in
+            docker) pacman_unlock || exit 1
+                    step "Installing Docker"
+                    pacman -S --needed --noconfirm docker docker-compose docker-buildx
+                    systemctl enable --now docker.socket
+                    usermod -aG docker "$user"
+                    echo "Log out and in again to use docker without sudo." ;;
+            podman) pacman_unlock || exit 1
+                    step "Installing Podman"
+                    pacman -S --needed --noconfirm podman podman-compose ;;
+            *) echo "usage: containers USER docker|podman"; exit 1 ;;
+        esac
+        ;;
+    privacy)
+        # privacy KEY on|off
+        case "${2:-}:${3:-}" in
+            firewall:on|firewall:off) "$0" firewall "$3" ;;
+            mac:on)  mkdir -p /etc/NetworkManager/conf.d
+                     printf '[device]\nwifi.scan-rand-mac-address=yes\n[connection]\nwifi.cloned-mac-address=random\n' \
+                        > /etc/NetworkManager/conf.d/90-devium-mac.conf; systemctl reload NetworkManager ;;
+            mac:off) rm -f /etc/NetworkManager/conf.d/90-devium-mac.conf; systemctl reload NetworkManager ;;
+            location:on)  systemctl unmask geoclue.service 2>/dev/null ;;
+            location:off) systemctl mask --now geoclue.service 2>/dev/null ;;
+            *) echo "usage: privacy firewall|mac|location on|off"; exit 1 ;;
+        esac
+        ;;
     *)
-        sed -n '2,9p' "$0"; exit 1 ;;
+        sed -n '2,30p' "$0"; exit 1 ;;
 esac

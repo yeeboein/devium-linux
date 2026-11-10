@@ -11,6 +11,11 @@ LOG="$STATE/firstrun.log"
 exec >>"$LOG" 2>&1
 echo "=== devium-firstrun $(date)"
 
+# --- Low-RAM mode (turned on by the installer on computers with 4 GB or less) --
+if [[ -f /etc/devium/low-ram && ! -f $STATE/low-ram-applied ]]; then
+    /usr/lib/devium/lowram-user on
+fi
+
 # --- Xfce edition: Devium wallpaper and shortcuts ----------------------------
 if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-done ]]; then
     sleep 3   # let xfdesktop create its settings
@@ -22,6 +27,7 @@ if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-done ]]; then
     sc() { xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/$1" -n -t string -s "$2"; }
     sc "<Super><Shift>s" "xfce4-screenshooter -r -c"
     sc "<Super>u" "devium-update-manager"
+    sc "<Super>t" "devium-tools"
     sc "<Super>F1" "devium-welcome"
     sc "<Super>e" "exo-open --launch FileManager"
     sc "<Primary><Alt>t" "exo-open --launch TerminalEmulator"

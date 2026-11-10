@@ -1,0 +1,11 @@
+[Unit]
+Description=Devium automatic updates (restore point first)
+After=network-online.target
+Wants=network-online.target
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+ExecStart=/usr/lib/devium/devium-helper update

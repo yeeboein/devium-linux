@@ -1,0 +1,9 @@
+[Unit]
+Description=Record app memory use every 10 minutes
+
+[Timer]
+OnStartupSec=3min
+OnUnitActiveSec=10min
+
+[Install]
+WantedBy=timers.target

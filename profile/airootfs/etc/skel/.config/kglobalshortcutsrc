@@ -10,3 +10,6 @@ _launch=Meta+F1
 
 [services][devium-update-manager.desktop]
 _launch=Meta+U
+
+[services][devium-tools.desktop]
+_launch=Meta+T
