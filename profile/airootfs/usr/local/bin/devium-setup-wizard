@@ -700,6 +700,7 @@ class Wizard(QWidget):
 
     def finished(self):
         self.progress.setValue(self.total_steps)
+        ui.style_app(QApplication.instance())   # follow the theme the user just picked (dark/light)
         msg = "Everything you picked is installed."
         if getattr(self, "failed", 0):
             msg = ("Most things are installed, but some steps had problems.\n"

@@ -14,14 +14,14 @@ ACCENT2 = "#b4b8e0"
 STYLE = f"""
 QWidget {{ font-size: 10.5pt; }}
 QLabel#title {{ font-size: 20pt; font-weight: 700; }}
-QLabel#subtitle {{ color: #8a93a6; }}
+QLabel#subtitle {{ color: SUBTLE; }}
 QLabel#h2 {{ font-size: 13pt; font-weight: 600; margin-top: 6px; }}
 QPushButton {{ padding: 7px 14px; border-radius: 8px; }}
 QPushButton#primary {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {ACCENT}, stop:1 {ACCENT2});
     color: #1b2026; font-weight: 600; border: none;
 }}
-QPushButton#primary:disabled {{ background: palette(mid); color: #8a93a6; }}
+QPushButton#primary:disabled {{ background: palette(mid); color: SUBTLE; }}
 QPushButton#tile {{
     text-align: left; padding: 12px 14px; border-radius: 12px;
     border: 1px solid palette(mid); background: palette(base);
@@ -92,23 +92,48 @@ def edition():
     return "kdeplasma"
 
 
+def is_light():
+    """Is the desktop using a light colour scheme? (Devium Light / Breeze Light / a light GTK theme)"""
+    import configparser, os
+    cfg = configparser.ConfigParser(strict=False, interpolation=None)
+    cfg.read([os.path.expanduser("~/.config/kdeglobals")])
+    scheme = cfg.get("General", "ColorScheme", fallback="")
+    if scheme:
+        return "light" in scheme.lower()
+    try:   # Xfce: GTK theme name
+        import subprocess
+        out = subprocess.run(["xfconf-query", "-c", "xsettings", "-p", "/Net/ThemeName"],
+                             capture_output=True, text=True, timeout=2).stdout.strip().lower()
+        if out:
+            return "dark" not in out
+    except Exception:
+        pass
+    return False
+
+
+DARK = {"Window": "#2b323b", "WindowText": "#dde3ea", "Base": "#242a32", "AlternateBase": "#29303a",
+        "Text": "#dde3ea", "Button": "#343d48", "ButtonText": "#dde3ea", "Mid": "#3b4450",
+        "Highlight": "#8fb4d8", "HighlightedText": "#1b2026", "Link": "#8fb4d8", "ToolTipBase": "#242a32",
+        "ToolTipText": "#dde3ea", "PlaceholderText": "#8a93a6", "subtle": "#8a93a6"}
+LIGHT = {"Window": "#eceff4", "WindowText": "#14181d", "Base": "#f8fafc", "AlternateBase": "#eef2f6",
+         "Text": "#14181d", "Button": "#e2e8ef", "ButtonText": "#14181d", "Mid": "#c5cdd8",
+         "Highlight": "#5f8fc0", "HighlightedText": "#ffffff", "Link": "#3f6f9f", "ToolTipBase": "#f8fafc",
+         "ToolTipText": "#14181d", "PlaceholderText": "#5a6472", "subtle": "#4f5966"}
+
+
 def style_app(app):
-    """Devium look for the Devium apps. KDE already gives Qt apps Devium's colours;
-    elsewhere (Xfce) set the Devium palette ourselves."""
-    import os
-    if "KDE" not in os.environ.get("XDG_CURRENT_DESKTOP", ""):
-        from PyQt6.QtGui import QColor, QPalette
-        app.setStyle("Fusion")
-        pal = QPalette()
-        C = QPalette.ColorRole
-        for role, c in [(C.Window, "#2b323b"), (C.WindowText, "#dde3ea"), (C.Base, "#242a32"),
-                        (C.AlternateBase, "#29303a"), (C.Text, "#dde3ea"), (C.Button, "#343d48"),
-                        (C.ButtonText, "#dde3ea"), (C.Mid, "#3b4450"), (C.Highlight, "#8fb4d8"),
-                        (C.HighlightedText, "#1b2026"), (C.Link, "#8fb4d8"), (C.ToolTipBase, "#242a32"),
-                        (C.ToolTipText, "#dde3ea"), (C.PlaceholderText, "#8a93a6")]:
+    """Devium look for the Devium apps, in dark or light, with readable text in both.
+    Called at start-up and again whenever the theme changes."""
+    from PyQt6.QtGui import QColor, QPalette
+    colours = LIGHT if is_light() else DARK
+    app.setStyle("Fusion")
+    pal = QPalette()
+    for name, c in colours.items():
+        role = getattr(QPalette.ColorRole, name, None)
+        if role is not None:
             pal.setColor(role, QColor(c))
-        app.setPalette(pal)
-    app.setStyleSheet(STYLE)
+    app.setPalette(pal)
+    app.setStyleSheet(STYLE.replace("SUBTLE", colours["subtle"]))
 
 
 def launch(*cmd: str) -> bool:
