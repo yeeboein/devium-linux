@@ -72,3 +72,21 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website
+
+## V1 (1.0): more desktops (no GNOME)
+ISOs: KDE Plasma (main), Xfce (old laptops), Hyprland (tiling showcase).
+Installer gets a "Desktop" page to install any of these from any ISO, each with Devium theming,
+Devium apps, support, fastfetch, a Devium-style dock/bar, and ArchPill where supported.
+Tiling desktops ship a beginner-friendly starter config and a shortcuts cheat sheet.
+- [x] KDE Plasma
+- [x] Xfce
+- [ ] Hyprland (bar, launcher, notifications, lock screen, starter keybinds)
+- [ ] Cinnamon
+- [ ] COSMIC
+- [ ] LXQt
+- [ ] MATE
+- [ ] Sway
+- [ ] niri
+- [ ] i3
+- [ ] Budgie? (partly GNOME-based - decide)
+- No GNOME (and GNOME can't show ArchPill)
