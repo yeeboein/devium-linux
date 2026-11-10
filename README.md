@@ -22,12 +22,18 @@ Built with [ArchPill](https://github.com/yeeboein/archpill), [KDElite](https://g
 
 ### Devium Setup: pick only what you want
 
+Real screenshots from an installed Devium (beta7):
+
 <p align="center">
-  <img src="docs/screenshots/wizard-1-welcome.png" width="45%">
-  <img src="docs/screenshots/wizard-3-languages.png" width="45%"><br>
-  <img src="docs/screenshots/wizard-4-look.png" width="45%">
-  <img src="docs/screenshots/wizard-5-summary.png" width="45%">
+  <img src="docs/screenshots/real/setup-01-welcome.png" width="45%">
+  <img src="docs/screenshots/real/setup-02-browser.png" width="45%"><br>
+  <img src="docs/screenshots/real/setup-06-languages.png" width="45%">
+  <img src="docs/screenshots/real/setup-09-gaming.png" width="45%"><br>
+  <img src="docs/screenshots/real/setup-10-apps.png" width="45%">
+  <img src="docs/screenshots/real/setup-11-summary.png" width="45%">
 </p>
+
+More in [docs/screenshots/real](docs/screenshots/real).
 
 ---
 
