@@ -10,3 +10,6 @@ If the ISO comes in parts (`.iso.000`, `.iso.001`, ...), download all parts and 
 - Windows (Command Prompt): `copy /b devium-kdeplasma-<version>-x86_64.iso.000+devium-kdeplasma-<version>-x86_64.iso.001 devium.iso`
 
 Check the download with the `.sha256` file (optional).
+
+### Community
+Questions, bugs or ideas? Join the **[Devium Discord](https://discord.gg/YTMattgyG3)**.

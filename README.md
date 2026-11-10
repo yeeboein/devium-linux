@@ -8,6 +8,11 @@
 </p>
 
 <p align="center">
+  <a href="https://discord.gg/YTMattgyG3"><img src="https://img.shields.io/badge/Discord-Join%20the%20Devium%20community-5865F2?logo=discord&logoColor=white" alt="Join the Devium Discord"></a>
+  <a href="https://github.com/yeeboein/devium-linux/releases"><img src="https://img.shields.io/github/v/release/yeeboein/devium-linux?include_prereleases&label=Download&color=8fb4d8" alt="Download"></a>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/desktop-mockup.png" width="90%" alt="Devium desktop (mock-up)"><br>
   <sub>Desktop mock-up: mountain wallpaper, floating dock, ArchPill, fastfetch and Devium Welcome.</sub>
 </p>
@@ -41,6 +46,11 @@ Real screenshots from an installed Devium (beta7):
 More in [docs/screenshots/real](docs/screenshots/real).
 
 ---
+
+## Community
+
+Join the **[Devium Discord](https://discord.gg/YTMattgyG3)** for help, news, new betas and to share your desktop.
+Inside Devium: Devium Tools > Get help > Ask on Discord, or the Discord button in About Devium and Welcome.
 
 ## What's inside
 

@@ -194,6 +194,8 @@ class Welcome(QWidget):
                  lambda: self.go("spectacle", "--region", name="Snip"), "spectacle"),
             tile("ArchPill settings", "Customise the pill at the top of the screen",
                  self.archpill_settings, "preferences-desktop-theme"),
+            tile("Devium Discord", "Help, news and new betas: chat with the community",
+                 lambda: ui.open_link(ui.DISCORD, self), "internet-chat"),
             tile("System Settings", "Wi-Fi, display, sound, look and more",
                  lambda: self.go("systemsettings"), "preferences-system"),
         ]

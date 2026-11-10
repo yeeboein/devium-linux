@@ -266,7 +266,7 @@ class HomePage(Page):
                       f"<a href='{REPO}/releases'>Releases</a> &nbsp;·&nbsp; "
                       f"<a href='{REPO}'>GitHub</a> &nbsp;·&nbsp; "
                       f"<a href='https://wiki.archlinux.org'>Arch Wiki</a>", rich=True)
-        invite = read("/etc/devium/discord-invite")
+        invite = read("/etc/devium/discord-invite") or ui.DISCORD
         if invite.startswith("https://discord."):
             links.setText(links.text() + f" &nbsp;·&nbsp; <a href='{invite}'>Discord</a>")
         self.add(links)
@@ -1091,7 +1091,8 @@ class HelpPage(Page):
                                  icon="help-contents"))))
         self.add(card(label(T("Report a problem"), "h2"),
                       label("Something broken, or an idea? Send it to the Devium team.", "subtitle"),
-                      row(button(T("Report a problem"), lambda: ReportDialog(self).exec(), True, "tools-report-bug"))))
+                      row(button(T("Report a problem"), lambda: ReportDialog(self).exec(), True, "tools-report-bug"),
+                          button("Ask on Discord", lambda: ui.open_link(ui.DISCORD, self), icon="internet-chat"))))
         self.finish()
 
 

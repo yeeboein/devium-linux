@@ -8,6 +8,7 @@ from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 LOGO = "/usr/share/devium/logo.png"
+DISCORD = "https://discord.gg/YTMattgyG3"
 ACCENT = "#8fb4d8"
 ACCENT2 = "#b4b8e0"
 

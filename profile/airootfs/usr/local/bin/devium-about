@@ -48,6 +48,10 @@ class About(QWidget):
         gh = QPushButton("Devium on GitHub")
         gh.clicked.connect(lambda: ui.open_link("https://github.com/yeeboein/devium-linux", self))
         row.addWidget(gh)
+        dc = QPushButton("Join our Discord")
+        dc.setToolTip(ui.DISCORD)
+        dc.clicked.connect(lambda: ui.open_link(ui.DISCORD, self))
+        row.addWidget(dc)
         row.addStretch(1)
         if ui.is_live():
             pw = QLabel("Live preview login: user devium, password devium")

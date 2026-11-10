@@ -36,4 +36,42 @@ Presentation {
                wrapMode: Text.WordWrap; color: "#dde3ea"; font.pixelSize: 18
                text: "<b>Dual boot</b><br><br>Installed next to Windows? When your computer starts, pick <b>Devium</b> or <b>Windows</b> from the boot menu." }
     }
+
+    // "Join our Discord" button, always visible. Clicking it shows a QR code to scan with a phone
+    // (the live system has no web browser).
+    Rectangle {
+        id: discordBtn
+        z: 10
+        anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 14
+        width: discordLabel.width + 28; height: 36; radius: 18
+        color: discordArea.containsMouse ? "#6f7dd8" : "#5865f2"
+        Text { id: discordLabel; anchors.centerIn: parent; color: "white"; font.pixelSize: 14; font.bold: true
+               text: "Join the Devium Discord" }
+        MouseArea { id: discordArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                    onClicked: qrPopup.visible = true }
+    }
+    Rectangle {
+        id: qrPopup
+        visible: false
+        z: 20
+        anchors.fill: parent
+        color: "#e6242a32"
+        MouseArea { anchors.fill: parent; onClicked: qrPopup.visible = false }
+        Column {
+            anchors.centerIn: parent
+            spacing: 12
+            Text { anchors.horizontalCenter: parent.horizontalCenter; color: "#dde3ea"; font.pixelSize: 20; font.bold: true
+                   text: "Scan with your phone's camera" }
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.min(qrPopup.height * 0.55, 260); height: width; radius: 12; color: "white"
+                Image { anchors.fill: parent; anchors.margins: 8; source: "discord-qr.png"; smooth: false
+                        fillMode: Image.PreserveAspectFit }
+            }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; color: "#96b2d0"; font.pixelSize: 16
+                   text: "discord.gg/YTMattgyG3" }
+            Text { anchors.horizontalCenter: parent.horizontalCenter; color: "#8a95a3"; font.pixelSize: 13
+                   text: "Help, news and new betas. Click anywhere to close." }
+        }
+    }
 }
