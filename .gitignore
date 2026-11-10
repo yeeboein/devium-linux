@@ -2,3 +2,4 @@ work/
 out/
 *.iso
 .aur-cache/
+__pycache__/
