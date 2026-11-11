@@ -74,8 +74,8 @@ jobs:
             iso="devium-${ed}-${DEVIUM_VERSION}-x86_64.iso"
             mv out/$ed/*.iso "out/release/$iso"
             (cd out/release && sha256sum "$iso" > "$iso.sha256")
-            # GitHub Releases allow at most 2 GB per file: split bigger ISOs into parts.
-            if [[ -n $RELEASE && $(stat -c %s "out/release/$iso") -gt 2000000000 ]]; then
+            # GitHub Releases allow files up to 2 GiB (2147483648 bytes): only split ISOs bigger than that.
+            if [[ -n $RELEASE && $(stat -c %s "out/release/$iso") -gt 2140000000 ]]; then
               (cd out/release && split -b 1900M -d -a 3 "$iso" "$iso." && rm "$iso")
             fi
           done
