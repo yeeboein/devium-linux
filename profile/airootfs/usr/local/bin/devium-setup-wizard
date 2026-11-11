@@ -5,13 +5,14 @@ import getpass
 import json
 import os
 import re
+import time
 import shutil
 import subprocess
 import sys
 
 sys.path.insert(0, "/usr/lib/devium")
 
-from PyQt6.QtCore import QProcess, QSize, Qt
+from PyQt6.QtCore import QTimer, QProcess, QSize, Qt
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QFrame, QHBoxLayout, QLabel,
                              QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
@@ -485,7 +486,13 @@ class Wizard(QWidget):
         self.install_status = label("Starting…")
         l.addWidget(self.install_status)
         self.progress = QProgressBar()
+        self.progress.setRange(0, 1000)
+        self.progress.setFormat("%p%")
         l.addWidget(self.progress)
+        # keep the bar moving gently while a step is busy but quiet (e.g. a big download)
+        self.creep = QTimer(self)
+        self.creep.setInterval(400)
+        self.creep.timeout.connect(self.creep_tick)
         tip = label("Tip: this can take a while on slow internet. You can keep using your computer.",
                     "subtitle")
         l.addWidget(tip)
@@ -650,18 +657,33 @@ class Wizard(QWidget):
                        "remove": p["remove"], "remove_flatpak": p["remove_flatpak"],
                        "services": p["services"], "groups": p["groups"], "shell": p["shell"]["path"]}, f)
         self.p = p
+        # Each step gets a share of the bar that matches how much it downloads (MB), so the bar moves
+        # at a steady speed instead of jumping from step to step.
+        items = p["items"]
+        model_mb = p["ai"]["mb"] if p.get("ai") else 0
+        helper_mb = sum(it.get("mb", 0) for it in items if it.get("helper"))
+        aur_mb = sum(it.get("mb", 0) for it in items if it.get("aur"))
+        fl_mb = sum(it.get("mb", 0) for it in items if it.get("flatpak"))
+        setup_mb = max(p["mb"] - model_mb - helper_mb - aur_mb, 0)
+        self.pac_share = max(setup_mb - fl_mb, 1) / max(setup_mb, 1) if p["flatpak"] else 1.0
+        self.n_apps = len(p["flatpak"])
         steps = []
         steps.append(("Installing packages and apps…", "pkexec",
-                      ["/usr/lib/devium/devium-helper", "setup", plan_file]))
-        for it in p["items"]:
+                      ["/usr/lib/devium/devium-helper", "setup", plan_file], max(setup_mb, 40), "setup"))
+        for it in items:
             if it.get("helper"):
                 steps.append((f"Installing {it['name']}…", "pkexec",
-                              ["/usr/lib/devium/devium-helper", it["helper"]]))
+                              ["/usr/lib/devium/devium-helper", it["helper"]], max(it.get("mb", 0), 30), "pacman"))
         for pkg in p["aur"]:
-            steps.append((f"Building {pkg} from the AUR…", "bash", ["-c", self.aur_script(pkg)]))
+            mb = next((it.get("mb", 50) for it in items if pkg in it.get("aur", [])), 50)
+            steps.append((f"Building {pkg} from the AUR…", "bash", ["-c", self.aur_script(pkg)], mb, "build"))
             steps.append((f"Installing {pkg}…", "bash", ["-c",
-                          f"pkexec /usr/lib/devium/devium-helper install-local /tmp/devium-aur/{pkg}/*.pkg.tar.zst"]))
-        steps.append(("Setting up your choices…", "bash", ["-c", self.user_script(p)]))
+                          f"pkexec /usr/lib/devium/devium-helper install-local /tmp/devium-aur/{pkg}/*.pkg.tar.zst"],
+                          max(mb // 4, 10), "pacman"))
+        steps.append(("Setting up your choices…", "bash", ["-c", self.user_script(p)],
+                      max(model_mb, 20), "user"))
+        self.total_weight = sum(st[3] for st in steps)
+        self.weight_done = 0
         self.queue = steps
         self.total_steps = len(steps)
         self.go(self.stack.indexOf(self.install_w))
@@ -817,10 +839,12 @@ class Wizard(QWidget):
             return self.after_cancel()
         if not self.queue:
             return self.finished()
-        lbl, prog, args = self.queue.pop(0)
+        lbl, prog, args, weight, kind = self.queue.pop(0)
         done = self.total_steps - len(self.queue) - 1
-        self.progress.setRange(0, self.total_steps)
-        self.progress.setValue(done)
+        self.cur = {"weight": weight, "kind": kind, "sub": 0.0, "seg": None, "pkgs": 0, "dl": 0,
+                    "chk": 0.0, "inst": 0.0, "app": 0, "pct": 0.0, "last": time.monotonic()}
+        self.show_progress()
+        self.creep.start()
         self.install_status.setText(f"{lbl}   (step {done + 1} of {self.total_steps})")
         self.log.appendPlainText(f"\n$ {prog} {' '.join(args)[:200]}")
         self.proc = QProcess(self)
@@ -833,10 +857,70 @@ class Wizard(QWidget):
         text = bytes(self.proc.readAllStandardOutput()).decode(errors="replace")
         self.log.insertPlainText(text)
         self.log.ensureCursorVisible()
-        m = re.findall(r"\((\d+)/(\d+)\) (?:installing|upgrading)", text)
+        m = re.findall(r"\((\d+)/(\d+)\) (?:installing|upgrading|reinstalling)", text)
         if m:
             self.install_status.setText(self.install_status.text().split("   (")[0] +
                                         f"   (package {m[-1][0]} of {m[-1][1]})")
+        self.parse_progress(text)
+
+    # ------------------------------------------------------------------ progress bar
+    def parse_progress(self, text):
+        """Work out how far the current step is from what pacman, flatpak and ollama print."""
+        c = getattr(self, "cur", None)
+        if not c:
+            return
+        for line in text.splitlines():
+            if line.startswith("### Installing") and "packages" in line:
+                c["seg"] = "pacman"
+            elif line.startswith("### Installing") and "Flathub" in line:
+                c["seg"] = "flatpak"
+            elif line.startswith("### App "):
+                mm = re.match(r"### App (\d+) of (\d+)", line)
+                if mm:
+                    c["app"], c["pct"] = int(mm.group(1)) - 1, 0.0
+            mm = re.search(r"Packages \((\d+)\)", line)
+            if mm:
+                c["pkgs"] = int(mm.group(1))
+            if "downloading..." in line:
+                c["dl"] += 1
+            mm = re.search(r"\((\d+)/(\d+)\) (checking|loading)", line)
+            if mm:
+                c["chk"] = int(mm.group(1)) / max(int(mm.group(2)), 1)
+            mm = re.search(r"\((\d+)/(\d+)\) (?:installing|upgrading|reinstalling)", line)
+            if mm:
+                c["inst"] = int(mm.group(1)) / max(int(mm.group(2)), 1)
+                c["chk"] = 1.0
+            for pct in re.findall(r"(\d{1,3})%", line):
+                c["pct"] = max(c["pct"], min(int(pct), 100) / 100)
+        dl = min(c["dl"] / c["pkgs"], 1.0) if c["pkgs"] else 0.0
+        pac = 0.5 * dl + 0.1 * c["chk"] + 0.4 * c["inst"]
+        if c["kind"] == "setup":
+            if c["seg"] == "flatpak" and self.n_apps:
+                apps = (c["app"] + c["pct"]) / self.n_apps
+                frac = self.pac_share + (1 - self.pac_share) * apps
+            else:
+                frac = self.pac_share * pac
+        elif c["kind"] == "pacman":
+            frac = pac
+        elif c["kind"] == "user":
+            frac = c["pct"]   # ollama pull prints percentages
+        else:
+            frac = 0.0
+        if frac > c["sub"]:
+            c["sub"] = min(frac, 0.99)
+            c["last"] = time.monotonic()
+            self.show_progress()
+
+    def creep_tick(self):
+        c = getattr(self, "cur", None)
+        if c and time.monotonic() - c["last"] > 2 and c["sub"] < 0.95:
+            c["sub"] += (0.95 - c["sub"]) * 0.006
+            self.show_progress()
+
+    def show_progress(self):
+        c = getattr(self, "cur", None)
+        done = self.weight_done + (c["sub"] * c["weight"] if c else 0)
+        self.progress.setValue(int(1000 * done / max(self.total_weight, 1)))
 
     def after_cancel(self):
         self.cancelled = False
@@ -847,6 +931,10 @@ class Wizard(QWidget):
         self.go(0)
 
     def step_done(self, code, _status):
+        if getattr(self, "cur", None):
+            self.weight_done += self.cur["weight"]
+            self.cur = None
+        self.creep.stop()
         if getattr(self, "cancelled", False):
             return self.after_cancel()
         # pacman ran out of disk space part-way: say so and start over
@@ -866,7 +954,8 @@ class Wizard(QWidget):
         self.run_next()
 
     def finished(self):
-        self.progress.setValue(self.total_steps)
+        self.creep.stop()
+        self.progress.setValue(1000)
         ui.style_app(QApplication.instance())   # follow the theme the user just picked (dark/light)
         msg = "Everything you picked is installed."
         if getattr(self, "failed", 0):

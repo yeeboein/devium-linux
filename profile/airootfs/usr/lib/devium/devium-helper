@@ -199,7 +199,9 @@ PY
         if (( ${#APPS[@]} )); then
             flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null
             step "Installing ${#APPS[@]} apps from Flathub"
+            n=0
             for app in "${APPS[@]}"; do
+                n=$((n + 1)); echo "### App $n of ${#APPS[@]}: $app"
                 flatpak install --system -y --noninteractive flathub "$app" || { echo "Could not install $app"; fail=1; }
             done
         fi
