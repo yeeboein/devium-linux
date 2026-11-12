@@ -415,8 +415,8 @@ class Wizard(QWidget):
                 hint.setContentsMargins(30, 0, 0, 4)
                 l.addWidget(hint)
 
-        radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey, pale accents, big floating dock"),
-                         ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey, big floating dock"),
+        radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey, pale accents, big floating bar, start menu in the middle"),
+                         ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey, start menu in the middle"),
                          ("style-kde", "Base KDE   —   KDE's standard look and panel "
                                        "(best if you want to customise)")],
                "style-devium")
@@ -750,24 +750,29 @@ class Wizard(QWidget):
         launchers += ["applications:org.kde.kate.desktop", "applications:devium-snip.desktop",
                       "applications:org.kde.discover.desktop", "applications:devium-welcome.desktop"]
         hiding = "dodgewindows" if self.checked("dock-hide") else "none"
-        if self.checked("style-kde"):
+        # Devium themes: start button and apps CENTRED on a big floating bar (the start menu opens from
+        # the middle), tray and clock on the right. Base KDE: KDE's normal panel, start button on the left.
+        # The bar is rebuilt in order so the layout is right however it looked before.
+        centred = not self.checked("style-kde")
+        if centred:
+            dock_js = ("p.floating=true; p.alignment='center'; p.lengthMode='fill';"
+                       "p.height=2*Math.ceil(gridUnit*3.4/2);")
+        else:
             dock_js = ("p.floating=false; p.alignment='left'; p.lengthMode='fill';"
                        "p.height=2*Math.ceil(gridUnit*2.2/2);")
-        else:
-            dock_js = ("p.floating=true; p.alignment='center'; p.lengthMode='fit';"
-                       "p.height=2*Math.ceil(gridUnit*3.4/2);")
-        # With ArchPill the pill shows time, battery, sound and network, so the dock keeps only
-        # the start button and app icons. Without ArchPill the dock keeps its tray and clock.
-        extras = ["org.kde.plasma.marginsseparator", "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock"]
-        if self.checked("archpill"):
-            tray_js = ("p.widgets().forEach(function(w){ if (" +
-                       " || ".join(f"w.type=='{t}'" for t in extras) + ") w.remove(); });")
-        else:
-            tray_js = "".join(f"if (p.widgets('{t}').length==0) p.addWidget('{t}');" for t in extras)
+        # With ArchPill the pill shows time, battery, sound and network, so the bar keeps only
+        # the start button and app icons. Without ArchPill the bar keeps its tray and clock.
+        spacer = "p.addWidget('org.kde.plasma.panelspacer');" if centred else ""
+        tray = "" if self.checked("archpill") else (
+            ("" if centred else "p.addWidget('org.kde.plasma.marginsseparator');") +
+            "p.addWidget('org.kde.plasma.systemtray'); p.addWidget('org.kde.plasma.digitalclock');")
         js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';" + dock_js +
-              "p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General'];"
-              "w.writeConfig('launchers','" + ",".join(launchers) + "'); w.reloadConfig(); });"
-              + tray_js + " });")
+              "p.widgets().forEach(function(w){ w.remove(); });" + spacer +
+              "var k=p.addWidget('org.kde.plasma.kickoff'); k.currentConfigGroup=['General'];"
+              "k.writeConfig('icon','/usr/share/devium/start-button.png');"
+              "var t=p.addWidget('org.kde.plasma.icontasks'); t.currentConfigGroup=['General'];"
+              "t.writeConfig('launchers','" + ",".join(launchers) + "'); t.writeConfig('iconSpacing','2');"
+              + spacer + tray + " });")
         lines.append(f"(qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)} "
                      f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
         # theme (the Devium themes come with the big floating dock; Base KDE gets KDE's normal panel)

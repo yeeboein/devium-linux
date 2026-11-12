@@ -81,6 +81,16 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] devium-ram, support search, "support fix"
 - [ ] Easy backup, export/import setup, stricter disk check
 
+## beta9 (in progress)
+- [x] Devium themes: start button and apps centred, start menu opens from the middle (tray and clock on the right)
+- [x] Devium Setup: progress bar moves smoothly during each step
+- [x] KDE ISO in one file again (about 1.9 GB)
+- [ ] Easy backup to USB (and restore), export/import your Devium Setup choices
+- [ ] Stricter disk check in the installer
+- [ ] Blank Devium (nothing extra installed, still pick Devium / Devium Dark / Base KDE)
+- [ ] ArchPill: take over notifications and the volume popup automatically when it's turned on
+- [ ] Fixes from beta8 testing
+
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website
