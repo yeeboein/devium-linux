@@ -84,6 +84,7 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 ## beta9 (in progress)
 - [x] Devium themes: start button and apps centred, start menu opens from the middle (tray and clock on the right)
 - [x] Devium Setup: progress bar moves smoothly during each step
+- [x] Devium icon pack: every app icon is a rounded square in the Devium gradient with the logo in white (part of the Devium themes)
 - [x] KDE ISO in one file again (about 1.9 GB)
 - [ ] Easy backup to USB (and restore), export/import your Devium Setup choices
 - [ ] Stricter disk check in the installer

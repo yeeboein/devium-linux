@@ -4,7 +4,7 @@ AccentColor=143,180,216
 fixed=JetBrains Mono,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
 
 [Icons]
-Theme=breeze-dark
+Theme=Devium-Dark
 
 [KDE]
 LookAndFeelPackage=org.devium.desktop

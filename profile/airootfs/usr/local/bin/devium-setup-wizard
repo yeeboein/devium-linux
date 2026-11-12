@@ -415,8 +415,8 @@ class Wizard(QWidget):
                 hint.setContentsMargins(30, 0, 0, 4)
                 l.addWidget(hint)
 
-        radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey, pale accents, big floating bar, start menu in the middle"),
-                         ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey, start menu in the middle"),
+        radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey, pale accents, big floating bar, start menu in the middle, Devium icons"),
+                         ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey, start menu in the middle, Devium icons"),
                          ("style-kde", "Base KDE   —   KDE's standard look and panel "
                                        "(best if you want to customise)")],
                "style-devium")
@@ -798,6 +798,17 @@ class Wizard(QWidget):
                          "xfconf-query -c xfwm4 -p /general/theme -s Default")
         lines.append(f"plasma-apply-colorscheme {scheme}; "
                      f"plasma-apply-desktoptheme {'breeze-light' if light else 'breeze-dark'}")
+        # Icons: the Devium themes get the Devium icon pack (gradient rounded squares, white logos);
+        # Base KDE gets KDE's own Breeze icons.
+        if self.checked("style-kde"):
+            icon_theme = "breeze" if light else "breeze-dark"
+        else:
+            icon_theme = "Devium" if light else "Devium-Dark"
+        if XFCE:
+            lines.append(f"xfconf-query -c xsettings -p /Net/IconThemeName -s {icon_theme if not self.checked('style-kde') else ('Adwaita')}")
+        else:
+            lines.append(f"/usr/lib/plasma-changeicons {icon_theme} 2>/dev/null || "
+                         f"kwriteconfig6 --notify --file kdeglobals --group Icons --key Theme {icon_theme}")
         # KDE Lite / Full KDE (KDElite only changes your own settings and can be undone)
         if self.checked("kde-lite"):
             lines.append(f"bash {KDELITE} apply")

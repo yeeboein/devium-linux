@@ -1,0 +1,9 @@
+Devium icon theme
+
+Each icon is a rounded square in the Devium gradient with an app logo in white,
+made by tools/make-icons.py in https://github.com/yeeboein/devium-linux
+
+Logo shapes come from:
+- Simple Icons (https://simpleicons.org), CC0-1.0. Brand logos remain the trademarks of their owners.
+- Breeze icons by KDE (https://invent.kde.org/frameworks/breeze-icons), LGPL-3.0-or-later.
+- The Devium logo.
