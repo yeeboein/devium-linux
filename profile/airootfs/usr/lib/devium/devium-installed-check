@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""Live ISO: if Devium is already installed on this computer's disk, say so and explain how to
+start it (remove the ISO / USB stick, turn EFI on in a VM). Exit 0 if the dialog was shown."""
+import json
+import os
+import subprocess
+import sys
+import tempfile
+
+sys.path.insert(0, "/usr/lib/devium")
+
+
+def installed_partition():
+    try:
+        data = json.loads(subprocess.run(["lsblk", "-J", "-p", "-o", "NAME,FSTYPE,TYPE,RM,MOUNTPOINT"],
+                                         capture_output=True, text=True, timeout=10).stdout)
+    except Exception:
+        return None
+    parts = []
+
+    def walk(devs):
+        for d in devs:
+            if d.get("type") == "part" and d.get("fstype") in ("ext4", "btrfs", "xfs") and not d.get("mountpoint"):
+                parts.append(d["name"])
+            walk(d.get("children", []))
+    walk(data.get("blockdevices", []))
+    for dev in parts:
+        mnt = tempfile.mkdtemp(prefix="devium-check-")
+        try:
+            if subprocess.run(["sudo", "-n", "mount", "-o", "ro", dev, mnt],
+                              capture_output=True, timeout=20).returncode != 0:
+                continue
+            for root in (mnt, os.path.join(mnt, "@")):   # btrfs installs keep / in the @ subvolume
+                if os.path.exists(os.path.join(root, "var/lib/devium/finished")):
+                    return dev
+        finally:
+            subprocess.run(["sudo", "-n", "umount", mnt], capture_output=True)
+            os.rmdir(mnt) if not os.listdir(mnt) else None
+    return None
+
+
+def main():
+    dev = installed_partition()
+    if not dev:
+        return 1
+    from PyQt6.QtWidgets import QApplication, QMessageBox
+    import devium_ui as ui
+    app = QApplication(sys.argv)
+    ui.style_app(app)
+    efi = os.path.isdir("/sys/firmware/efi")
+    vm = subprocess.run(["systemd-detect-virt"], capture_output=True, text=True).stdout.strip() not in ("", "none")
+    steps = ("<ol><li>Shut down.</li>"
+             + ("<li>In VirtualBox: <b>Settings &gt; Storage</b>, click the Devium disc, then the small disc "
+                "icon &gt; <b>Remove Disk from Virtual Drive</b>.</li>" if vm else
+                "<li>Take out the USB stick.</li>")
+             + "<li>Start the computer again: your installed Devium starts.</li></ol>")
+    if not efi and vm:
+        steps += ("<p>Tip: turn on <b>EFI</b> too (Settings &gt; System &gt; Enable EFI) - then the virtual "
+                  "machine always starts from its disk, even with the ISO left in.</p>")
+    box = QMessageBox()
+    box.setWindowTitle("Devium is already installed")
+    box.setIcon(QMessageBox.Icon.Information)
+    box.setText("<b>Devium is already installed on this computer.</b><br>"
+                "You started the installer (ISO / USB) again instead of your installed Devium.")
+    box.setInformativeText(steps + "<p>Or pick <b>Start installed Devium</b> in the boot menu.</p>")
+    off = box.addButton("Shut down now", QMessageBox.ButtonRole.AcceptRole)
+    box.addButton("Keep using the live version", QMessageBox.ButtonRole.RejectRole)
+    box.exec()
+    if box.clickedButton() is off:
+        subprocess.Popen(["systemctl", "poweroff"])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

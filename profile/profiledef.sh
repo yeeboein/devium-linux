@@ -34,6 +34,7 @@ file_permissions=(
   ["/usr/local/bin/devium-tools"]="0:0:755"
   ["/usr/local/bin/devium-ram"]="0:0:755"
   ["/usr/lib/devium/lowram-user"]="0:0:755"
+  ["/usr/lib/devium/devium-installed-check"]="0:0:755"
   ["/usr/lib/devium/devium-helper"]="0:0:755"
   ["/usr/lib/devium/devium-setup"]="0:0:755"
   ["/usr/lib/devium/install-progress.py"]="0:0:755"

@@ -49,6 +49,8 @@ if [[ -d /run/archiso ]]; then
         done
         touch "$STATE/live-dock-done"
     fi
+    # Already installed? (the computer started from the ISO / USB again after installing)
+    if /usr/lib/devium/devium-installed-check; then exit 0; fi
     devium-about &
     exit 0
 fi

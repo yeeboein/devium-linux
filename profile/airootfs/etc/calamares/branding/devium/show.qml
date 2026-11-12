@@ -37,6 +37,11 @@ Presentation {
                text: "<b>Dual boot</b><br><br>Installed next to Windows? When your computer starts, pick <b>Devium</b> or <b>Windows</b> from the boot menu." }
     }
 
+    Slide {
+        Text { anchors.centerIn: parent; width: parent.width * 0.8; horizontalAlignment: Text.AlignHCenter
+               wrapMode: Text.WordWrap; color: "#dde3ea"; font.pixelSize: 18
+               text: "<b>When it's finished</b><br><br>Shut down and <b>remove the USB stick</b> (or, in a virtual machine, <b>remove the ISO</b> from the virtual DVD drive), then start your computer. Otherwise the installer starts again." }
+    }
     // "Join our Discord" button, always visible. Clicking it shows a QR code to scan with a phone
     // (the live system has no web browser).
     Rectangle {
