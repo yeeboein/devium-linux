@@ -49,11 +49,11 @@ if ! curl -fsI -m 8 https://archlinux.org >/dev/null 2>&1; then
     echo -e "${Y}No internet connection.${N} Connect to Wi-Fi from the network icon in the taskbar, then try again."
     pause; exit 1
 fi
-# Devium needs about 20 GB. Warn early instead of failing halfway through the install.
+# Devium needs at least 10 GB. Warn early instead of failing halfway through the install.
 biggest=$(lsblk -dbno SIZE,TYPE,RO 2>/dev/null | awk '$2=="disk" && $3==0 {print $1}' | sort -n | tail -n1)
-if [[ -n $biggest ]] && (( biggest < 12 * 1000**3 )); then
-    echo -e "${Y}Your biggest disk is only $(( biggest / 1000**3 )) GB.${N} Devium needs at least 12 GB."
-    echo "In a virtual machine: shut it down and give it a bigger disk (30 GB is good)."
+if [[ -n $biggest ]] && (( biggest < 10 * 1000**3 )); then
+    echo -e "${Y}Your biggest disk is only $(( biggest / 1000**3 )) GB.${N} Devium needs at least 10 GB."
+    echo "In a virtual machine: shut it down and give it a bigger disk (20 GB is good)."
     pause; exit 1
 fi
 echo -e "At the disk step, choose ${C}ext4${N} and answer ${Y}No${N} to a separate /home partition."

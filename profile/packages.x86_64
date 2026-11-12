@@ -47,7 +47,6 @@ plymouth
 networkmanager
 wpa_supplicant
 iwd
-modemmanager #install
 bluez #install
 bluez-utils #install
 pipewire
@@ -56,9 +55,6 @@ pipewire-pulse
 pipewire-jack
 wireplumber
 alsa-utils #install
-cups #install
-system-config-printer #install
-print-manager #install #kde
 tlp #install
 ufw #install
 plasma-firewall #install #kde
