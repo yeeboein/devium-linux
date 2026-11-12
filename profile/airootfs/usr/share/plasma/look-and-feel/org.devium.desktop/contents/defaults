@@ -14,8 +14,10 @@ name=breeze-dark
 cursorTheme=breeze_cursors
 
 [kwinrc][org.kde.kdecoration2]
-library=org.kde.breeze
-theme=Breeze
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__Devium
+ButtonsOnLeft=XIA
+ButtonsOnRight=
 
 [kwinrc][WindowSwitcher]
 LayoutName=org.kde.breeze.desktop

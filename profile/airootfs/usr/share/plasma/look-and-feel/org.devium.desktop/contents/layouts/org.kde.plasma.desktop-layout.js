@@ -1,16 +1,13 @@
-// Devium default desktop: a big floating bar at the bottom with the start button and apps
-// CENTRED (the start menu opens from the middle of the screen), tray and clock on the right.
-// It hides when a window covers it. (ArchPill lives at the top of the screen.)
+// Devium default desktop: a big floating dock in the middle of the screen that is exactly as
+// wide as its icons, and hides when a window covers it. (ArchPill lives at the top of the screen.)
 
 var dock = new Panel;
 dock.location = "bottom";
 dock.height = 2 * Math.ceil(gridUnit * 3.4 / 2);   // big icons (part of the Devium theme)
 try { dock.floating = true; } catch (e) {}
 try { dock.alignment = "center"; } catch (e) {}
-try { dock.lengthMode = "fill"; } catch (e) {}      // full width, so the middle is the middle
+try { dock.lengthMode = "fit"; } catch (e) {}       // only as wide as its icons
 try { dock.hiding = "dodgewindows"; } catch (e) {}  // hide when a window covers it
-
-dock.addWidget("org.kde.plasma.panelspacer");       // flexible space: pushes the apps to the centre
 
 var launcher = dock.addWidget("org.kde.plasma.kickoff");
 launcher.currentConfigGroup = ["General"];
@@ -29,7 +26,7 @@ tasks.writeConfig("launchers", [
 ].join(","));
 tasks.writeConfig("iconSpacing", "2");
 
-dock.addWidget("org.kde.plasma.panelspacer");       // flexible space on the other side
+dock.addWidget("org.kde.plasma.marginsseparator");
 dock.addWidget("org.kde.plasma.systemtray");
 dock.addWidget("org.kde.plasma.digitalclock");
 

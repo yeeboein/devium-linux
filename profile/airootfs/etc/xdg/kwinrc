@@ -10,3 +10,10 @@ LatencyPolicy=Low
 
 [Windows]
 BorderlessMaximizedWindows=false
+
+# Devium: pastel macOS-style window buttons on the left
+[org.kde.kdecoration2]
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__Devium
+ButtonsOnLeft=XIA
+ButtonsOnRight=

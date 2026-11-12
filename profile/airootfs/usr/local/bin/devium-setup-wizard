@@ -15,7 +15,7 @@ sys.path.insert(0, "/usr/lib/devium")
 from PyQt6.QtCore import QTimer, QProcess, QSize, Qt
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QFrame, QHBoxLayout, QLabel,
-                             QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
+                             QDialog, QListWidget, QListWidgetItem, QMessageBox, QPlainTextEdit,
                              QProgressBar, QPushButton, QRadioButton, QScrollArea, QStackedWidget,
                              QVBoxLayout, QWidget)
 
@@ -80,6 +80,13 @@ def available_packages(names):
     return set(re.findall(r"^Name\s*:\s*(\S+)", r.stdout, re.M))
 
 
+def current_scheme():
+    import configparser
+    c = configparser.ConfigParser(strict=False, interpolation=None)
+    c.read([os.path.expanduser("~/.config/kdeglobals")])
+    return c.get("General", "ColorScheme", fallback="")
+
+
 def ram_gb():
     try:
         for line in open("/proc/meminfo"):
@@ -137,6 +144,8 @@ class Wizard(QWidget):
         self.setWindowTitle("Devium Setup")
         self.setWindowIcon(ui.app_icon())
         self.resize(960, 720)
+        # Opened again on an installed Devium: "Let's configure your Devium", ticks what's there
+        self.reconfig = os.path.exists(DONE_MARKER) and not ui.is_live()
         self.inputs = {}       # item id -> QCheckBox / QRadioButton
         self.was_installed = set()   # items already installed when Devium Setup opened
         self.items = {}        # item id -> item dict
@@ -226,7 +235,7 @@ class Wizard(QWidget):
         self.back_btn.setVisible(i > 0 and not last_steps)
         self.skip_btn.setVisible(0 < i < self.stack.count() - 3)
         self.next_btn.setVisible(not last_steps)
-        self.next_btn.setText("Install my picks" if w is self.summary_w else
+        self.next_btn.setText(("Update my Devium" if self.reconfig else "Install my picks") if w is self.summary_w else
                               "Let's go" if i == 0 else "Next")
         self.next_btn.setEnabled(True)
         if w is self.summary_w:
@@ -282,15 +291,18 @@ class Wizard(QWidget):
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addStretch(1)
         l.addWidget(logo)
-        t = label("Welcome to Devium", "title")
+        t = label("Let's configure your Devium" if self.reconfig else "Welcome to Devium", "title")
         t.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(t)
-        txt = label(
-            "Let's set up your computer. On the next pages, pick the apps and tools you want.\n"
-            "Devium only installs what you choose, so it stays fast and light.\n\n"
-            "Not sure? Just keep clicking Next: good choices are already selected.\n"
-            "You can change everything later from Devium Welcome.\n\n"
-            f"Free disk space: {free_mb() / 1024:.1f} GB")
+        if self.reconfig:
+            intro = ("Everything you already have is ticked. Tick things to add them, untick things to remove them,\n"
+                     "or change the look. Only the changes are made.\n\n")
+        else:
+            intro = ("Let's set up your computer. On the next pages, pick the apps and tools you want.\n"
+                     "Devium only installs what you choose, so it stays fast and light.\n\n"
+                     "Not sure? Just keep clicking Next: good choices are already selected.\n"
+                     "You can change everything later from Devium Welcome.\n\n")
+        txt = label(intro + f"Free disk space: {free_mb() / 1024:.1f} GB")
         txt.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(txt)
         if ui.is_live():
@@ -369,17 +381,29 @@ class Wizard(QWidget):
                 l.addWidget(r)
 
         if os.path.exists(KDELITE) and not XFCE:
-            radios("Desktop", [("kde-lite", "KDE Lite   —   recommended: switches off KDE extras you don't need, "
-                                            "uses less RAM"),
-                               ("kde-full", "Full KDE   —   everything KDE normally runs")], "kde-lite")
-        radios("Brightness", [("theme-dark", "Dark"), ("theme-light", "Light")], "theme-dark")
+            # Enough memory (8 GB+): Full KDE. Less: KDE Lite. Running again: keep what they have.
+            ram = ram_gb()
+            lite_now = os.path.isdir(os.path.expanduser("~/.local/share/kdelite"))
+            pick = ("kde-lite" if lite_now else "kde-full") if self.reconfig else \
+                ("kde-full" if ram >= 7.5 else "kde-lite")
+            rec = f"   (recommended for your {ram:.0f} GB of RAM)"
+            radios("Desktop", [("kde-full", "Full KDE   —   everything KDE normally runs" +
+                                (rec if pick == "kde-full" and not self.reconfig else "")),
+                               ("kde-lite", "KDE Lite   —   switches off KDE extras you don't need, uses less RAM" +
+                                (rec if pick == "kde-lite" and not self.reconfig else ""))], pick)
+        scheme = current_scheme()
+        radios("Brightness", [("theme-dark", "Dark"), ("theme-light", "Light")],
+               "theme-light" if self.reconfig and "light" in scheme.lower() else "theme-dark")
+        shell_now = os.path.basename(os.environ.get("SHELL", "zsh"))
         radios("Terminal shell", [(f"shell-{s['id']}", f"{s['name']}   —   {s['desc']}") for s in cat.SHELLS],
-               "shell-zsh")
+               f"shell-{shell_now}" if self.reconfig and any(x["id"] == shell_now for x in cat.SHELLS) else "shell-zsh")
 
         l.addWidget(label("Extras", "h2"))
         ap = QCheckBox(f"ArchPill   —   pill with time, music, battery; dock shows just apps "
                        f"({fmt_mb(cat.ARCHPILL['mb'])})")
-        ap.setChecked(True)
+        has_archpill = (os.path.exists(os.path.join(CONFIG, "archpill-wanted")) or
+                        os.path.isdir(os.path.expanduser("~/archpill")))
+        ap.setChecked(has_archpill if self.reconfig else True)
         ap.toggled.connect(self.update_total)
         self.inputs["archpill"] = ap
         ap.setToolTip("With ArchPill, the dock shows only the start button and your apps: "
@@ -397,7 +421,10 @@ class Wizard(QWidget):
         ap.toggled.connect(archpill_toggled)
         archpill_toggled(ap.isChecked())
         mag = QCheckBox(f"Magnify dock   ({fmt_mb(cat.MAGNIFY['mb'])})")
-        mag.setToolTip("linux-magnify: a macOS-style dock whose icons grow as your mouse moves over them")
+        mag.setToolTip("Linux Magnify: a dock that works like the macOS dock. Icons grow smoothly under your mouse, "
+                       "a dot shows open apps, icons bounce when apps start. It replaces the Devium dock while "
+                       "it runs (and copies its pinned apps), and has its own settings app.")
+        mag.setChecked(self.reconfig and os.path.exists(os.path.expanduser("~/.local/bin/linux-magnify")))
         mag.toggled.connect(self.update_total)
         self.inputs["magnify"] = mag
         dock = QCheckBox("Hide the dock when a window covers it")
@@ -411,15 +438,17 @@ class Wizard(QWidget):
                 hint.setContentsMargins(30, 0, 0, 4)
                 l.addWidget(hint)
             if b is mag:
-                hint = label("macOS-style dock: icons grow as your mouse moves over them (linux-magnify)", "subtitle")
+                hint = label("Like the macOS dock: icons grow under your mouse.\n"
+                             "Replaces the Devium dock and keeps your pinned apps.", "subtitle")
                 hint.setContentsMargins(30, 0, 0, 4)
                 l.addWidget(hint)
 
-        radios("Theme", [("style-devium", "Use the Devium theme   —   blue-grey, pale accents, big floating bar, start menu in the middle, Devium icons"),
-                         ("style-deviumdark", "Devium Dark   —   deeper, darker blue-grey, start menu in the middle, Devium icons"),
+        radios("Theme", [("style-devium", "Devium   —   blue-grey, floating dock, pastel window buttons, Devium icons"),
+                         ("style-deviumdark", "Devium Dark   —   the same, in a deeper, darker blue-grey"),
                          ("style-kde", "Base KDE   —   KDE's standard look and panel "
                                        "(best if you want to customise)")],
-               "style-devium")
+               ("style-deviumdark" if scheme == "DeviumDark" else
+                "style-devium" if scheme.startswith("Devium") else "style-kde") if self.reconfig else "style-devium")
         l.addWidget(label("The Devium fastfetch logo looks the same with every theme.", "subtitle"))
         l.addWidget(self.theme_previews())
         l.addStretch(1)
@@ -482,7 +511,7 @@ class Wizard(QWidget):
     def install_page(self):
         self.install_w = QWidget()
         l = QVBoxLayout(self.install_w)
-        l.addWidget(label("Installing your picks", "h2"))
+        l.addWidget(label("Updating your Devium" if self.reconfig else "Installing your picks", "h2"))
         self.install_status = label("Starting…")
         l.addWidget(self.install_status)
         self.progress = QProgressBar()
@@ -519,7 +548,7 @@ class Wizard(QWidget):
         self.done_w = QWidget()
         l = QVBoxLayout(self.done_w)
         l.addStretch(1)
-        t = label("Devium is ready!", "title")
+        t = label("Your Devium is updated!" if self.reconfig else "Devium is ready!", "title")
         t.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(t)
         self.done_text = label("")
@@ -645,7 +674,8 @@ class Wizard(QWidget):
             f"<p><b>Look:</b> {', '.join(look)}</p>"
             f"<p><b>Total: {fmt_mb(p['mb']) if p['mb'] else 'nothing to download'}</b>, "
             f"leaving about {max(left, 0) / 1024:.1f} GB free.</p>{warn}"
-            "<p>Click <b>Install my picks</b>. You'll be asked for your password once.</p>")
+            f"<p>Click <b>{'Update my Devium' if self.reconfig else 'Install my picks'}</b>. "
+            "You'll be asked for your password once.</p>")
 
     # ------------------------------------------------------------------ install
     def start_install(self):
@@ -668,7 +698,7 @@ class Wizard(QWidget):
         self.pac_share = max(setup_mb - fl_mb, 1) / max(setup_mb, 1) if p["flatpak"] else 1.0
         self.n_apps = len(p["flatpak"])
         steps = []
-        steps.append(("Installing packages and apps…", "pkexec",
+        steps.append(("Updating packages and apps…" if self.reconfig else "Installing packages and apps…", "pkexec",
                       ["/usr/lib/devium/devium-helper", "setup", plan_file], max(setup_mb, 40), "setup"))
         for it in items:
             if it.get("helper"):
@@ -680,7 +710,8 @@ class Wizard(QWidget):
             steps.append((f"Installing {pkg}…", "bash", ["-c",
                           f"pkexec /usr/lib/devium/devium-helper install-local /tmp/devium-aur/{pkg}/*.pkg.tar.zst"],
                           max(mb // 4, 10), "pacman"))
-        steps.append(("Setting up your choices…", "bash", ["-c", self.user_script(p)],
+        steps.append(("Updating your settings…" if self.reconfig else "Setting up your choices…", "bash",
+                      ["-c", self.user_script(p)],
                       max(model_mb, 20), "user"))
         self.total_weight = sum(st[3] for st in steps)
         self.weight_done = 0
@@ -729,15 +760,6 @@ class Wizard(QWidget):
             model = p["ai"]["model"]
             lines.append("for i in $(seq 1 30); do curl -fs http://127.0.0.1:11434 >/dev/null && break; sleep 1; done")
             lines.append(f"command -v ollama >/dev/null && ollama pull {q(model)}")
-        if self.checked("magnify"):
-            lines.append("if [ -d /opt/linux-magnify ]; then rm -rf ~/.cache/linux-magnify-src && "
-                         "cp -r /opt/linux-magnify ~/.cache/linux-magnify-src && "
-                         "(cd ~/.cache/linux-magnify-src && printf 'y\\ny\\n' | ./install.sh); fi")
-            # make room for it: the Plasma dock hides itself until you move to the screen edge
-            js_hide = "panels().forEach(function(p){ if (p.location=='bottom') p.hiding='autohide'; });"
-            lines.append(f"qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js_hide)} "
-                         ">/dev/null 2>&1")
-            lines.append("pgrep -f linux_magnify >/dev/null || (setsid ~/.local/bin/linux-magnify >/dev/null 2>&1 &)")
         if "rust" in chosen:
             lines.append("command -v rustup >/dev/null && rustup default stable")
         # dock: swap Konsole / Dolphin launchers for the chosen apps, add the editor, dock auto-hide
@@ -750,29 +772,27 @@ class Wizard(QWidget):
         launchers += ["applications:org.kde.kate.desktop", "applications:devium-snip.desktop",
                       "applications:org.kde.discover.desktop", "applications:devium-welcome.desktop"]
         hiding = "dodgewindows" if self.checked("dock-hide") else "none"
-        # Devium themes: start button and apps CENTRED on a big floating bar (the start menu opens from
-        # the middle), tray and clock on the right. Base KDE: KDE's normal panel, start button on the left.
-        # The bar is rebuilt in order so the layout is right however it looked before.
-        centred = not self.checked("style-kde")
-        if centred:
-            dock_js = ("p.floating=true; p.alignment='center'; p.lengthMode='fill';"
-                       "p.height=2*Math.ceil(gridUnit*3.4/2);")
-        else:
+        # Devium themes: a big floating dock in the middle that is exactly as wide as its icons.
+        # Base KDE: KDE's normal full-width panel.
+        if self.checked("style-kde"):
             dock_js = ("p.floating=false; p.alignment='left'; p.lengthMode='fill';"
                        "p.height=2*Math.ceil(gridUnit*2.2/2);")
-        # With ArchPill the pill shows time, battery, sound and network, so the bar keeps only
-        # the start button and app icons. Without ArchPill the bar keeps its tray and clock.
-        spacer = "p.addWidget('org.kde.plasma.panelspacer');" if centred else ""
-        tray = "" if self.checked("archpill") else (
-            ("" if centred else "p.addWidget('org.kde.plasma.marginsseparator');") +
-            "p.addWidget('org.kde.plasma.systemtray'); p.addWidget('org.kde.plasma.digitalclock');")
+        else:
+            dock_js = ("p.floating=true; p.alignment='center'; p.lengthMode='fit';"
+                       "p.height=2*Math.ceil(gridUnit*3.4/2);")
+        # With ArchPill the pill shows time, battery, sound and network, so the dock keeps only
+        # the start button and app icons. Without ArchPill the dock keeps its tray and clock.
+        extras = ["org.kde.plasma.marginsseparator", "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock"]
+        if self.checked("archpill"):
+            tray_js = ("p.widgets().forEach(function(w){ if (" +
+                       " || ".join(f"w.type=='{t}'" for t in extras) + ") w.remove(); });")
+        else:
+            tray_js = "".join(f"if (p.widgets('{t}').length==0) p.addWidget('{t}');" for t in extras)
         js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';" + dock_js +
-              "p.widgets().forEach(function(w){ w.remove(); });" + spacer +
-              "var k=p.addWidget('org.kde.plasma.kickoff'); k.currentConfigGroup=['General'];"
-              "k.writeConfig('icon','/usr/share/devium/start-button.png');"
-              "var t=p.addWidget('org.kde.plasma.icontasks'); t.currentConfigGroup=['General'];"
-              "t.writeConfig('launchers','" + ",".join(launchers) + "'); t.writeConfig('iconSpacing','2');"
-              + spacer + tray + " });")
+              "p.widgets('org.kde.plasma.panelspacer').forEach(function(w){ w.remove(); });"
+              "p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General'];"
+              "w.writeConfig('launchers','" + ",".join(launchers) + "'); w.reloadConfig(); });"
+              + tray_js + " });")
         lines.append(f"(qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)} "
                      f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
         # theme (the Devium themes come with the big floating dock; Base KDE gets KDE's normal panel)
@@ -804,6 +824,18 @@ class Wizard(QWidget):
             icon_theme = "breeze" if light else "breeze-dark"
         else:
             icon_theme = "Devium" if light else "Devium-Dark"
+        # Window buttons: Devium themes get pastel macOS-style round buttons on the left
+        # (close, minimise, maximise); Base KDE keeps KDE's Breeze buttons on the right.
+        if not XFCE:
+            kw = "kwriteconfig6 --file kwinrc --group org.kde.kdecoration2"
+            if self.checked("style-kde"):
+                lines.append(f"{kw} --key library org.kde.breeze; {kw} --key theme Breeze; "
+                             f"{kw} --key ButtonsOnLeft M; {kw} --key ButtonsOnRight IAX")
+            else:
+                deco = "Devium-Light" if light else "Devium"
+                lines.append(f"{kw} --key library org.kde.kwin.aurorae; {kw} --key theme __aurorae__svg__{deco}; "
+                             f"{kw} --key ButtonsOnLeft XIA; {kw} --key ButtonsOnRight ''")
+            lines.append("qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1")
         if XFCE:
             lines.append(f"xfconf-query -c xsettings -p /Net/IconThemeName -s {icon_theme if not self.checked('style-kde') else ('Adwaita')}")
         else:
@@ -822,11 +854,30 @@ class Wizard(QWidget):
             lines.append("if command -v qs >/dev/null && [ -d /opt/archpill ]; then "
                          "[ -d ~/archpill ] || cp -r /opt/archpill ~/archpill; "
                          "(cd ~/archpill && ./install.sh --no-packages); fi")
-            lines.append("command -v qs >/dev/null && ! pgrep -f 'qs -c archpill' >/dev/null && "
-                         "(QS_APP_ID=archpill setsid qs -c archpill -n -d >/dev/null 2>&1 &)")
+            # ArchPill shows notifications and the volume bar, so Plasma's own popups are switched off
+            # (with ArchPill the dock has no system tray, so Plasma lets go of notifications)
+            lines.append("kwriteconfig6 --notify --file plasmaparc --group General --key VolumeOsd false")
+            lines.append("kwriteconfig6 --notify --file plasmaparc --group General --key MuteOsd false")
+            lines.append("mkdir -p ~/.config/archpill && touch ~/.config/archpill/.plasma-notifications-off")
+            # Devium shows its own ArchPill tour, so skip ArchPill's built-in one (only on a fresh config)
+            lines.append("[ -f ~/.config/archpill/config.json ] || "
+                         "echo '{\"setup\": {\"done\": true}}' > ~/.config/archpill/config.json")
         else:
             lines.append(f"rm -f {q(os.path.join(CONFIG, 'archpill-wanted'))}")
             lines.append("[ -x ~/archpill/uninstall.sh ] && ~/archpill/uninstall.sh")
+            lines.append("kwriteconfig6 --notify --file plasmaparc --group General --key VolumeOsd true")
+            lines.append("kwriteconfig6 --notify --file plasmaparc --group General --key MuteOsd true")
+        # Linux Magnify last, so it copies the finished dock (pinned apps, start icon, hide setting)
+        if self.checked("magnify"):
+            lines.append("if [ -d /opt/linux-magnify ]; then rm -rf ~/.cache/linux-magnify-src && "
+                         "cp -r /opt/linux-magnify ~/.cache/linux-magnify-src && "
+                         "(cd ~/.cache/linux-magnify-src && yes | ./install.sh); fi")
+            lines.append("pgrep -f linux-magnify >/dev/null || "
+                         "(PATH=$HOME/.local/bin:$PATH setsid linux-magnify >/dev/null 2>&1 &)")
+        elif self.reconfig and os.path.exists(os.path.expanduser("~/.local/bin/linux-magnify")):
+            # unticked: stop it and give the dock back
+            lines.append("pkill -f linux-magnify; ~/.local/bin/linux-magnify --restore-panels >/dev/null 2>&1; "
+                         "rm -f ~/.config/autostart/linux-magnify.desktop")
         lines.append(f"mkdir -p {q(CONFIG)} && touch {q(DONE_MARKER)}")
         return "\n".join(lines)
 
@@ -981,6 +1032,26 @@ class Wizard(QWidget):
             msg += "\n\nLog out and back in to finish (for your new shell / Docker access)."
         self.done_text.setText(msg)
         self.go(self.stack.indexOf(self.done_w))
+        QTimer.singleShot(400, self.after_finish)
+
+    def after_finish(self):
+        if self.checked("archpill") and shutil.which("qs"):
+            if not os.path.exists(os.path.join(CONFIG, "archpill-tour-done")):
+                ArchPillTour(self).exec()
+                open(os.path.join(CONFIG, "archpill-tour-done"), "w").close()
+            subprocess.Popen(["sh", "-c", "pgrep -f 'qs -c archpill' >/dev/null || "
+                              "QS_APP_ID=archpill setsid qs -c archpill -n -d >/dev/null 2>&1"],
+                             start_new_session=True)
+        box = QMessageBox(self)
+        box.setWindowTitle("Restart recommended")
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setText("<b>We recommend a restart to get everything moving!</b>")
+        box.setInformativeText("New apps, your shell, the dock and ArchPill all start fresh after a restart.")
+        restart = box.addButton("Restart now", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton("Ignore", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is restart:
+            subprocess.Popen(["systemctl", "reboot"])
 
     def closeEvent(self, ev):
         if self.queue or (getattr(self, "proc", None) and self.proc.state() != QProcess.ProcessState.NotRunning):
@@ -991,6 +1062,71 @@ class Wizard(QWidget):
         os.makedirs(CONFIG, exist_ok=True)
         open(os.path.join(CONFIG, "setup-seen"), "w").close()
         ev.accept()
+
+
+class ArchPillTour(QDialog):
+    """A short, skippable showcase of ArchPill. ArchPill starts when it closes."""
+    SHOTS = "/opt/archpill/docs/screenshots"
+    PAGES = [
+        ("pill.png", "Meet ArchPill",
+         "The pill at the top of your screen shows the time, your music, volume and battery at a glance."),
+        ("control-centre.png", "Click it for the control centre",
+         "Like on a phone: Wi-Fi, Bluetooth, volume, brightness, night light and more, all in one place."),
+        ("music.png", "Your music",
+         "When something plays, the pill shows it. Hover to see the song; click for play, pause and skip."),
+        ("volume.png", "Volume and notifications",
+         "Change the volume and the pill shows a volume bar. Notifications appear in the pill too."),
+        ("settings.png", "Make it yours",
+         "Right-click the pill for ArchPill Settings: position, size, colours, what it shows and more."),
+    ]
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("ArchPill tour")
+        self.resize(640, 520)
+        self.i = 0
+        l = QVBoxLayout(self)
+        self.img = QLabel()
+        self.img.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.img.setMinimumHeight(300)
+        self.title = label("", "title")
+        self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.text = label("")
+        self.text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.count = label("", "subtitle")
+        self.count.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        l.addWidget(self.img, 1)
+        l.addWidget(self.title)
+        l.addWidget(self.text)
+        l.addWidget(self.count)
+        row = QHBoxLayout()
+        skip = QPushButton("Skip tour")
+        skip.clicked.connect(self.accept)
+        self.back = QPushButton("Back")
+        self.back.clicked.connect(lambda: self.show_page(self.i - 1))
+        self.nxt = QPushButton("Next")
+        self.nxt.setObjectName("primary")
+        self.nxt.clicked.connect(lambda: self.accept() if self.i == len(self.PAGES) - 1 else self.show_page(self.i + 1))
+        row.addWidget(skip)
+        row.addStretch(1)
+        row.addWidget(self.back)
+        row.addWidget(self.nxt)
+        l.addLayout(row)
+        self.show_page(0)
+
+    def show_page(self, i):
+        self.i = max(0, min(i, len(self.PAGES) - 1))
+        shot, title, text = self.PAGES[self.i]
+        pix = QPixmap(os.path.join(self.SHOTS, shot))
+        if pix.isNull():
+            pix = QPixmap(ui.LOGO)
+        self.img.setPixmap(pix.scaled(600, 300, Qt.AspectRatioMode.KeepAspectRatio,
+                                      Qt.TransformationMode.SmoothTransformation))
+        self.title.setText(title)
+        self.text.setText(text)
+        self.count.setText(f"{self.i + 1} of {len(self.PAGES)}")
+        self.back.setEnabled(self.i > 0)
+        self.nxt.setText("Start ArchPill" if self.i == len(self.PAGES) - 1 else "Next")
 
 
 def main():

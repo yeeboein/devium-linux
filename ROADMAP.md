@@ -82,7 +82,6 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [ ] Easy backup, export/import setup, stricter disk check
 
 ## beta9 (in progress)
-- [x] Devium themes: start button and apps centred, start menu opens from the middle (tray and clock on the right)
 - [x] Devium Setup: progress bar moves smoothly during each step
 - [x] Devium icon pack: every app icon is a rounded square in the Devium gradient with the logo in white (part of the Devium themes)
 - [x] KDE ISO in one file again (about 1.9 GB)
@@ -91,6 +90,18 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [ ] Blank Devium (nothing extra installed, still pick Devium / Devium Dark / Base KDE)
 - [ ] ArchPill: take over notifications and the volume popup automatically when it's turned on
 - [ ] Fixes from beta8 testing
+
+## beta10 (in progress)
+- [x] Dock fits its apps (no wide bar), terminal pinned
+- [x] Pastel macOS-style window buttons (close, minimise, maximise on the left) in the Devium themes
+- [x] Devium Setup: Full KDE recommended with 8 GB+ RAM, KDE Lite below that
+- [x] Devium Setup: "Terminal fun" page (cmatrix, cbonsai, asciiquarium, cowsay, tldr, bat, eza...)
+- [x] Devium Setup again on an installed Devium: "Let's configure your Devium", everything installed is ticked, "Updating"
+- [x] ArchPill tour after setup (skippable), then ArchPill starts; ArchPill takes over notifications and the volume popup
+- [x] "We recommend a restart" pop-up after setup (Restart now / Ignore)
+- [x] New Linux Magnify (replaces the dock, copies pinned apps, own settings app)
+- [x] 10 GB minimum disk, smaller installs
+- [x] No install loop: the live ISO notices an installed Devium and explains; "Start installed Devium" in the BIOS menu
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

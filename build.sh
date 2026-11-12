@@ -98,7 +98,9 @@ git clone --depth 1 https://github.com/yeeboein/kdelite.git "$STAGE/airootfs/opt
 
 # 3c. Bundle linux-magnify (https://github.com/yeeboein/linux-magnify), the macOS-style dock option.
 say "Downloading linux-magnify"
-git clone --depth 1 https://github.com/yeeboein/linux-magnify.git "$STAGE/airootfs/opt/linux-magnify" \
+# MAGNIFY_REF picks a branch (default: the repository's main branch).
+git clone --depth 1 ${MAGNIFY_REF:+-b "$MAGNIFY_REF"} https://github.com/yeeboein/linux-magnify.git \
+    "$STAGE/airootfs/opt/linux-magnify" \
     || warn "Could not download linux-magnify; the Magnify dock option will be hidden."
 
 # 4. Release info (used by the installer to fetch Devium's files for the new system).
