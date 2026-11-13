@@ -795,17 +795,32 @@ class Wizard(QWidget):
                        "p.height=2*Math.ceil(gridUnit*3.4/2);")
         # With ArchPill the pill shows time, battery, sound and network, so the dock keeps only
         # the start button and app icons. Without ArchPill the dock keeps its tray and clock.
-        extras = ["org.kde.plasma.marginsseparator", "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock"]
-        if self.checked("archpill"):
-            tray_js = ("p.widgets().forEach(function(w){ if (" +
-                       " || ".join(f"w.type=='{t}'" for t in extras) + ") w.remove(); });")
-        else:
-            tray_js = "".join(f"if (p.widgets('{t}').length==0) p.addWidget('{t}');" for t in extras)
+        # Order: apps | start button | tray and clock (or, with ArchPill, a Trash icon like the macOS dock).
+        # The task manager is never re-created (that loses its pinned apps); the start button and the
+        # right-hand widgets are moved by removing and adding them again after it.
+        right = ["org.kde.plasma.trash"] if self.checked("archpill") else \
+            ["org.kde.plasma.marginsseparator", "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock"]
+        moved = ["org.kde.plasma.kickoff", "org.kde.plasma.trash", "org.kde.plasma.marginsseparator",
+                 "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock", "org.kde.plasma.panelspacer"]
         js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';" + dock_js +
-              "p.widgets('org.kde.plasma.panelspacer').forEach(function(w){ w.remove(); });"
+              "p.widgets().forEach(function(w){ if (" + " || ".join(f"w.type=='{t}'" for t in moved) +
+              ") w.remove(); });"
+              "if (p.widgets('org.kde.plasma.icontasks').length==0) p.addWidget('org.kde.plasma.icontasks');"
               "p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General'];"
-              "w.writeConfig('launchers','" + ",".join(launchers) + "'); w.reloadConfig(); });"
-              + tray_js + " });")
+              "w.writeConfig('launchers','" + ",".join(launchers) + "'); w.writeConfig('iconSpacing','2');"
+              " w.reloadConfig(); });"
+              "var k=p.addWidget('org.kde.plasma.kickoff'); k.currentConfigGroup=['General'];"
+              "k.writeConfig('icon','/usr/share/devium/start-button.png'); k.reloadConfig();"
+              + "".join(f"p.addWidget('{t}');" for t in right) + " });")
+        if self.checked("style-kde"):
+            # Base KDE: KDE's usual order, start button on the left: start | apps | tray | clock
+            js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';" + dock_js +
+                  "p.widgets().forEach(function(w){ w.remove(); });"
+                  "var k=p.addWidget('org.kde.plasma.kickoff');"
+                  "var t=p.addWidget('org.kde.plasma.icontasks'); t.currentConfigGroup=['General'];"
+                  "t.writeConfig('launchers','" + ",".join(launchers) + "'); t.reloadConfig();"
+                  "p.addWidget('org.kde.plasma.marginsseparator'); p.addWidget('org.kde.plasma.systemtray');"
+                  "p.addWidget('org.kde.plasma.digitalclock'); });")
         lines.append(f"(qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)} "
                      f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
         # theme (the Devium themes come with the big floating dock; Base KDE gets KDE's normal panel)
