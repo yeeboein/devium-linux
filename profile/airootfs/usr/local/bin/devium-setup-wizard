@@ -781,14 +781,9 @@ class Wizard(QWidget):
         if "rust" in chosen:
             lines.append("command -v rustup >/dev/null && rustup default stable")
         # dock: swap Konsole / Dolphin launchers for the chosen apps, add the editor, dock auto-hide
-        launchers = ["preferred://filemanager", "preferred://browser"]
+        # The dock starts with just the terminal pinned (right-click any app > Pin to add more)
         term = next((it for it in p["items"] if it["id"] in [x["id"] for x in cat.PAGES[2]["items"]]), None)
-        launchers.append(f"applications:{term['desktop'] if term else 'org.kde.konsole.desktop'}")
-        for ed in ("vscodium", "vscode"):
-            if ed in chosen:
-                launchers.append(f"applications:{chosen[ed]['desktop']}")
-        launchers += ["applications:org.kde.kate.desktop", "applications:devium-snip.desktop",
-                      "applications:org.kde.discover.desktop", "applications:devium-welcome.desktop"]
+        launchers = [f"applications:{term['desktop'] if term else 'org.kde.konsole.desktop'}"]
         hiding = "dodgewindows" if self.checked("dock-hide") else "none"
         # Devium themes: a big floating dock in the middle that is exactly as wide as its icons.
         # Base KDE: KDE's normal full-width panel.

@@ -8,8 +8,8 @@ _launch=Print
 [services][devium-welcome.desktop]
 _launch=Meta+F1
 
-[services][devium-update-manager.desktop]
-_launch=Meta+U
-
 [services][devium-tools.desktop]
 _launch=Meta+T
+
+[services][devium-tools-updates.desktop]
+_launch=Meta+U

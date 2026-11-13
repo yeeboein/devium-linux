@@ -15,15 +15,7 @@ launcher.writeConfig("icon", "/usr/share/devium/start-button.png");
 
 var tasks = dock.addWidget("org.kde.plasma.icontasks");
 tasks.currentConfigGroup = ["General"];
-tasks.writeConfig("launchers", [
-    "preferred://filemanager",
-    "preferred://browser",
-    "applications:org.kde.konsole.desktop",
-    "applications:org.kde.kate.desktop",
-    "applications:devium-snip.desktop",
-    "applications:org.kde.discover.desktop",
-    "applications:devium-welcome.desktop"
-].join(","));
+tasks.writeConfig("launchers", "applications:org.kde.konsole.desktop");   // just the terminal to start with
 tasks.writeConfig("iconSpacing", "2");
 
 dock.addWidget("org.kde.plasma.marginsseparator");

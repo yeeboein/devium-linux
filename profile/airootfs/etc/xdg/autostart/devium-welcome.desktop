@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Devium Welcome
-Exec=/usr/local/bin/devium-welcome --autostart
-Icon=devium
-NoDisplay=true
-X-KDE-autostart-phase=2
-X-KDE-autostart-after=panel

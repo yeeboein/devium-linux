@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Updates
+Comment=Install updates (Devium Tools)
+Exec=devium-tools updates
+Icon=system-software-update
+Terminal=false
+NoDisplay=true

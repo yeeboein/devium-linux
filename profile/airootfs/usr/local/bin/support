@@ -63,7 +63,7 @@ cmd "devium-tools"                    "App Manager, speed, battery, privacy, hel
 cmd "devium-ram"                      "What is using your memory"
 cmd "devium-welcome"                  "Open Devium Welcome (Meta+F1)"
 cmd "devium-setup-wizard"             "Pick apps, languages, games and theme"
-cmd "devium-update-manager  (update)" "Install updates with a progress bar (Meta+U)"
+cmd "devium-tools updates  (update)"  "Install updates (Meta+U)"
 cmd "devium-updater"                  "Get new Devium versions and ISOs"
 cmd "devium-new-project <name>"       "New Python project in ~/Projects, opens your editor"
 cmd "fastfetch"                       "Show the Devium logo and system info"

@@ -183,7 +183,7 @@ class Welcome(QWidget):
                               lambda: self.go("devium-install"), "drive-optical"))
         items += [
             tile("Update Manager", "Get the latest updates (Meta+U)",
-                 lambda: self.go("devium-update-manager"), "system-software-update"),
+                 lambda: self.go("devium-tools", "updates", name="Devium Tools"), "system-software-update"),
             tile("Devium Tools", "App Manager, speed, battery, privacy and help (Meta+T)",
                  lambda: self.go("devium-tools", name="Devium Tools"), "preferences-system"),
             tile("Discover", "Find and install apps",
@@ -309,7 +309,7 @@ class Welcome(QWidget):
             h2("System"),
             tiles([
                 tile("Update Manager", "Updates, plus free up disk space",
-                     lambda: self.go("devium-update-manager"), "system-software-update"),
+                     lambda: self.go("devium-tools", "updates", name="Devium Tools"), "system-software-update"),
                 tile("Devium Updater", "New Devium versions and ISOs",
                      lambda: self.go("devium-updater"), "devium"),
                 tile("Restore points", "Set up Timeshift: undo a bad update in two clicks",

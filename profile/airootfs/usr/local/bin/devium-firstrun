@@ -35,7 +35,7 @@ if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-done ]]; then
     xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -n -t string -s "$wp" 2>/dev/null
     sc() { xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/$1" -n -t string -s "$2"; }
     sc "<Super><Shift>s" "xfce4-screenshooter -r -c"
-    sc "<Super>u" "devium-update-manager"
+    sc "<Super>u" "devium-tools updates"
     sc "<Super>t" "devium-tools"
     sc "<Super>F1" "devium-welcome"
     sc "<Super>e" "exo-open --launch FileManager"

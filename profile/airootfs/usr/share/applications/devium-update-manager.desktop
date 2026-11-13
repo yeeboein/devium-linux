@@ -8,3 +8,4 @@ Icon=system-software-update
 Terminal=false
 Categories=System;Settings;
 Keywords=update;upgrade;software;packages;pacman;
+NoDisplay=true
