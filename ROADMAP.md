@@ -93,15 +93,20 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 
 ## beta10 (in progress)
 - [x] Dock fits its apps (no wide bar), terminal pinned
-- [x] Pastel macOS-style window buttons (close, minimise, maximise on the left) in the Devium themes
 - [x] Devium Setup: Full KDE recommended with 8 GB+ RAM, KDE Lite below that
 - [x] Devium Setup: "Terminal fun" page (cmatrix, cbonsai, asciiquarium, cowsay, tldr, bat, eza...)
 - [x] Devium Setup again on an installed Devium: "Let's configure your Devium", everything installed is ticked, "Updating"
-- [x] ArchPill tour after setup (skippable), then ArchPill starts; ArchPill takes over notifications and the volume popup
+- [x] ArchPill starts after setup and takes over notifications and the volume popup
 - [x] "We recommend a restart" pop-up after setup (Restart now / Ignore)
 - [x] New Linux Magnify (replaces the dock, copies pinned apps, own settings app)
 - [x] 10 GB minimum disk, smaller installs
 - [x] No install loop: the live ISO notices an installed Devium and explains; "Start installed Devium" in the BIOS menu
+
+## beta11 (in progress)
+- [x] Fix: window title bars missing in beta10 (couldn't close windows) - back to KDE's standard buttons
+- [x] No ArchPill tour; the restart pop-up appears one minute after Setup finishes
+- [x] Devium Setup only shows what works on your desktop (ArchPill needs Wayland; Linux Magnify needs its packages)
+- [x] Linux Magnify installed the way its README says (packages, install.sh with autostart, then start it)
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

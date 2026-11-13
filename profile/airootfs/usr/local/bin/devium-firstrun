@@ -11,6 +11,15 @@ LOG="$STATE/firstrun.log"
 exec >>"$LOG" 2>&1
 echo "=== devium-firstrun $(date)"
 
+# --- beta10 fix: its custom window buttons didn't show up, so windows couldn't be closed.
+#     Put KDE's normal title bar back (once).
+if grep -q "__aurorae__svg__Devium" "${XDG_CONFIG_HOME:-$HOME/.config}/kwinrc" 2>/dev/null; then
+    kw="kwriteconfig6 --file kwinrc --group org.kde.kdecoration2"
+    $kw --key library org.kde.breeze; $kw --key theme Breeze
+    $kw --key ButtonsOnLeft M; $kw --key ButtonsOnRight IAX
+    qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1
+fi
+
 # --- Low-RAM mode (turned on by the installer on computers with 4 GB or less) --
 if [[ -f /etc/devium/low-ram && ! -f $STATE/low-ram-applied ]]; then
     /usr/lib/devium/lowram-user on
