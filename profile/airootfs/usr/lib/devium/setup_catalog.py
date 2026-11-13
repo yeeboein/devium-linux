@@ -100,7 +100,7 @@ PAGES = [
              "ext": ["ms-python.python", "charliermarsh.ruff"], "default": True},
             {"id": "cpp", "name": "C / C++", "desc": "gcc, clang, cmake, make, ninja, meson, gdb, lldb, valgrind",
              "mb": 450, "pacman": ["base-devel", "gcc", "clang", "cmake", "make", "ninja", "meson", "gdb", "lldb", "valgrind"],
-             "ext": ["llvm-vs-code-extensions.vscode-clangd"], "default": True},
+             "ext": ["llvm-vs-code-extensions.vscode-clangd"]},
             {"id": "node", "name": "JavaScript (Node.js)", "desc": "Websites and web apps (node, npm)", "mb": 80,
              "pacman": ["nodejs", "npm"]},
             {"id": "java", "name": "Java", "desc": "OpenJDK with Maven and Gradle", "mb": 250,
