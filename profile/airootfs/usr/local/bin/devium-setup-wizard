@@ -404,7 +404,7 @@ class Wizard(QWidget):
                        f"({fmt_mb(cat.ARCHPILL['mb'])})")
         has_archpill = (os.path.exists(os.path.join(CONFIG, "archpill-wanted")) or
                         os.path.isdir(os.path.expanduser("~/archpill")))
-        ap.setChecked(has_archpill if self.reconfig else True)
+        ap.setChecked(has_archpill if self.reconfig else False)   # off by default
         ap.toggled.connect(self.update_total)
         self.inputs["archpill"] = ap
         ap.setToolTip("With ArchPill, the dock shows only the start button and your apps: "
@@ -427,6 +427,8 @@ class Wizard(QWidget):
                        "it runs (and copies its pinned apps), and has its own settings app.")
         mag.setChecked(self.reconfig and os.path.exists(os.path.expanduser("~/.local/bin/linux-magnify")))
         mag.toggled.connect(self.update_total)
+        # Ticking Linux Magnify also ticks ArchPill (they go well together); ArchPill can still be unticked
+        mag.toggled.connect(lambda on: on and ap.isVisibleTo(inner) and ap.setChecked(True))
         self.inputs["magnify"] = mag
         dock = QCheckBox("Hide the dock when a window covers it")
         dock.setChecked(True)

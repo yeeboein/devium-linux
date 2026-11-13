@@ -107,6 +107,11 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] No ArchPill tour; the restart pop-up appears one minute after Setup finishes
 - [x] Devium Setup only shows what works on your desktop (ArchPill needs Wayland; Linux Magnify needs its packages)
 - [x] Linux Magnify installed the way its README says (packages, install.sh with autostart, then start it)
+- [x] ArchPill off by default; ticking Linux Magnify ticks ArchPill too (you can still untick it)
+- [x] Dock starts with only the terminal pinned; start button in the middle of the dock (apps | start | tray)
+- [x] Devium Welcome no longer opens at login; updates live in Devium Tools (Meta+U)
+- [x] Installer upgrades in one step and refreshes mirrors and keys first (fixes "Package Manager error")
+- [x] README rewritten
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
