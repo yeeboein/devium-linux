@@ -1,33 +1,56 @@
 <p align="center">
-  <img src="docs/banner.png" alt="Devium: light, fast, made for coding" width="100%">
+  <img src="docs/banner.png" alt="Devium" width="100%">
 </p>
 
 <p align="center">
   <img src="profile/airootfs/usr/share/devium/logo.png" width="96" alt="Devium logo"><br>
-  <b>A light, fast Arch Linux desktop made for coding: easy for beginners, nice for pros.</b>
+  <b>An Arch-based distro for coding. Light enough for old laptops, easy enough for your first Linux install.</b>
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/YTMattgyG3"><img src="https://img.shields.io/badge/Discord-Join%20the%20Devium%20community-5865F2?logo=discord&logoColor=white" alt="Join the Devium Discord"></a>
-  <a href="https://github.com/yeeboein/devium-linux/releases"><img src="https://img.shields.io/github/v/release/yeeboein/devium-linux?include_prereleases&label=Download&color=8fb4d8" alt="Download"></a>
+  <a href="https://discord.gg/YTMattgyG3"><img src="https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://github.com/yeeboein/devium-linux/releases"><img src="https://img.shields.io/github/v/release/yeeboein/devium-linux?include_prereleases&label=download&color=8fb4d8" alt="Download"></a>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/desktop-mockup.png" width="90%" alt="Devium desktop (mock-up)"><br>
-  <sub>Desktop mock-up: mountain wallpaper, floating dock, ArchPill, fastfetch and Devium Welcome.</sub>
+  <img src="docs/screenshots/desktop-mockup.png" width="90%" alt="Devium desktop">
 </p>
 
-### Developers
+## What is this?
 
-<table><tr><td><img src="profile/airootfs/usr/share/devium/credits/yeeboein.png" width="72" style="border-radius:50%"></td>
-<td><b>Yeeboein</b><br>Owner<br><a href="https://github.com/yeeboein">github.com/yeeboein</a></td></tr></table>
+I wanted an Arch setup I could put on any laptop and start coding on straight away, without spending
+an evening configuring it. So I made Devium.
 
-Built with [ArchPill](https://github.com/yeeboein/archpill), [KDElite](https://github.com/yeeboein/kdelite),
-[Arch Linux](https://archlinux.org) and [KDE Plasma](https://kde.org/plasma-desktop).
+It's Arch Linux with KDE Plasma (or Xfce for really old machines), a blue-grey theme, a floating dock,
+and a setup app that asks what you actually want instead of installing everything. You pick your
+browser, editor, languages, games and apps, it shows you how much space each one takes, and that's
+all that goes on your computer.
 
-### Devium Setup: pick only what you want
+It's still in beta, so expect the odd bug. If you find one, tell me on
+[Discord](https://discord.gg/YTMattgyG3) or open an issue.
 
-Real screenshots from an installed Devium (beta7):
+## What you get
+
+- **A real installer.** Click Install Devium, pick your disk, done. Works next to Windows too.
+  Needs about 10 GB.
+- **Devium Setup.** Runs after install. Browser, file manager, terminal, code editor, languages
+  (Python, C/C++, Rust, Go, Java, Node...), Python libraries, dev tools, games, apps. Run it again any
+  time to add or remove stuff.
+- **Devium Tools** (Meta+T). App manager with size and RAM use, updates with undo, a "make it faster"
+  button, low-RAM mode, battery charge limit, privacy switches, printers, Docker, Git/GitHub setup,
+  help for people coming from Windows, and a way to report bugs.
+- **[ArchPill](https://github.com/yeeboein/archpill)** if you want it: a little pill at the top of the
+  screen with the time, music, volume and battery, and a control centre when you click it.
+- **Linux Magnify** if you want a macOS-style dock where the icons grow under your mouse.
+- **Optional local AI.** Ollama with a model that fits your RAM. Off unless you pick it.
+- **`support`** in the terminal lists about 100 useful commands. `support fix` checks for common
+  problems and fixes what it can.
+- Small touches: Devium icon pack, light and dark themes, disk encryption option, Irish/Spanish/
+  French/German in the Devium apps, and a fastfetch logo made out of the word DEVIUM.
+
+## Screenshots
+
+From a real install:
 
 <p align="center">
   <img src="docs/screenshots/real/setup-01-welcome.png" width="45%">
@@ -39,62 +62,34 @@ Real screenshots from an installed Devium (beta7):
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/real/terminal-fastfetch.png" width="70%"><br>
-  <sub>The terminal on an installed Devium: type <code>fastfetch</code> for the DEVIUM logo and system info.</sub>
+  <img src="docs/screenshots/real/terminal-fastfetch.png" width="70%">
 </p>
 
 More in [docs/screenshots/real](docs/screenshots/real).
 
----
+## Download
 
-## Community
+Grab the latest ISO from [Releases](https://github.com/yeeboein/devium-linux/releases). There are two:
 
-Join the **[Devium Discord](https://discord.gg/YTMattgyG3)** for help, news, new betas and to share your desktop.
-Inside Devium: Devium Tools > Get help > Ask on Discord, or the Discord button in About Devium and Welcome.
+- **KDE Plasma**: the main one, for most computers
+- **Xfce**: lighter, for old laptops
 
-## What's inside
+First time? The [guide](docs/GUIDE.md) walks you through putting it on a USB stick or in a VM.
 
-| | |
-|---|---|
-| **Base** | Arch Linux (rolling), `linux` kernel, UEFI + BIOS boot, zram swap |
-| **Desktop** | KDE Plasma (core only, no PIM/Akonadi), dark Breeze theme, bottom panel with the Devium start button |
-| **Lightweight** | Baloo file indexing off, no blur, fast animations, TLP battery saver — ~550–750 MB RAM idle |
-| **Devium apps** | **Welcome** (Meta+F1), **Update Manager** (Meta+U), **Snip** (Meta+Shift+S), `support` command |
-| **ArchPill** | [yeeboein/archpill](https://github.com/yeeboein/archpill) preinstalled and set up on first login |
-| **Apps** | Dolphin, Konsole, Kate, Spectacle (Snip), Gwenview, Okular, Ark, KCalc, System Monitor, Firefox, mpv, Discover + Flathub, Timeshift |
-| **Coding** | VS Code (`code`, preconfigured for Python), git, GitHub CLI, Node.js + npm, base-devel (gcc/make), neovim, btop, ripgrep, fd, jq, starship |
-| **Python** | pip, pipx, virtualenv, numpy, pandas, matplotlib, requests, flask, beautifulsoup4, pytest, black, ruff, pillow, pyyaml, rich, ipython |
-| **Extras** | Firewall (ufw) on by default, printing (CUPS), driver helper, one-click Python project starter, fastfetch with the Devium logo |
+### Trying it in VirtualBox
 
-### Devium apps
+- Turn on **EFI** (Settings > System). If you forget, it keeps booting the installer after you install.
+- 4 GB RAM, 2 CPUs, 20 GB disk
+- Graphics: VMSVGA with 3D acceleration on
 
-- **Devium Welcome** — opens at login (untick “Show at login” to stop). Install Devium, start a Python project, get popular apps from Discover, install extra drivers (NVIDIA, Broadcom
-  Wi‑Fi, printers…), firewall/theme/restore-point switches and a shortcut cheat sheet.
-- **Update Manager** — lists system, Flatpak and ArchPill updates, updates everything with one password
-  prompt and a progress bar, takes a Timeshift restore point first (once Timeshift is set up), frees up
-  disk space, and asks to restart after kernel updates. A small timer checks twice a day and shows a
-  notification.
-- **Snip** — Spectacle set up like the Windows Snipping Tool: **Meta+Shift+S** to select an area, draw on
-  it, and it's already copied to the clipboard (and saved in `~/Pictures/Screenshots`). **Meta+Shift+R**
-  records the screen.
-- **`support`** — type it in a terminal to see helpful commands and what they do.
+The live session logs in as `devium` (password `devium`). If you get a black screen, pick
+"safe graphics" in the boot menu. After installing, remove the ISO from the virtual drive before
+rebooting.
 
-## Get the ISO
+## Building it yourself
 
-📖 **New here? Follow the step-by-step [Devium guide](docs/GUIDE.md)** (download, VM, USB, install, troubleshooting).
-
-### Option A: download a release
-
-Get the latest ISO from the [Releases page](https://github.com/yeeboein/devium-linux/releases).
-There are two editions: **KDE Plasma** (most computers) and the lighter **Xfce** (very old laptops).
-
-### Option B: build on GitHub (no Arch machine needed)
-
-1. Open the repo's **Actions** tab → **Build Devium ISO** → **Run workflow** (pick this branch).
-2. Wait ~30–60 minutes.
-3. Download **devium-iso** from the finished run (it's a zip containing the `.iso`).
-
-### Option C: build on Arch Linux
+The ISOs are built by GitHub Actions (`.github/workflows/build-iso.yml`). On an Arch machine you can
+build one locally:
 
 ```bash
 git clone https://github.com/yeeboein/devium-linux.git
@@ -108,64 +103,38 @@ cd devium-linux
 sudo ./build.sh
 ```
 
-For the lighter Xfce edition: `sudo EDITION=xfce ./build.sh`
+Use `sudo EDITION=xfce ./build.sh` for the Xfce version. The ISO ends up in `out/`, and
+`sudo ./build.sh --clean` starts from scratch.
 
-The ISO ends up in `out/`. Packages that no longer exist in the Arch repos are skipped with a warning
-instead of failing the build. Use `sudo ./build.sh --clean` to start from scratch.
-
-## Try it in a VM
-
-VirtualBox, VMware, GNOME Boxes or virt-manager all work.
-
-| Setting | Value |
-|---|---|
-| RAM | 4 GB (2 GB minimum) |
-| CPUs | 2+ |
-| Disk | 30 GB (only needed to test installing) |
-| Video | 128 MB, 3D acceleration on (VirtualBox: VMSVGA) |
-| Firmware | UEFI or BIOS |
-
-Boot the ISO and you land on the Plasma desktop as user **devium** (password **devium**).
-If the screen stays black, choose **safe graphics** in the boot menu.
-
-## Install to disk
-
-Double-click **Install Devium** on the desktop (or use the Welcome app). It runs Arch's official
-installer (`archinstall`) with Devium's packages pre-filled; choose the **Minimal** profile and
-**NetworkManager**. At the end it downloads this repo inside the new system and runs
-`devium-setup --installed`, which adds Devium's apps, branding and ArchPill.
-
-> The installer needs internet, and this repository must be public (it clones the branch the ISO was
-> built from).
-
-## Project layout
+### Where things are
 
 ```
-build.sh                       build the ISO (wraps mkarchiso)
-profile/                       archiso profile (based on Arch's releng)
-  packages.x86_64              package list
-  profiledef.sh                ISO name, boot modes, file permissions
-  efiboot/ syslinux/           boot menus (UEFI / BIOS)
-  airootfs/                    files copied into the system
-    etc/xdg/                   KDE, Dolphin, Spectacle, fastfetch defaults
-    etc/skel/                  new-user defaults (.bashrc, shortcuts)
-    usr/local/bin/devium-*     Devium apps and scripts
-    usr/lib/devium/            setup script, root helper, shared UI code
-    usr/share/devium/          logos, fastfetch logo, VS Code settings
-    usr/share/plasma/look-and-feel/org.devium.desktop   panel layout
-.github/workflows/build-iso.yml  GitHub Actions ISO build
+build.sh                      builds the ISO (wraps mkarchiso)
+profile/packages.x86_64       package list (#install = installed systems only, #kde = KDE edition only)
+profile/airootfs/             everything that goes into the system
+  usr/local/bin/devium-*      the Devium apps
+  usr/lib/devium/             setup script, root helper, shared UI code, Devium Setup's app list
+  usr/share/devium/           logos, fastfetch logo, previews
+  etc/calamares/              the installer
+editions/xfce/                Xfce edition overrides
+tools/make-icons.py           generates the Devium icon pack
+docs/                         guide, release notes, screenshots
 ```
 
-## Customising
+Want to change the app list in Devium Setup? It's all in `profile/airootfs/usr/lib/devium/setup_catalog.py`.
 
-- **Add/remove packages:** edit `profile/packages.x86_64`.
-- **Panel layout:** `profile/airootfs/usr/share/plasma/look-and-feel/org.devium.desktop/contents/layouts/`.
-- **Fastfetch logo:** `profile/airootfs/usr/share/devium/fastfetch-logo.txt`.
-- **Wallpaper:** `profile/airootfs/usr/share/wallpapers/Devium/`.
+## Roadmap
 
-## Notes
+See [ROADMAP.md](ROADMAP.md). Next up: more desktops for 1.0 (Hyprland, Cinnamon, COSMIC and others,
+no GNOME) and maybe ARM.
 
-- VS Code is the open-source build (`code` from Arch's repos, extensions from Open VSX). Microsoft's
-  build is in the AUR as `visual-studio-code-bin`.
-- Discover is set up for Flatpak apps only; system updates go through the Update Manager (a full
-  `pacman -Syu`), which is the safe way to update Arch.
+## Thanks
+
+Devium is built on [Arch Linux](https://archlinux.org), [KDE Plasma](https://kde.org/plasma-desktop),
+[Calamares](https://calamares.io) and a lot of other open source work. Icons use shapes from
+[Simple Icons](https://simpleicons.org) and KDE's Breeze.
+
+My other projects that ship with it: [ArchPill](https://github.com/yeeboein/archpill),
+[KDElite](https://github.com/yeeboein/kdelite) and [Linux Magnify](https://github.com/yeeboein/linux-magnify).
+
+Made by [Yeeboein](https://github.com/yeeboein).
