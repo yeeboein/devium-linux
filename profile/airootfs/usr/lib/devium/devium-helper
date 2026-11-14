@@ -6,11 +6,11 @@
 #   devium-helper install PKG...    install packages from the Arch repos
 #   devium-helper firewall on|off
 #   devium-helper snapshot
-#   devium-helper setup PLAN.json   apply the Devium Setup wizard's choices
+#   devium-helper setup PLAN.json   apply the Devium Configure wizard's choices
 #   devium-helper install-local FILE.pkg.tar.zst...   install packages built from the AUR
 #   devium-helper refresh TAG       update Devium's own files to release TAG (Devium Updater)
 #   devium-helper brave-origin      install or update Brave Origin (official build from Brave)
-#   devium-helper cancel            stop a running Devium Setup install cleanly
+#   devium-helper cancel            stop a running Devium Configure install cleanly
 #   devium-helper archpill-deps     install what ArchPill needs (Quickshell and friends)
 #   devium-helper remove PKG... | remove-flatpak APP    (App Manager)
 #   devium-helper undo-update       put back package versions from before the last update

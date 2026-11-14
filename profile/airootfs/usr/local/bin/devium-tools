@@ -235,7 +235,7 @@ class HomePage(Page):
         grid = QGridLayout()
         grid.setSpacing(10)
         tiles = [
-            ("Devium Setup", "Add or remove apps and the look", "system-software-install",
+            ("Devium Configure", "Add or remove apps and the look", "devium",
              lambda: ui.launch("devium-setup-wizard")),
             (T("App Manager"), "Size, RAM and remove apps", "view-list-details",
              lambda: win.go("apps")),
@@ -245,9 +245,9 @@ class HomePage(Page):
              lambda: ui.launch("devium-updater")),
             (T("Make it faster"), "Safe tweaks for speed and memory", "speedometer", lambda: win.go("speed")),
             (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
-            ("Devium Setup again", "Add or remove apps any time", "system-software-install",
-             lambda: ui.launch("devium-setup-wizard")),
-            ("About Devium", "Version, credits and links", "devium", lambda: ui.launch("devium-about")),
+            (T("Privacy"), "Firewall, Wi-Fi tracking, location", "security-high", lambda: win.go("privacy")),
+            (T("Report a problem"), "Tell the Devium team what went wrong", "tools-report-bug",
+             lambda: ReportDialog(win).exec()),
         ]
         for i, (name, desc, icon, act) in enumerate(tiles):
             b = QPushButton(f"  {name}\n  {desc}")
@@ -293,7 +293,7 @@ class AppsPage(Page):
         self.search.setPlaceholderText(T("Search") + "...")
         self.search.textChanged.connect(self.filter)
         self.add(row(self.search, button(T("Refresh"), self.load, icon="view-refresh"),
-                     button("Add apps (Devium Setup)", lambda: ui.launch("devium-setup-wizard"), icon="list-add"),
+                     button("Add apps (Devium Configure)", lambda: ui.launch("devium-setup-wizard"), icon="list-add"),
                      stretch=False))
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels([T("Name"), T("Size"), T("Average RAM"), T("Type")])
@@ -776,11 +776,11 @@ WINDOWS_APPS = [
     ("Start menu", "App launcher", "Meta"),
     ("Task Manager", "System Monitor", "Ctrl+Esc"),
     ("Control Panel / Settings", "System Settings", ""),
-    ("Microsoft Store", "Discover / Devium Setup", ""),
+    ("Microsoft Store", "Discover / Devium Configure", ""),
     ("Notepad", "Kate", ""),
     ("Command Prompt / PowerShell", "Konsole (terminal)", "Ctrl+Alt+T"),
     ("Snipping Tool", "Spectacle", "Print / Meta+Shift+S"),
-    ("Microsoft Office", "LibreOffice (Devium Setup > Packages)", ""),
+    ("Microsoft Office", "LibreOffice (Devium Configure > Packages)", ""),
     ("Photos", "Gwenview", ""),
     ("Paint", "KolourPaint, or Krita / GIMP", ""),
     ("Windows Update", "Update Manager", "Meta+U"),
@@ -978,7 +978,7 @@ class ReportDialog(QDialog):
                           "the team reads it.", "subtitle"))
         f = QFormLayout()
         self.kind = QComboBox()
-        self.kind.addItems(["Bug", "Installer", "Devium Setup", "Looks / theme", "Hardware / drivers",
+        self.kind.addItems(["Bug", "Installer", "Devium Configure", "Looks / theme", "Hardware / drivers",
                             "Idea / request", "Other"])
         self.title = QLineEdit()
         self.title.setPlaceholderText("e.g. Wi-Fi stops after sleep")

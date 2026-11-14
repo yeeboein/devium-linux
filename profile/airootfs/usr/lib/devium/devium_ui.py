@@ -296,7 +296,7 @@ def open_link(url, parent=None):
     link.setStyleSheet(f"color: {ACCENT};")
     lay.addWidget(link)
     if not browser:
-        note = QLabel("No web browser is installed yet. Pick one in Devium Setup after installing.")
+        note = QLabel("No web browser is installed yet. Pick one in Devium Configure after installing.")
         note.setObjectName("subtitle")
         note.setWordWrap(True)
         note.setAlignment(Qt.AlignmentFlag.AlignCenter)

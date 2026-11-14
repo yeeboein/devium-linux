@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=Devium Setup
-GenericName=Choose your apps
+Name=Devium Configure
+GenericName=Add or remove apps and change the look
 Comment=Pick your browser, code editor, languages, tools and apps
 Exec=devium-setup-wizard
-Icon=tools-wizard
+Icon=devium
 Terminal=false
 Categories=System;Settings;
-Keywords=setup;wizard;install;apps;browser;editor;languages;compilers;
+Keywords=configure;setup;wizard;install;apps;browser;editor;languages;compilers;

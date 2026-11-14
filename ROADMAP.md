@@ -119,6 +119,13 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] Linux Magnify set up as its README says (packages incl. Quickshell, install.sh --yes, --enable);
       unticking it turns it off (Devium dock and Meta key come back) and removes all of its files and packages
 
+## beta12
+- [x] Fix: Devium Tools (and the restart pop-up) couldn't start on installed systems (missing run permission)
+- [x] Devium Setup renamed "Devium Configure", Devium icon
+- [x] Dock: apps then start button, no Trash; fits the number of apps
+- [x] About Devium only on the live ISO
+- [x] yay ticked by default
+
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website

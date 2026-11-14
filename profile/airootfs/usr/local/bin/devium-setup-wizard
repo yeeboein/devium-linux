@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Devium Setup: pick your browser, editor, languages, tools and apps.
+"""Devium Configure: pick your browser, editor, languages, tools and apps.
 Only what you choose gets installed, so Devium stays light."""
 import getpass
 import json
@@ -113,7 +113,7 @@ def flatpak_installed(app):
 
 
 def base_packages():
-    """Packages every Devium install has: never removed by Devium Setup."""
+    """Packages every Devium install has: never removed by Devium Configure."""
     try:
         return {l.strip() for l in open("/usr/share/devium/install-packages.txt") if l.strip()}
     except OSError:
@@ -141,13 +141,13 @@ def scroll(inner):
 class Wizard(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Devium Setup")
+        self.setWindowTitle("Devium Configure")
         self.setWindowIcon(ui.app_icon())
         self.resize(960, 720)
         # Opened again on an installed Devium: "Let's configure your Devium", ticks what's there
         self.reconfig = os.path.exists(DONE_MARKER) and not ui.is_live()
         self.inputs = {}       # item id -> QCheckBox / QRadioButton
-        self.was_installed = set()   # items already installed when Devium Setup opened
+        self.was_installed = set()   # items already installed when Devium Configure opened
         self.items = {}        # item id -> item dict
         self.queue = []
 
@@ -165,7 +165,7 @@ class Wizard(QWidget):
         side.setFixedWidth(250)
         sl = QVBoxLayout(side)
         sl.setContentsMargins(12, 16, 6, 12)
-        sl.addWidget(ui.header("Setup", "", size=36))
+        sl.addWidget(ui.header("Configure", "", size=36))
         self.steps = QListWidget()
         self.steps.setObjectName("nav")
         self.steps.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -302,13 +302,13 @@ class Wizard(QWidget):
             intro = ("Let's set up your computer. On the next pages, pick the apps and tools you want.\n"
                      "Devium only installs what you choose, so it stays fast and light.\n\n"
                      "Not sure? Just keep clicking Next: good choices are already selected.\n"
-                     "You can change everything later: just open Devium Setup again.\n\n")
+                     "You can change everything later: just open Devium Configure again.\n\n")
         txt = label(intro + f"Free disk space: {free_mb() / 1024:.1f} GB")
         txt.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(txt)
         if ui.is_live():
             live = label("You're using the live version: anything installed here is gone after a restart. "
-                         "Install Devium first, then run Devium Setup.")
+                         "Install Devium first, then run Devium Configure.")
             live.setStyleSheet("color: #f59e0b;")
             live.setAlignment(Qt.AlignmentFlag.AlignCenter)
             l.addWidget(live)
@@ -345,7 +345,7 @@ class Wizard(QWidget):
                        and all(installed(x) for x in it.get("pacman", []))
                        and all(flatpak_installed(x) for x in it.get("flatpak", [])))
             if already:
-                # Running Devium Setup again: installed things start ticked; untick to remove them
+                # Running Devium Configure again: installed things start ticked; untick to remove them
                 self.was_installed.add(it["id"])
                 box.setText(box.text() + "   ✓ installed")
             box.setChecked(bool(it.get("default")) or bool(already))
@@ -810,10 +810,10 @@ class Wizard(QWidget):
                        "p.height=2*Math.ceil(gridUnit*3.4/2);")
         # With ArchPill the pill shows time, battery, sound and network, so the dock keeps only
         # the start button and app icons. Without ArchPill the dock keeps its tray and clock.
-        # Order: apps | start button | tray and clock (or, with ArchPill, a Trash icon like the macOS dock).
+        # Order: apps | start button | tray and clock (with ArchPill: just apps | start button).
         # The task manager is never re-created (that loses its pinned apps); the start button and the
         # right-hand widgets are moved by removing and adding them again after it.
-        right = ["org.kde.plasma.trash"] if self.checked("archpill") else \
+        right = [] if self.checked("archpill") else \
             ["org.kde.plasma.marginsseparator", "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock"]
         moved = ["org.kde.plasma.kickoff", "org.kde.plasma.trash", "org.kde.plasma.marginsseparator",
                  "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock", "org.kde.plasma.panelspacer"]
@@ -945,7 +945,7 @@ class Wizard(QWidget):
         r = QMessageBox.question(
             self, "Cancel install?",
             "Stop installing your picks?\n\nAnything already installed stays on your computer - "
-            "you can remove it later by running Devium Setup again.")
+            "you can remove it later by running Devium Configure again.")
         if r != QMessageBox.StandardButton.Yes:
             return
         self.cancelled = True
@@ -1053,7 +1053,7 @@ class Wizard(QWidget):
         self.cancelled = False
         self.cancel_btn.setEnabled(True)
         QMessageBox.information(self, "Install cancelled",
-                                "Installing was cancelled. You're back at the start of Devium Setup: "
+                                "Installing was cancelled. You're back at the start of Devium Configure: "
                                 "pick again whenever you like.")
         self.go(0)
 
@@ -1071,7 +1071,7 @@ class Wizard(QWidget):
             return self.not_enough_space()
         if code in (126, 127) and self.proc.program() == "pkexec":
             self.queue = []
-            QMessageBox.information(self, "Cancelled", "Nothing was installed. You can run Devium Setup "
+            QMessageBox.information(self, "Cancelled", "Nothing was installed. You can run Devium Configure "
                                     "again any time from the app menu.")
             self.go(self.stack.indexOf(self.summary_w))
             return
@@ -1087,7 +1087,7 @@ class Wizard(QWidget):
         msg = "Everything you picked is installed."
         if getattr(self, "failed", 0):
             msg = ("Most things are installed, but some steps had problems.\n"
-                   "Click Show details on the previous page, or try again later from Devium Setup.")
+                   "Click Show details on the previous page, or try again later from Devium Configure.")
         if self.p["groups"] or self.p["shell"]["id"] != "zsh":
             msg += "\n\nLog out and back in to finish (for your new shell / Docker access)."
         self.done_text.setText(msg)
@@ -1120,7 +1120,7 @@ def main():
         if ui.is_live() or os.path.exists(DONE_MARKER) or os.path.exists(os.path.join(CONFIG, "setup-seen")):
             return
     app = QApplication(sys.argv)
-    app.setApplicationName("Devium Setup")
+    app.setApplicationName("Devium Configure")
     app.setDesktopFileName("devium-setup-wizard")
     ui.style_app(app)
     w = Wizard()

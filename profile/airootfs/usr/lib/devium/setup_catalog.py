@@ -1,4 +1,4 @@
-"""Everything the Devium Setup wizard offers.
+"""Everything the Devium Configure wizard offers.
 
 Each item:
     id       unique id
@@ -175,7 +175,7 @@ PAGES = [
             {"id": "sqlite", "name": "DB Browser for SQLite", "desc": "Look inside databases", "mb": 30,
              "pacman": ["sqlitebrowser"]},
             {"id": "yay", "name": "yay (AUR helper)", "desc": "Install community packages from the AUR", "mb": 15,
-             "aur": ["yay-bin"]},
+             "aur": ["yay-bin"], "default": True},
         ],
     },
     {
@@ -214,7 +214,7 @@ PAGES = [
         "intro": "Run an AI chatbot on your own computer: private, offline, no account. It uses a lot of "
                  "memory and disk, so only pick one if you want it. Models that don't fit your RAM are hidden.",
         "items": [
-            {"id": "ai-none", "name": "No local AI", "desc": "Skip this (you can add it later from Devium Setup)",
+            {"id": "ai-none", "name": "No local AI", "desc": "Skip this (you can add it later from Devium Configure)",
              "mb": 0, "default": True},
             {"id": "ai-llama1b", "name": "Llama 3.2 1B", "desc": "Tiny and quick, basic answers (needs 4 GB RAM)",
              "mb": 1400, "min_ram": 4, "model": "llama3.2:1b"},

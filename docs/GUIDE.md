@@ -135,7 +135,7 @@ You need **internet** for the installer (connect to Wi-Fi from the network icon 
 On your first login:
 - **ArchPill** sets itself up (move the mouse to the top-centre of the screen).
 - **VS Code** gets its Python extension in the background.
-- **Devium Setup** opens: pick your browser, editor, languages, games and look.
+- **Devium Configure** opens: pick your browser, editor, languages, games and look.
 - Afterwards, **Devium Tools** (Meta+T) is where you look after your computer:
   updates with undo (Meta+U), App Manager, Make it faster, battery, privacy and help.
 - Tip: open the **Timeshift** app once to turn on restore points, so you can undo a bad update.

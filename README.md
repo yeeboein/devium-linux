@@ -33,7 +33,7 @@ It's still in beta, so expect the odd bug. If you find one, tell me on
 
 - **A real installer.** Click Install Devium, pick your disk, done. Works next to Windows too.
   Needs about 10 GB.
-- **Devium Setup.** Runs after install. Browser, file manager, terminal, code editor, languages
+- **Devium Configure.** Runs after install. Browser, file manager, terminal, code editor, languages
   (Python, C/C++, Rust, Go, Java, Node...), Python libraries, dev tools, games, apps. Run it again any
   time to add or remove stuff.
 - **Devium Tools** (Meta+T). App manager with size and RAM use, updates with undo, a "make it faster"
@@ -113,7 +113,7 @@ build.sh                      builds the ISO (wraps mkarchiso)
 profile/packages.x86_64       package list (#install = installed systems only, #kde = KDE edition only)
 profile/airootfs/             everything that goes into the system
   usr/local/bin/devium-*      the Devium apps
-  usr/lib/devium/             setup script, root helper, shared UI code, Devium Setup's app list
+  usr/lib/devium/             setup script, root helper, shared UI code, Devium Configure's app list
   usr/share/devium/           logos, fastfetch logo, previews
   etc/calamares/              the installer
 editions/xfce/                Xfce edition overrides
@@ -121,7 +121,7 @@ tools/make-icons.py           generates the Devium icon pack
 docs/                         guide, release notes, screenshots
 ```
 
-Want to change the app list in Devium Setup? It's all in `profile/airootfs/usr/lib/devium/setup_catalog.py`.
+Want to change the app list in Devium Configure? It's all in `profile/airootfs/usr/lib/devium/setup_catalog.py`.
 
 ## Roadmap
 

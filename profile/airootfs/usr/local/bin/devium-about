@@ -35,7 +35,7 @@ class About(QWidget):
         ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(ver)
         desc = QLabel("A light, fast Arch Linux desktop made for coding. Easy for beginners, nice for pros, "
-                      "and it runs well on older laptops. After installing, Devium Setup lets you pick "
+                      "and it runs well on older laptops. After installing, Devium Configure lets you pick "
                       "exactly what you want, so nothing you don't need gets installed.")
         desc.setWordWrap(True)
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)

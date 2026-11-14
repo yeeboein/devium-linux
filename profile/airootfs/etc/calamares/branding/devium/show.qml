@@ -19,7 +19,7 @@ Presentation {
     Slide {
         Text { anchors.centerIn: parent; width: parent.width * 0.8; horizontalAlignment: Text.AlignHCenter
                wrapMode: Text.WordWrap; color: "#dde3ea"; font.pixelSize: 18
-               text: "<b>You choose what's installed</b><br><br>After you restart, <b>Devium Setup</b> lets you pick your browser, code editor, languages, games and apps. Every choice shows how much space it uses." }
+               text: "<b>You choose what's installed</b><br><br>After you restart, <b>Devium Configure</b> lets you pick your browser, code editor, languages, games and apps. Every choice shows how much space it uses." }
     }
     Slide {
         Text { anchors.centerIn: parent; width: parent.width * 0.8; horizontalAlignment: Text.AlignHCenter
