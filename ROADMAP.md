@@ -116,6 +116,8 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] Fix: dock icons disappearing after a restart (restart goes through KDE so it saves first, Setup saves
       the dock straight away, and a login check puts pinned apps back if they ever go missing)
 - [x] Devium Dark icons are a real copy, not a folder link
+- [x] Linux Magnify set up as its README says (packages incl. Quickshell, install.sh --yes, --enable);
+      unticking it turns it off (Devium dock and Meta key come back) and removes all of its files and packages
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

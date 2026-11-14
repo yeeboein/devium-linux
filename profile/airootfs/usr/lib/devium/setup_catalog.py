@@ -284,6 +284,10 @@ SHELLS = [
 ARCHPILL = {"id": "archpill", "mb": 60, "pacman": ["quickshell", "qt6-svg", "qt6-declarative", "upower",
                                                    "brightnessctl", "libnotify"]}
 
-MAGNIFY = {"id": "magnify", "mb": 30, "pacman": ["gtk4", "gtk4-layer-shell", "python-gobject", "python-cairo",
-                                                 "python-xlib"]}
+# Linux Magnify (https://github.com/yeeboein/linux-magnify): what its README asks for on Arch.
+# Quickshell gives it the start menu and the settings app.
+MAGNIFY = {"id": "magnify", "mb": 90, "pacman": ["git", "python", "gtk4", "gtk4-layer-shell", "python-gobject",
+                                                 "python-cairo", "python-xlib", "libnotify", "quickshell"],
+           # removed again when Linux Magnify is unticked (if nothing else needs them)
+           "own": ["gtk4-layer-shell", "python-xlib"]}
 AI_EXTRAS = {"pacman": ["ollama"], "flatpak": ["com.jeffser.Alpaca"], "services": ["ollama.service"], "mb": 150}

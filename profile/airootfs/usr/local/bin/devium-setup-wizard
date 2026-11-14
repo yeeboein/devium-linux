@@ -634,9 +634,11 @@ class Wizard(QWidget):
             fl += cat.AI_EXTRAS["flatpak"]
             svcs += cat.AI_EXTRAS["services"]
             mb += cat.AI_EXTRAS["mb"]
-        if self.checked("magnify") and not installed("gtk4-layer-shell"):
+        if self.checked("magnify") and not all(installed(x) for x in cat.MAGNIFY["pacman"]):
             pac += cat.MAGNIFY["pacman"]
             mb += cat.MAGNIFY["mb"]
+        magnify_gone = (self.reconfig and not self.checked("magnify")
+                        and os.path.exists(os.path.expanduser("~/.local/bin/linux-magnify")))
         # Unticked things that were installed: remove them (never Devium's base packages,
         # never packages another ticked item still needs)
         keep = base_packages() | {x for it in items for x in it.get("pacman", [])}
@@ -647,12 +649,19 @@ class Wizard(QWidget):
                 rm_pac += [x for x in it.get("pacman", []) if x not in keep]
                 rm_fl += it.get("flatpak", [])
                 freed += it.get("mb", 0)
+        if magnify_gone:
+            extra = list(cat.MAGNIFY["own"])
+            if not self.checked("archpill") and not self.checked("quickshell"):
+                extra.append("quickshell")
+            rm_pac += [x for x in extra if installed(x) and x not in keep]
         if aur:
             pac += ["base-devel", "git"]
         dedupe = lambda xs: list(dict.fromkeys(xs))
         return {"items": items, "pacman": dedupe(pac), "flatpak": dedupe(fl), "aur": dedupe(aur),
                 "remove": dedupe(rm_pac), "remove_flatpak": dedupe(rm_fl), "freed": freed,
-                "removed_items": [self.items[i]["name"] for i in self.was_installed if not self.checked(i)],
+                "removed_items": [self.items[i]["name"] for i in self.was_installed if not self.checked(i)]
+                                 + (["Linux Magnify"] if magnify_gone else []),
+                "magnify_gone": magnify_gone,
                 "ai": ai,
                 "services": dedupe(svcs), "groups": dedupe(groups), "ext": dedupe(ext),
                 "shell": shell, "mb": mb}
@@ -718,6 +727,10 @@ class Wizard(QWidget):
         self.pac_share = max(setup_mb - fl_mb, 1) / max(setup_mb, 1) if p["flatpak"] else 1.0
         self.n_apps = len(p["flatpak"])
         steps = []
+        if p.get("magnify_gone"):
+            # turn Linux Magnify off first (it brings the Devium dock back), while its packages are still there
+            steps.append(("Turning off Linux Magnify…", "bash",
+                          ["-c", "~/.local/bin/linux-magnify --disable >/dev/null 2>&1; sleep 2; true"], 5, "user"))
         steps.append(("Updating packages and apps…" if self.reconfig else "Installing packages and apps…", "pkexec",
                       ["/usr/lib/devium/devium-helper", "setup", plan_file], max(setup_mb, 40), "setup"))
         for it in items:
@@ -909,15 +922,22 @@ class Wizard(QWidget):
             lines.append("kwriteconfig6 --notify --file plasmaparc --group General --key MuteOsd true")
         # Linux Magnify last, so it copies the finished dock (pinned apps, start icon, hide setting)
         if self.checked("magnify"):
+            # as its README says: install.sh (yes to autostart), then --enable. On Plasma that backs up and
+            # removes the Plasma panel, copies the pinned apps and menu icon, and makes Meta open its menu.
             lines.append("if [ -d /opt/linux-magnify ]; then rm -rf ~/.cache/linux-magnify-src && "
                          "cp -r /opt/linux-magnify ~/.cache/linux-magnify-src && "
-                         "(cd ~/.cache/linux-magnify-src && yes | ./install.sh); fi")
-            lines.append("pgrep -f linux-magnify >/dev/null || "
-                         "(PATH=$HOME/.local/bin:$PATH setsid linux-magnify >/dev/null 2>&1 &)")
+                         "(cd ~/.cache/linux-magnify-src && ./install.sh --yes); fi")
+            lines.append("if [ -x ~/.local/bin/linux-magnify ]; then ~/.local/bin/linux-magnify --disable >/dev/null 2>&1; "
+                         "~/.local/bin/linux-magnify --enable; fi")
         elif self.reconfig and os.path.exists(os.path.expanduser("~/.local/bin/linux-magnify")):
-            # unticked: stop it and give the dock back
-            lines.append("pkill -f linux-magnify; ~/.local/bin/linux-magnify --restore-panels >/dev/null 2>&1; "
-                         "rm -f ~/.config/autostart/linux-magnify.desktop")
+            # unticked: turn it off (brings the Devium dock back, gives the Meta key back), then remove all of it
+            lines.append("~/.local/bin/linux-magnify --disable >/dev/null 2>&1; sleep 2")
+            lines.append("rm -rf ~/.local/share/linux-magnify ~/.config/linux-magnify ~/.cache/linux-magnify-src "
+                         "~/.local/bin/linux-magnify ~/.local/bin/magdoc "
+                         "~/.local/share/applications/magdoc.desktop ~/.local/share/applications/magdoc-settings.desktop "
+                         "~/.local/share/applications/linux-magnify.desktop "
+                         "~/.local/share/applications/linux-magnify-settings.desktop "
+                         "~/.config/autostart/magdoc.desktop ~/.config/autostart/linux-magnify.desktop")
         lines.append(f"mkdir -p {q(CONFIG)} && touch {q(DONE_MARKER)}")
         return "\n".join(lines)
 
