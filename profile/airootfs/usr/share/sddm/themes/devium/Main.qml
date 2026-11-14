@@ -14,6 +14,25 @@ Rectangle {
     readonly property color ink: "#eef2f7"
     readonly property color soft: "#c4ccd6"
     property int sessionIndex: (sessionModel && sessionModel.lastIndex >= 0) ? sessionModel.lastIndex : 0
+    // the user's own profile picture (set in Devium Tools or KDE's Users settings), if they have one
+    property string avatar: ""
+    readonly property string avatarUrl: avatar === "" ? "" : (avatar.indexOf("/") === 0 ? "file://" + avatar : avatar)
+
+    // look up the picture of whoever is typed in the user name box
+    Repeater {
+        model: userModel
+        delegate: Item {
+            visible: false
+            property bool match: model.name === userField.text
+            onMatchChanged: if (match) root.avatar = root.customIcon(model.icon)
+            Component.onCompleted: if (match) root.avatar = root.customIcon(model.icon)
+        }
+    }
+    function customIcon(icon) {
+        // SDDM falls back to its own generic face; treat that as "no picture" and show the Devium logo
+        var s = icon ? String(icon) : ""
+        return (s.length === 0 || s.indexOf("/sddm/faces/") >= 0) ? "" : s
+    }
 
     // ---- the mountains, slightly darkened so the text reads well
     Image {
@@ -91,19 +110,57 @@ Rectangle {
             anchors { left: parent.left; right: parent.right; top: parent.top; margins: 28 }
             spacing: 14
 
-            // avatar: the user's picture, or the Devium logo in a circle
-            Rectangle {
-                width: 92; height: 92; radius: 46
+            // avatar: the user's own picture in a circle, or the Devium logo
+            Item {
+                width: 92; height: 92
                 anchors.horizontalCenter: parent.horizontalCenter
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: root.accent }
-                    GradientStop { position: 1.0; color: root.accent2 }
+                Rectangle {
+                    anchors.fill: parent; radius: width / 2
+                    visible: photo.status !== Image.Ready
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: root.accent }
+                        GradientStop { position: 1.0; color: root.accent2 }
+                    }
+                    Image {
+                        anchors.centerIn: parent
+                        source: "logo-white.png"; width: 54; height: 54
+                        fillMode: Image.PreserveAspectFit; smooth: true
+                    }
                 }
-                Image {
-                    anchors.centerIn: parent
-                    source: "logo-white.png"; width: 54; height: 54
-                    fillMode: Image.PreserveAspectFit; smooth: true
+                // The user's own picture (KDE System Settings > Users), drawn as a circle with a 2D canvas:
+                // works everywhere, even without 3D acceleration (unlike shader effects)
+                Image { id: photo; source: root.avatarUrl; visible: false }      // only to know if it loads
+                Canvas {
+                    id: photoCanvas
+                    anchors.fill: parent
+                    visible: photo.status === Image.Ready
+                    onPaint: {
+                        var ctx = getContext("2d")
+                        ctx.reset()
+                        if (!isImageLoaded(root.avatarUrl)) return
+                        ctx.save()
+                        ctx.beginPath()
+                        ctx.arc(width / 2, height / 2, width / 2, 0, 2 * Math.PI)
+                        ctx.closePath()
+                        ctx.clip()
+                        // crop to a centred square, like a profile picture
+                        var w = photo.implicitWidth, h = photo.implicitHeight, side = Math.min(w, h)
+                        ctx.drawImage(root.avatarUrl, (w - side) / 2, (h - side) / 2, side, side, 0, 0, width, height)
+                        ctx.restore()
+                    }
+                    onImageLoaded: requestPaint()
+                    Connections {
+                        target: root
+                        function onAvatarUrlChanged() { if (root.avatarUrl) photoCanvas.loadImage(root.avatarUrl) }
+                    }
+                    Connections { target: photo; function onStatusChanged() { photoCanvas.requestPaint() } }
+                    Component.onCompleted: if (root.avatarUrl) loadImage(root.avatarUrl)
+                }
+                Rectangle {   // thin accent ring around the picture
+                    anchors.fill: parent; radius: width / 2
+                    color: "transparent"; border.color: root.accent; border.width: 2
+                    visible: photo.status === Image.Ready
                 }
             }
 

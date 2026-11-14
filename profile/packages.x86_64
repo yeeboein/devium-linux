@@ -24,6 +24,7 @@ squashfs-tools
 rsync
 archinstall
 sudo
+accountsservice
 nano
 less
 man-db #install

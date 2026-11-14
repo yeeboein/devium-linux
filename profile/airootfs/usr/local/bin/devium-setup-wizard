@@ -910,6 +910,11 @@ class Wizard(QWidget):
             lines.append(f"bash {KDELITE} apply")
         elif self.checked("kde-full"):
             lines.append(f"[ -d ~/.local/share/kdelite ] && bash {KDELITE} revert")
+            # Full KDE: KDE's normal, full animations (Devium's default is a lighter 0.5x for old laptops)
+            if not os.path.exists("/etc/devium/low-ram"):
+                lines.append("kwriteconfig6 --file kdeglobals --group KDE --key AnimationDurationFactor 1")
+                lines.append("kwriteconfig6 --file kwinrc --group Plugins --key slidingpopupsEnabled true")
+                lines.append("qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1; true")
         lines.append(f"mkdir -p {q(CONFIG)} && touch {q(os.path.join(CONFIG, 'shell-chosen'))}")
         # ArchPill
         if self.checked("archpill"):
