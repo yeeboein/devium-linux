@@ -69,10 +69,10 @@ More in [docs/screenshots/real](docs/screenshots/real).
 
 ## Download
 
-Grab the latest ISO from [Releases](https://github.com/yeeboein/devium-linux/releases). There are two:
+**Latest: beta11** ([what's new](https://github.com/yeeboein/devium-linux/releases/tag/beta11))
 
-- **KDE Plasma**: the main one, for most computers
-- **Xfce**: lighter, for old laptops
+- **[Devium KDE Plasma (beta11)](https://github.com/yeeboein/devium-linux/releases/download/beta11/devium-kdeplasma-beta11-x86_64.iso)**: the main one, for most computers (1.9 GB)
+- **[Devium Xfce (beta11)](https://github.com/yeeboein/devium-linux/releases/download/beta11/devium-xfce-beta11-x86_64.iso)**: lighter, for old laptops (1.6 GB)
 
 First time? The [guide](docs/GUIDE.md) walks you through putting it on a USB stick or in a VM.
 
