@@ -1,0 +1,30 @@
+/* Devium bar: floating, rounded, blue-grey */
+* {
+    font-family: "Noto Sans", "Symbols Nerd Font Mono", sans-serif;
+    font-size: 14px;
+    border: none;
+    min-height: 0;
+}
+window#waybar {
+    background: rgba(36, 42, 50, 0.92);
+    color: #dde3ea;
+    border-radius: 14px;
+}
+#image.start { padding: 0 6px 0 12px; }
+#workspaces button {
+    color: #96a0ad;
+    padding: 0 9px;
+    border-radius: 10px;
+    margin: 5px 2px;
+}
+#workspaces button.active {
+    color: #1b2026;
+    background: linear-gradient(90deg, #8fb4d8, #b4b8e0);
+}
+#workspaces button:hover { background: rgba(143, 180, 216, 0.18); }
+#clock { font-weight: 600; }
+#tray, #pulseaudio, #network, #battery, #custom-tools { padding: 0 10px; }
+#custom-tools { padding-right: 14px; color: #8fb4d8; }
+#battery.warning:not(.charging) { color: #e8cd96; }
+#battery.critical:not(.charging) { color: #e89ca0; }
+tooltip { background: #242a32; border: 1px solid #3a434e; border-radius: 10px; }

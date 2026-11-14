@@ -144,7 +144,7 @@ Devium apps, support, fastfetch, a Devium-style dock/bar, and ArchPill where sup
 Tiling desktops ship a beginner-friendly starter config and a shortcuts cheat sheet.
 - [x] KDE Plasma
 - [x] Xfce
-- [ ] Hyprland (bar, launcher, notifications, lock screen, starter keybinds)
+- [x] Hyprland (Waybar, fuzzel, mako, hyprlock/hypridle, starter keybinds + SUPER+/ cheat sheet) - first ISO in beta14
 - [ ] Cinnamon
 - [ ] COSMIC
 - [ ] LXQt

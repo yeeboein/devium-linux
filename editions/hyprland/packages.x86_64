@@ -1,0 +1,47 @@
+# Devium Hyprland edition: added on top of profile/packages.x86_64 (minus the "#kde" lines).
+# Same tags: "#install" = installed systems only (not on the ISO).
+
+# --- Hyprland desktop ---
+hyprland
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+hyprpaper
+hyprlock
+hypridle
+hyprpolkitagent
+waybar
+fuzzel
+mako
+sddm
+qt6-wayland
+qt5-wayland
+kitty
+thunar
+thunar-volman
+tumbler
+gvfs
+network-manager-applet
+blueman
+pavucontrol
+brightnessctl
+playerctl
+grim
+slurp
+wl-clipboard
+cliphist
+libnotify
+gnome-themes-extra
+breeze-icons
+papirus-icon-theme
+ttf-nerd-fonts-symbols-mono
+
+# --- apps on installed systems ---
+nwg-look #install
+file-roller #install
+thunar-archive-plugin #install
+loupe #install
+papers #install
+gnome-calculator #install
+gnome-disk-utility #install
+mousepad #install
+btop #install

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Devium Hyprland: show every keyboard shortcut (SUPER + /).
+fuzzel --dmenu --prompt "Shortcuts  " --width 60 --lines 22 >/dev/null <<'KEYS'
+SUPER + Space        Open apps (or click the Devium logo)
+SUPER + Return       Terminal
+SUPER + E            Files
+SUPER + T            Devium Tools
+SUPER + U            Updates
+SUPER + Q            Close the window
+SUPER + F            Fullscreen
+SUPER + V            Float / tile the window
+SUPER + arrows       Move between windows
+SUPER + SHIFT + arrows   Move the window
+SUPER + 1 ... 9      Go to workspace 1-9
+SUPER + SHIFT + 1-9  Send the window to a workspace
+SUPER + drag         Move a window with the mouse (right-drag: resize)
+SUPER + SHIFT + S    Screenshot an area (copied)
+Print                Screenshot the whole screen (copied)
+SUPER + SHIFT + V    Clipboard history
+SUPER + L            Lock the screen
+SUPER + SHIFT + E    Log out
+SUPER + /            This list
+KEYS

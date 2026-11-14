@@ -11,9 +11,9 @@ on:
         required: false
         default: ""
       editions:
-        description: "Editions to build (space separated): kdeplasma xfce"
+        description: "Editions to build (space separated): kdeplasma xfce hyprland"
         required: false
-        default: "kdeplasma xfce"
+        default: "kdeplasma xfce hyprland"
   push:
     tags: ['v*', 'beta*']
 
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 240
     env:
-      EDITIONS: ${{ github.event.inputs.editions || 'kdeplasma xfce' }}
+      EDITIONS: ${{ github.event.inputs.editions || 'kdeplasma xfce hyprland' }}
       RELEASE: ${{ github.event.inputs.release || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
     steps:
       - uses: actions/checkout@v4

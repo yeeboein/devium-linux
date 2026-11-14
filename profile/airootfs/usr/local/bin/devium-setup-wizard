@@ -26,6 +26,23 @@ CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.c
 DONE_MARKER = os.path.join(CONFIG, "setup-done")
 KDELITE = "/opt/kdelite/kdelite"
 XFCE = ui.edition() == "xfce"
+HYPR = ui.edition() == "hyprland"
+KDE = not XFCE and not HYPR          # the KDE Plasma edition (dock scripts, KDE Lite, KDE theme tools)
+if HYPR:
+    # Thunar and kitty come with the Hyprland edition; Dolphin/Konsole become optional.
+    for page in cat.PAGES:
+        if page["id"] == "filemanager":
+            for it in page["items"]:
+                if it["id"] == "dolphin":
+                    it.update(pacman=["dolphin"], mb=80, default=False, desc="Powerful KDE file manager")
+                if it["id"] == "thunar":
+                    it.update(pacman=[], mb=0, default=True, desc="Light and simple")
+        if page["id"] == "terminal":
+            for it in page["items"]:
+                if it["id"] == "konsole":
+                    it.update(pacman=["konsole"], mb=40, default=False, desc="KDE's full-featured terminal")
+                if it["id"] == "kitty":
+                    it.update(pacman=[], mb=0, default=True, desc="Fast and very customisable")
 if XFCE:
     # Thunar and the Xfce terminal come with the Xfce edition; Dolphin/Konsole become optional.
     for page in cat.PAGES:
@@ -389,7 +406,7 @@ class Wizard(QWidget):
                 self.inputs[oid] = r
                 l.addWidget(r)
 
-        if os.path.exists(KDELITE) and not XFCE:
+        if os.path.exists(KDELITE) and KDE:
             # Enough memory (8 GB+): Full KDE. Less: KDE Lite. Running again: keep what they have.
             ram = ram_gb()
             lite_now = os.path.isdir(os.path.expanduser("~/.local/share/kdelite"))
@@ -456,7 +473,7 @@ class Wizard(QWidget):
             shown.append(mag)
         else:
             mag.setChecked(False)
-        if not XFCE:
+        if KDE:
             shown.append(dock)
         for b in shown:
             b.setStyleSheet("padding: 5px;")
@@ -691,7 +708,7 @@ class Wizard(QWidget):
             rows += "".join(f"<tr><td style='color:#e89ca0'>Remove: {n}</td><td align='right'>frees space</td></tr>"
                             for n in p["removed_items"])
         look = (["KDE Lite" if self.checked("kde-lite") else "Full KDE"]
-                if os.path.exists(KDELITE) and not XFCE else []) + [("Devium Dark theme" if self.checked("style-deviumdark") else
+                if os.path.exists(KDELITE) and KDE else []) + [("Devium Dark theme" if self.checked("style-deviumdark") else
                  ("Devium" if self.checked("style-devium") else "Base KDE") + " theme, " +
                  ("dark" if self.checked("theme-dark") else "light")),
                 f"{p['shell']['name']} shell",
@@ -844,7 +861,7 @@ class Wizard(QWidget):
         # Remember the pinned apps (the login check puts them back if they ever go missing), then restart
         # the panel cleanly so Plasma writes the new dock to disk now, not only at logout.
         lines.append(f"mkdir -p {q(CONFIG)} && printf '%s\\n' {q(','.join(launchers))} > {q(os.path.join(CONFIG, 'dock-launchers'))}")
-        if not XFCE:
+        if KDE:
             lines.append("sleep 2; systemctl --user restart plasma-plasmashell.service 2>/dev/null || "
                          "(kquitapp6 plasmashell; sleep 1; setsid kstart plasmashell >/dev/null 2>&1 &); sleep 4")
         # theme (the Devium themes come with the big floating dock; Base KDE gets KDE's normal panel)
@@ -868,8 +885,9 @@ class Wizard(QWidget):
             lines.append(f"xfconf-query -c xsettings -p /Net/ThemeName -s {gtk}; "
                          f"xfconf-query -c xsettings -p /Net/IconThemeName -s {icons}; "
                          "xfconf-query -c xfwm4 -p /general/theme -s Default")
-        lines.append(f"plasma-apply-colorscheme {scheme}; "
-                     f"plasma-apply-desktoptheme {'breeze-light' if light else 'breeze-dark'}")
+        if KDE:
+            lines.append(f"plasma-apply-colorscheme {scheme}; "
+                         f"plasma-apply-desktoptheme {'breeze-light' if light else 'breeze-dark'}")
         # Icons: the Devium themes get the Devium icon pack (gradient rounded squares, white logos);
         # Base KDE gets KDE's own Breeze icons.
         if self.checked("style-kde"):
@@ -877,13 +895,24 @@ class Wizard(QWidget):
         else:
             icon_theme = "Devium" if light else "Devium-Dark"
         # Window buttons: KDE's standard Breeze title bar (close / minimise / maximise on the right)
-        if not XFCE:
+        if KDE:
             kw = "kwriteconfig6 --file kwinrc --group org.kde.kdecoration2"
             lines.append(f"{kw} --key library org.kde.breeze; {kw} --key theme Breeze; "
                          f"{kw} --key ButtonsOnLeft M; {kw} --key ButtonsOnRight IAX")
             lines.append("qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1")
         if XFCE:
             lines.append(f"xfconf-query -c xsettings -p /Net/IconThemeName -s {icon_theme if not self.checked('style-kde') else ('Adwaita')}")
+        elif HYPR:
+            # GTK and Qt apps on Hyprland read these files (and gsettings) for their theme and icons
+            gtk = "Adwaita" if light else "Adwaita-dark"
+            ic = "Adwaita" if self.checked("style-kde") else icon_theme
+            lines.append("mkdir -p ~/.config/gtk-3.0 ~/.config/gtk-4.0 && for d in gtk-3.0 gtk-4.0; do printf "
+                         f"'[Settings]\\ngtk-theme-name={gtk}\\ngtk-icon-theme-name={ic}\\n"
+                         f"gtk-application-prefer-dark-theme={0 if light else 1}\\n' > ~/.config/$d/settings.ini; done")
+            lines.append(f"gsettings set org.gnome.desktop.interface gtk-theme {gtk} 2>/dev/null; "
+                         f"gsettings set org.gnome.desktop.interface icon-theme {ic} 2>/dev/null; "
+                         f"gsettings set org.gnome.desktop.interface color-scheme "
+                         f"{'prefer-light' if light else 'prefer-dark'} 2>/dev/null; true")
         else:
             lines.append(f"/usr/lib/plasma-changeicons {icon_theme} 2>/dev/null || "
                          f"kwriteconfig6 --notify --file kdeglobals --group Icons --key Theme {icon_theme}")
@@ -922,14 +951,19 @@ class Wizard(QWidget):
                          "(cd ~/.cache/linux-magnify-src && ./install.sh --yes); fi")
             # Snapshot the look first (dock, panels, colours, icons, theme, window style), so uninstalling
             # Linux Magnify later puts back exactly what they had. Only once: re-enabling keeps the original.
-            if not XFCE:
+            if KDE:
                 lines.append(f"if [ ! -d {q(SNAP)} ]; then mkdir -p {q(SNAP)} && for f in {' '.join(SNAP_FILES)}; do "
                              "[ -f ~/.config/$f ] && cp -a ~/.config/$f " + q(SNAP) + "/; done; fi")
             lines.append("if [ -x ~/.local/bin/linux-magnify ]; then ~/.local/bin/linux-magnify --disable >/dev/null 2>&1; "
                          "~/.local/bin/linux-magnify --enable; fi")
+            if HYPR:
+                lines.append("grep -q '^exec-once = linux-magnify' ~/.config/hypr/hyprland.conf 2>/dev/null || "
+                             "printf '\\n# Linux Magnify dock\\nexec-once = linux-magnify\\n' >> ~/.config/hypr/hyprland.conf")
         elif self.reconfig and os.path.exists(os.path.expanduser("~/.local/bin/linux-magnify")):
             # unticked: turn it off (brings the Devium dock back, gives the Meta key back), then remove all of it
             lines.append("~/.local/bin/linux-magnify --disable >/dev/null 2>&1; sleep 2")
+            if HYPR:
+                lines.append("sed -i '/^# Linux Magnify dock$/d; /^exec-once = linux-magnify$/d' ~/.config/hypr/hyprland.conf 2>/dev/null")
             lines.append("rm -rf ~/.local/share/linux-magnify ~/.config/linux-magnify ~/.cache/linux-magnify-src "
                          "~/.local/bin/linux-magnify ~/.local/bin/magdoc "
                          "~/.local/share/applications/magdoc.desktop ~/.local/share/applications/magdoc-settings.desktop "
@@ -937,7 +971,7 @@ class Wizard(QWidget):
                          "~/.local/share/applications/linux-magnify-settings.desktop "
                          "~/.config/autostart/magdoc.desktop ~/.config/autostart/linux-magnify.desktop")
             # Put the look back exactly as it was before Linux Magnify was turned on
-            if not XFCE and os.path.isdir(SNAP):
+            if KDE and os.path.isdir(SNAP):
                 lines.append("systemctl --user stop plasma-plasmashell.service 2>/dev/null || kquitapp6 plasmashell; sleep 1")
                 lines.append(f"cp -a {q(SNAP)}/. ~/.config/ && rm -rf {q(SNAP)}")
                 lines.append("systemctl --user start plasma-plasmashell.service 2>/dev/null || "

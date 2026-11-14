@@ -3,6 +3,7 @@
 #
 #   sudo ./build.sh                    build the KDE Plasma edition into ./out
 #   sudo EDITION=xfce ./build.sh       build the lighter Xfce edition
+#   sudo EDITION=hyprland ./build.sh   build the Hyprland (tiling) edition
 #   sudo ./build.sh --clean            remove the old work directory first
 #
 # Needs: archiso, git (installed automatically if missing).
@@ -14,8 +15,8 @@ OUT="${OUT_DIR:-$HERE/out}"
 STAGE="$WORK/profile"
 EDITION="${EDITION:-kdeplasma}"
 case "$EDITION" in
-    kdeplasma|xfce) ;;
-    *) echo "Unknown EDITION '$EDITION' (use kdeplasma or xfce)"; exit 1 ;;
+    kdeplasma|xfce|hyprland) ;;
+    *) echo "Unknown EDITION '$EDITION' (use kdeplasma, xfce or hyprland)"; exit 1 ;;
 esac
 
 say()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
@@ -48,6 +49,14 @@ if [[ $EDITION == xfce ]]; then
     # KDE-only files are harmless on Xfce, but drop the KDE desktop layout and login theme.
     rm -rf "$STAGE/airootfs/usr/share/plasma" "$STAGE/airootfs/usr/share/sddm" "$STAGE/airootfs/etc/sddm.conf.d"
     sed -i 's/^iso_application=.*/iso_application="Devium Xfce Live"/' "$STAGE/profiledef.sh"
+elif [[ $EDITION == hyprland ]]; then
+    grep -v '#kde' "$HERE/profile/packages.x86_64" > "$SRC_LIST"
+    cat "$HERE/editions/hyprland/packages.x86_64" >> "$SRC_LIST"
+    cp -a "$HERE/editions/hyprland/airootfs/." "$STAGE/airootfs/"
+    # no Plasma layout and no KDE login theme (SDDM uses its own theme here)
+    rm -rf "$STAGE/airootfs/usr/share/plasma" "$STAGE/airootfs/usr/share/sddm"
+    sed -i 's/^iso_application=.*/iso_application="Devium Hyprland Live"/' "$STAGE/profiledef.sh"
+    sed -i 's|^file_permissions=(|file_permissions=(\n  ["/usr/local/bin/devium-keys"]="0:0:755"|' "$STAGE/profiledef.sh"
 else
     cp "$HERE/profile/packages.x86_64" "$SRC_LIST"
 fi
@@ -71,6 +80,7 @@ if (( ${#missing[@]} )); then
     warn "Skipping packages not found in the repos: ${missing[*]}"
 fi
 desktop_must="plasma-desktop sddm"; [[ $EDITION == xfce ]] && desktop_must="xfce4-session lightdm"
+[[ $EDITION == hyprland ]] && desktop_must="hyprland sddm"
 for must in base linux mkinitcpio-archiso $desktop_must; do
     grep -qx "$must" "$STAGE/packages.x86_64" || die "Required package '$must' is missing."
 done
