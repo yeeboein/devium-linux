@@ -138,6 +138,8 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] Devium login screen (SDDM theme) with the mountain picture, clock, password box, desktop picker (KDE + Hyprland)
 - [x] Login screen shows the user's own profile picture (from KDE's Users settings), Devium logo if none
 - [x] Full KDE keeps KDE's full animations (KDE Lite and Low-RAM mode stay lighter)
+- [ ] Fix: installer crash with "Replace a partition" (waiting for the installer log)
+- [x] If the installer crashes, its log is saved to the Desktop (devium-installer-log.txt)
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

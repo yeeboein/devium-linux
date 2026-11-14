@@ -7,8 +7,23 @@ set -uo pipefail
 if [[ -z ${DEVIUM_TEXT_INSTALLER:-} && -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]] && command -v calamares >/dev/null; then
     # Devium splash while the installer loads (closes itself when the installer appears)
     python3 /usr/lib/devium/install-splash.py >/dev/null 2>&1 &
-    exec sudo --preserve-env=DISPLAY,WAYLAND_DISPLAY,XDG_RUNTIME_DIR,XAUTHORITY,QT_QPA_PLATFORM \
-        calamares -style breeze
+    sudo --preserve-env=DISPLAY,WAYLAND_DISPLAY,XDG_RUNTIME_DIR,XAUTHORITY,QT_QPA_PLATFORM \
+        calamares -d -style breeze
+    code=$?
+    # If the installer crashed (or failed), save its log to the Desktop so it's easy to send to us
+    if (( code != 0 )); then
+        log=/root/.cache/calamares/session.log
+        dest="$HOME/Desktop/devium-installer-log.txt"
+        mkdir -p "$HOME/Desktop"
+        if sudo test -f "$log"; then
+            sudo cat "$log" > "$dest"
+            # keep it private: drop any lines that mention passwords
+            sed -i -E '/[Pp]assword|passwd|chpasswd/d' "$dest"
+            notify-send --app-name="Devium" --icon=devium "The installer closed unexpectedly" \
+                "Its log is on your Desktop: devium-installer-log.txt. Please send it to us on Discord." 2>/dev/null
+        fi
+    fi
+    exit $code
 fi
 
 if [[ -z ${DEVIUM_IN_TERMINAL:-} && -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]]; then
