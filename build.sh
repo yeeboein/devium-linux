@@ -53,8 +53,8 @@ elif [[ $EDITION == hyprland ]]; then
     grep -v '#kde' "$HERE/profile/packages.x86_64" > "$SRC_LIST"
     cat "$HERE/editions/hyprland/packages.x86_64" >> "$SRC_LIST"
     cp -a "$HERE/editions/hyprland/airootfs/." "$STAGE/airootfs/"
-    # no Plasma layout and no KDE login theme (SDDM uses its own theme here)
-    rm -rf "$STAGE/airootfs/usr/share/plasma" "$STAGE/airootfs/usr/share/sddm"
+    # no Plasma layout; the Devium login theme (usr/share/sddm/themes/devium) needs no Plasma, so it stays
+    rm -rf "$STAGE/airootfs/usr/share/plasma" "$STAGE/airootfs/usr/share/sddm/themes/breeze"
     sed -i 's/^iso_application=.*/iso_application="Devium Hyprland Live"/' "$STAGE/profiledef.sh"
     sed -i 's|^file_permissions=(|file_permissions=(\n  ["/usr/local/bin/devium-keys"]="0:0:755"|' "$STAGE/profiledef.sh"
 else

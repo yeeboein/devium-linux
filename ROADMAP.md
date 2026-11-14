@@ -135,6 +135,7 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 
 ## beta14
 - [x] Local AI removed from Devium Configure (Ollama, Alpaca and the model downloads)
+- [x] Devium login screen (SDDM theme) with the mountain picture, clock, password box, desktop picker (KDE + Hyprland)
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

@@ -1,0 +1,13 @@
+[SddmGreeterTheme]
+Name=Devium
+Description=Devium login screen: the mountains, a clock and a simple password box
+Author=Yeeboein
+License=GPL-3.0-or-later
+Type=sddm-theme
+Version=1.0
+Website=https://github.com/yeeboein/devium-linux
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=devium
+Theme-API=2.0
+QtVersion=6
