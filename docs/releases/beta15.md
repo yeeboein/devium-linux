@@ -27,6 +27,15 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
 - **fastfetch fits your window:** big DEVIUM logo in wide terminals, a smaller logo in medium ones, and just the
   info in narrow ones, so nothing wraps onto the next line.
 
+- **Clean up** (Devium Tools > Clean up): finds app caches, the bin, old `node_modules` / Rust `target` /
+  `.venv` folders in projects you haven't touched for a month, old installers and duplicate files in Downloads,
+  big forgotten files, unused Docker images and old system packages and logs. Nothing goes until you tick it.
+- **Guest account** (Devium Tools > Privacy): a friend presses **Guest** on the login screen, no password. They
+  can't see your files or change the system, and everything they do is wiped when they log out.
+- **Crash catcher:** when an app crashes, a notification offers to send a report. It opens Report a problem,
+  filled in with which app crashed and where, so you can check it before sending. (KDE apps keep their own
+  crash reporter.)
+
 ## For coders
 - **Project starters:** `devium-new-project my-app --template rust`, or Devium Tools > Developer > New project.
   Templates: Python, website, Node.js, Flask, Rust, Go, C, C++ (CMake), Java and Discord bot, each with Git,
@@ -35,6 +44,23 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
   double-click, and stop it with one button.
 - **More developer tools** in Devium Configure and Devium Tools: modern terminal tools (fzf, eza, zoxide, jq, yq,
   httpie), Neovim, tmux, mise + direnv + just, act (run GitHub Actions locally), DBeaver, Meld and Kubernetes tools.
+
+## Coding tools (new page in Devium Tools)
+- **Dev doctor:** `support dev` checks Git, your SSH key and GitHub, languages, Docker, PATH and your projects,
+  and tells you the exact command to fix anything.
+- **Databases in one click:** PostgreSQL, MySQL, Redis or MongoDB in a container, with the connection string
+  ready to copy. Nothing installed on your system.
+- **Secret guard:** on by default. Stops a commit that contains a password, API key, private key or `.env` file
+  (uses gitleaks if you install it). Your projects' own Git hooks still run.
+- **.env files:** lists your projects' secret files and warns in red if one is committed to Git. One click
+  keeps it out of Git, another makes a safe `.env.example`.
+- **HTTPS on localhost:** one button makes a certificate your browsers trust, so `https://localhost` just works.
+- **Share a local site:** a temporary public link (and a QR code) for your `localhost:3000`.
+- **Language versions per project:** pick Python, Node, Go, Rust, Java and more per folder (mise).
+- **Snippets:** save code you reuse; `snip NAME` in the terminal, or `snip docker` in Spotlight.
+- **Build notifications:** a notification when a terminal command that took 30+ seconds finishes or fails.
+- **Offline docs:** Zeal, and `docs python:split` in Spotlight.
+- **Terminal extras:** mise, zoxide (`z folder`) and fzf (Ctrl+R) switch on by themselves once installed.
 
 ## Tip for VirtualBox
 Turn on **EFI**, give it **20 GB** of disk and **4 GB** of RAM, and remove the ISO after installing.

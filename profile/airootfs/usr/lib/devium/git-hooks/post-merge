@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Devium secret guard sets core.hooksPath; this keeps the project's own hook working.
+hook="$(git rev-parse --git-dir)/hooks/$(basename "$0")"
+[[ -x $hook ]] && exec "$hook" "$@"
+exit 0

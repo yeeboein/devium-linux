@@ -44,6 +44,10 @@ It's still in beta, so expect the odd bug. If you find one, tell me on
   - **Drivers:** NVIDIA, Broadcom Wi-Fi and fingerprint readers in one click.
   - **Health check:** disks, temperatures and battery wear. You get a warning before a disk dies.
   - **Phone link:** KDE Connect, set up with a QR code.
+  - **Clean up:** finds caches, old build folders, duplicate downloads and old packages, and frees the space.
+  - **Coding tools:** databases in one click, a secret guard that stops you committing passwords, `.env`
+    checks, HTTPS on localhost, a public link for your local site, per-project language versions and snippets.
+  - **Guest account:** let a friend use your laptop; it's wiped when they log out.
 - **Spotlight** (Meta+Space). Search apps, settings and files, do quick maths and unit conversions,
   or type `> command` to run something.
 - **[ArchPill](https://github.com/yeeboein/archpill)** if you want it: a little pill at the top of the
@@ -52,7 +56,8 @@ It's still in beta, so expect the odd bug. If you find one, tell me on
 - **`support`** in the terminal lists about 100 useful commands. `support fix` checks for common
   problems and fixes what it can, and `support learn` teaches you the terminal in 10 short lessons.
 - **`devium-new-project`** starts a Python, web, Node, Flask, Rust, Go, C, C++, Java or Discord bot
-  project with Git already set up. Devium Tools also shows what's running on which port.
+  project with Git already set up. Devium Tools also shows what's running on which port, and `support dev`
+  checks your whole coding setup.
 - Small touches: Devium icon pack, light and dark themes, disk encryption option, Irish/Spanish/
   French/German/Hungarian in the Devium apps, and a fastfetch logo made out of the word DEVIUM.
 

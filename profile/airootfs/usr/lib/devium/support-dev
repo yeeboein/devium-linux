@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# support dev - checks your coding setup and tells you how to fix what's missing.
+# Git, SSH key, GitHub, languages, Docker, PATH, secret guard, disk space.
+
+B=$'\e[1m'; D=$'\e[2m'; N=$'\e[0m'
+T=$'\e[38;2;180;184;224m'; C=$'\e[38;2;150;178;208m'; G=$'\e[38;2;143;212;184m'; W=$'\e[38;2;232;205;150m'
+problems=0
+ok()   { printf "  ${G}✓${N} %s\n" "$1"; }
+bad()  { printf "  ${W}!${N} %s\n" "$1"; [[ -n ${2:-} ]] && printf "      ${D}fix:${N} ${C}%s${N}\n" "$2"; problems=$((problems + 1)); }
+info() { printf "  ${D}·${N} %s\n" "$1"; }
+sec() { printf "\n${B}${T}%s${N}\n" "$1"; }
+
+printf "${B}${T}Devium dev doctor${N}  ${D}- checking your coding setup${N}\n"
+
+sec "Git"
+if command -v git >/dev/null; then
+    ok "git $(git --version | awk '{print $3}')"
+    n=$(git config --global user.name); e=$(git config --global user.email)
+    [[ -n $n ]] && ok "name: $n" || bad "No Git name set" "git config --global user.name \"Your Name\""
+    [[ -n $e ]] && ok "email set" || bad "No Git email set" "git config --global user.email you@example.com"
+    [[ $(git config --global init.defaultBranch) ]] || info "New repos start on 'master'. For 'main': git config --global init.defaultBranch main"
+    hp=$(git config --global core.hooksPath)
+    if [[ $hp == */devium/git-hooks* ]]; then ok "Secret guard is on (stops commits that contain passwords or keys)"
+    else bad "Secret guard is off" "Devium Tools > Coding tools > Secret guard"; fi
+else
+    bad "Git is not installed" "sudo pacman -S git"
+fi
+
+sec "SSH and GitHub"
+key=$(ls ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub 2>/dev/null | head -1)
+if [[ -n $key ]]; then
+    ok "SSH key: ${key/#$HOME/\~}"
+    perm=$(stat -c %a "${key%.pub}" 2>/dev/null)
+    [[ $perm == 600 || $perm == 400 ]] || bad "Your private key can be read by others ($perm)" "chmod 600 ${key%.pub}"
+else
+    bad "No SSH key yet" "Devium Tools > Developer > Connect Git and GitHub"
+fi
+if command -v gh >/dev/null; then
+    if gh auth status >/dev/null 2>&1; then ok "GitHub CLI is logged in"
+    else bad "GitHub CLI isn't logged in" "gh auth login"; fi
+fi
+if [[ -n $key ]] && command -v ssh >/dev/null; then
+    out=$(timeout 8 ssh -T -o BatchMode=yes -o StrictHostKeyChecking=accept-new git@github.com 2>&1)
+    if [[ $out == *"successfully authenticated"* ]]; then ok "GitHub accepts your SSH key"
+    elif [[ $out == *"Permission denied"* ]]; then bad "GitHub doesn't know your SSH key" "Add ${key/#$HOME/\~} at github.com/settings/keys"
+    else info "Couldn't reach GitHub over SSH (offline?)"; fi
+fi
+
+sec "Languages"
+ver() {   # first line that looks like a version line
+    command -v "$1" >/dev/null || return
+    local out; out=$("$@" 2>&1 | grep -v '^Picked up')
+    grep -m1 -iE "version|$1 [0-9]|^v?[0-9]" <<< "$out" || head -1 <<< "$out"
+}
+for l in "python:python --version" "pip:pip --version" "node:node --version" "npm:npm --version" \
+         "rustc:rustc --version" "cargo:cargo --version" "go:go version" "java:java -version" \
+         "gcc:gcc --version" "cmake:cmake --version"; do
+    name=${l%%:*}; cmd=${l#*:}
+    v=$(ver $cmd)
+    [[ -n $v ]] && ok "$name: $(echo "$v" | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)"
+done
+command -v python >/dev/null || info "No Python. Add it in Devium Configure > Languages."
+command -v node >/dev/null || info "No Node.js. Add it in Devium Configure > Languages."
+if command -v rustup >/dev/null && ! rustup default >/dev/null 2>&1; then
+    bad "Rust is installed but has no toolchain" "rustup default stable"
+fi
+if command -v pip >/dev/null; then
+    broken=$(python -m pip check 2>/dev/null | grep -v "No broken" | head -3)
+    [[ -n $broken ]] && bad "Some Python packages don't fit together: $broken" "python -m pip check"
+fi
+if command -v mise >/dev/null; then
+    ok "mise (per-project versions): $(mise --version 2>/dev/null | awk '{print $1}')"
+    [[ $(type -t mise 2>/dev/null) == function || -n ${MISE_SHELL:-} ]] || info "Open a new terminal so mise switches versions in your projects."
+fi
+
+sec "Containers"
+if command -v docker >/dev/null; then
+    if id -nG | tr ' ' '\n' | grep -qx docker; then ok "You're in the docker group"
+    else bad "You're not in the docker group yet" "sudo usermod -aG docker ${USER:-$(id -un)}  (then log out and in)"; fi
+    systemctl is-enabled docker.socket >/dev/null 2>&1 && ok "Docker starts when you use it" \
+        || bad "Docker isn't set to start" "sudo systemctl enable --now docker.socket"
+elif command -v podman >/dev/null; then
+    ok "podman $(podman --version | awk '{print $3}')"
+else
+    info "No Docker or Podman (Devium Tools > Developer to install one)"
+fi
+
+sec "PATH and tools"
+for d in "$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/go/bin"; do
+    [[ -d $d ]] || continue
+    [[ ":$PATH:" == *":$d:"* ]] && ok "${d/#$HOME/\~} is on your PATH" \
+        || bad "${d/#$HOME/\~} exists but isn't on your PATH (programs there won't be found)" \
+               "echo 'export PATH=\"$d:\$PATH\"' >> ~/.${SHELL##*/}rc"
+done
+for t in rg fd fzf jq; do command -v $t >/dev/null || missing+="$t "; done
+[[ -n ${missing:-} ]] && info "Handy tools you don't have: ${missing}(Devium Tools > Developer > More developer tools)"
+
+sec "Projects"
+proj="${PROJECTS_DIR:-$HOME/Projects}"
+if [[ -d $proj ]]; then
+    n=$(find "$proj" -mindepth 1 -maxdepth 1 -type d | wc -l)
+    ok "$n projects in ${proj/#$HOME/\~}"
+    leaks=$(find "$proj" -maxdepth 4 -name .env -not -path '*/node_modules/*' 2>/dev/null | while read -r f; do
+        d=$(dirname "$f"); git -C "$d" rev-parse 2>/dev/null || continue
+        git -C "$d" ls-files --error-unmatch .env >/dev/null 2>&1 && echo "${d/#$HOME/\~}"
+    done)
+    [[ -n $leaks ]] && bad ".env (secrets) is committed to Git in: $leaks" "Devium Tools > Coding tools > .env files"
+    nm=$(find "$proj" -maxdepth 4 -type d -name node_modules -prune 2>/dev/null | xargs -r du -sc 2>/dev/null | tail -1 | cut -f1)
+    (( ${nm:-0} > 2097152 )) && info "node_modules folders use $((nm / 1048576)) GB (Devium Tools > Clean up can remove old ones)"
+else
+    info "No ~/Projects folder yet. Start one: devium-new-project my-app"
+fi
+free=$(df -BG --output=avail "$HOME" | tail -1 | tr -dc 0-9)
+(( free >= 5 )) && ok "Disk: ${free} GB free" || bad "Only ${free} GB free: builds and containers may fail" "Devium Tools > Clean up"
+
+echo
+if (( problems == 0 )); then printf "  ${G}${B}All good. Happy coding!${N}\n\n"
+else printf "  ${W}${B}%d thing(s) to fix.${N} ${D}Run ${N}${C}support dev${N}${D} again after fixing.${N}\n\n" "$problems"; fi

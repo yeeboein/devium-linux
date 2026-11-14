@@ -154,6 +154,9 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] "What's new" window after Devium Updater
 - [x] `support learn`: 10-lesson terminal tutorial
 - [x] Project starters (10 templates), Ports and servers panel, more developer tools
+- [x] Coding tools page: dev doctor (support dev), one-click databases, secret guard, .env files, local HTTPS,
+      share a local site, per-project language versions, snippets (snip), build notifications, offline docs
+- [x] Clean up page, Guest account, crash catcher
 - [x] fastfetch fits any window: big logo, small logo, or info only, picked from the terminal size
 
 ## Next

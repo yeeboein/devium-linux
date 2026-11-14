@@ -8,10 +8,13 @@ conversions and terminal commands.
   2+2*3, sqrt(16), 15%    quick maths (Enter copies the answer)
   10 km in miles          unit conversions (length, weight, temperature, data, time)
   > htop                  run a command in the terminal
+  snip docker             your snippets (Enter copies one)
+  docs python:split       search the offline docs (Zeal) or DevDocs
 """
 import ast
 import configparser
 import glob
+import json
 import math
 import operator
 import os
@@ -60,6 +63,10 @@ SETTINGS = [
     ("phone android iphone kde connect", "Phone link (Devium Tools)", ["devium-tools", "phone"]),
     ("reset desktop dock panel default", "Reset desktop (Devium Tools)", ["devium-tools", "look"]),
     ("git github ssh docker ports developer", "Developer (Devium Tools)", ["devium-tools", "developer"]),
+    ("database postgres mysql redis mongo https env secret snippets share mise coding", "Coding tools (Devium Tools)",
+     ["devium-tools", "coding"]),
+    ("clean space disk free storage junk", "Clean up (Devium Tools)", ["devium-tools", "clean"]),
+    ("guest account friend", "Guest account (Devium Tools > Privacy)", ["devium-tools", "privacy"]),
     ("help support fix problem", "Get help (Devium Tools)", ["devium-tools", "help"]),
     ("date time clock timezone", "Date and time", ["systemsettings", "kcm_clock"]),
     ("notifications do not disturb", "Notifications", ["systemsettings", "kcm_notifications"]),
@@ -251,13 +258,15 @@ class Spotlight(QWidget):
         lay = QVBoxLayout(box)
         lay.setContentsMargins(10, 8, 10, 10)
         self.edit = QLineEdit()
-        self.edit.setPlaceholderText(T("Search apps, settings, files… or type 2+2, 5 km in miles, > command"))
+        self.edit.setPlaceholderText(T("Search apps, settings, files… or 2+2, 5 km in miles, > command, snip, docs"))
         self.edit.textChanged.connect(lambda: self.timer.start(90))
         self.edit.returnPressed.connect(self.activate)
         self.edit.installEventFilter(self)
         lay.addWidget(self.edit)
         self.list = QListWidget()
         self.list.setIconSize(self.list.iconSize() * 2)
+        self.list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.list.itemActivated.connect(lambda _i: self.activate())
         self.list.hide()
         lay.addWidget(self.list)
@@ -296,7 +305,27 @@ class Spotlight(QWidget):
         raw = self.edit.text()
         q = raw.strip().lower()
         if q:
-            if q.startswith(">"):
+            if q.startswith("snip ") or q == "snip":
+                word = q[4:].strip()
+                try:
+                    snips = json.loads(subprocess.run(["snip", "--json"], capture_output=True, text=True,
+                                                      timeout=3).stdout or "{}")
+                except Exception:
+                    snips = {}
+                for name, text in sorted(snips.items()):
+                    if not word or word in name.lower() or word in text.lower():
+                        first = text.strip().splitlines()[0][:60] if text.strip() else ""
+                        self.add(name, first + ("…" if len(first) == 60 else ""), "edit-paste", ("copy", text))
+                if not self.list.count():
+                    self.add(T("No snippets yet"), T("Add some in Devium Tools > Coding tools"), "edit-paste",
+                             ("cmd", ["devium-tools", "coding"]))
+            elif q.startswith("docs "):
+                word = raw.strip()[5:].strip()
+                if shutil.which("zeal"):
+                    self.add(f"Search the offline docs for: {word}", "Zeal", "zeal", ("cmd", ["zeal", word]))
+                self.add(f"Search the web docs for: {word}", "DevDocs", "internet-web-browser",
+                         ("open", "https://devdocs.io/#q=" + word.replace(" ", "%20")))
+            elif q.startswith(">"):
                 cmd = raw.strip()[1:].strip()
                 if cmd:
                     self.add(f"Run in terminal: {cmd}", "", "utilities-terminal", ("term", cmd))

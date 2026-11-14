@@ -28,6 +28,9 @@ fi
 [[ -f /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
     source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
+# Devium extras: notification when a long command finishes, mise, zoxide, fzf
+[[ -f /usr/share/devium/shell/devium.zsh ]] && source /usr/share/devium/shell/devium.zsh
+
 # fastfetch only runs when you type it. The first terminal you ever open shows one short tip.
 if [[ ! -e ~/.config/devium/terminal-tip-shown ]]; then
     mkdir -p ~/.config/devium && touch ~/.config/devium/terminal-tip-shown

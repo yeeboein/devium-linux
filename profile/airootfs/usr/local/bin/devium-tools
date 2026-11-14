@@ -3,7 +3,7 @@
 help for people coming from Windows, accessibility, language and support - in one app.
 
   devium-tools            open on the Home page (Devium Hub)
-  devium-tools <page>     open a page: apps, updates, look, backup, drivers, health, phone, speed,
+  devium-tools <page>     open a page: apps, updates, look, backup, drivers, health, phone, clean, coding, speed,
                           battery, privacy, printers, developer, windows, accessibility, language,
                           help, report
 """
@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QFormL
 
 import devium_ui as ui
 import tools_extra as extra
+import tools_dev as dev
 from devium_i18n import LANGUAGES, T, current as current_language, set_language
 
 HELPER = "/usr/lib/devium/devium-helper"
@@ -253,6 +254,9 @@ class HomePage(Page):
             (T("Health check"), "Disks, temperatures and battery wear", "heart", lambda: win.go("health")),
             (T("Phone link"), "Files, notifications and clipboard with your phone", "smartphone",
              lambda: win.go("phone")),
+            (T("Clean up"), "Find what takes space and free it", "edit-clear", lambda: win.go("clean")),
+            (T("Coding tools"), "Databases, secret guard, HTTPS, sharing, versions", "code-block",
+             lambda: win.go("coding")),
             (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
             (T("Privacy"), "Firewall, Wi-Fi tracking, location", "security-high", lambda: win.go("privacy")),
             (T("Report a problem"), "Tell the Devium team what went wrong", "tools-report-bug",
@@ -984,11 +988,35 @@ def system_summary():
     ])
 
 
+def crash_summary(pid, exe):
+    """The useful part of a crash (which app, version, signal, top of the stack), without personal info."""
+    out = run(["coredumpctl", "info", "--no-pager", str(pid), exe] if pid and pid != "0" else
+              ["coredumpctl", "info", "--no-pager", "-1", exe], timeout=30)
+    keep, stack = [], 0
+    for line in out.splitlines():
+        s = line.strip()
+        if s.startswith(("Signal:", "Executable:", "Command Line:", "Package:")):
+            keep.append(s if not s.startswith("Command Line:") else "Command Line: " + s.split(":", 1)[1].split()[0])
+        if s.startswith(("Stack trace of thread", "Module ")) and stack == 0 and "Stack" in s:
+            stack = 1
+            keep.append(s)
+        elif stack and s.startswith("#") and stack < 16:
+            keep.append(s)
+            stack += 1
+    owner = run(["pacman", "-Qo", exe]).strip()
+    if owner:
+        keep.insert(0, owner.split(" is owned by ")[-1])
+    text = "\n".join(keep) or "(no details recorded)"
+    text = text.replace(os.path.expanduser("~"), "~")
+    return re.sub(r"\S+@\S+\.\S+", "<email>", text)
+
+
 class ReportDialog(QDialog):
     LIMIT_FILE = os.path.expanduser("~/.cache/devium/last-report")
 
-    def __init__(self, parent):
+    def __init__(self, parent, crash=None):
         super().__init__(parent)
+        self.crash = crash      # (pid, exe) from the crash catcher
         self.setWindowTitle(T("Report a problem"))
         self.resize(620, 560)
         l = QVBoxLayout(self)
@@ -1026,6 +1054,13 @@ class ReportDialog(QDialog):
             w.toggled.connect(self.update_preview)
         self.send_btn = button(T("Send"), self.send, True, "mail-send")
         l.addLayout(row(self.send_btn, button(T("Cancel"), self.reject)))
+        if crash:
+            pid, exe = crash
+            self.kind.setCurrentText("Bug")
+            self.title.setText(f"{os.path.basename(exe)} crashed")
+            self.body.setPlainText(f"{os.path.basename(exe)} closed unexpectedly.\n\nWhat were you doing when it "
+                                   "happened? (Replace this line.)")
+            self.crash_info = crash_summary(pid, exe)
         self.update_preview()
 
     def extras(self):
@@ -1040,6 +1075,8 @@ class ReportDialog(QDialog):
             errs = re.sub(r"\S+@\S+\.\S+", "<email>", errs)
             errs = errs.replace(os.path.expanduser("~"), "~")
             text += "\n\nRecent errors:\n" + (errs.strip() or "(none)")
+        if getattr(self, "crash_info", ""):
+            text += "\n\nCrash:\n" + self.crash_info
         return text
 
     def update_preview(self):
@@ -1128,11 +1165,13 @@ PAGES = [
     ("drivers", T("Drivers"), "preferences-system-hardware", extra.make_drivers_page),
     ("health", T("Health check"), "heart", extra.make_health_page),
     ("phone", T("Phone link"), "smartphone", extra.make_phone_page),
+    ("clean", T("Clean up"), "edit-clear", dev.make_clean_page),
     ("speed", T("Speed and memory"), "speedometer", SpeedPage),
     ("battery", T("Battery"), "battery", BatteryPage),
-    ("privacy", T("Privacy"), "security-high", PrivacyPage),
+    ("privacy", T("Privacy"), "security-high", lambda win: dev.add_guest_card(PrivacyPage(win))),
     ("printers", T("Printers and scanners"), "printer", PrintersPage),
     ("developer", T("Developer"), "code-context", DeveloperPage),
+    ("coding", T("Coding tools"), "code-block", dev.make_coding_page),
     ("windows", T("Coming from Windows"), "computer", WindowsPage),
     ("accessibility", T("Accessibility"), "preferences-desktop-accessibility", AccessibilityPage),
     ("language", T("Language"), "preferences-desktop-locale", LanguagePage),
@@ -1163,7 +1202,11 @@ class Tools(QWidget):
         lay.addWidget(self.stack, 1)
         if start == "report":
             self.go("help")
-            QTimer.singleShot(200, lambda: ReportDialog(self).exec())
+            crash = None
+            if "--crash" in sys.argv:
+                i = sys.argv.index("--crash")
+                crash = (sys.argv[i + 1] if len(sys.argv) > i + 1 else "", sys.argv[i + 2] if len(sys.argv) > i + 2 else "")
+            QTimer.singleShot(200, lambda: ReportDialog(self, crash).exec())
         else:
             self.go(start if start in self.pages else "home")
 

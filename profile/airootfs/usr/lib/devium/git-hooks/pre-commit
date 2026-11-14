@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Devium secret guard: stops a commit that contains a password, API key or private key.
+# Turned on with: git config --global core.hooksPath /usr/lib/devium/git-hooks
+# Skip it once (if you're sure): git commit --no-verify     Turn it off: Devium Tools > Coding tools
+set -uo pipefail
+
+found=""
+if command -v gitleaks >/dev/null; then
+    if ! out=$(gitleaks git --staged --no-banner --redact 2>&1 || gitleaks protect --staged --no-banner --redact 2>&1); then
+        found="$out"
+    fi
+else
+    # Built-in check: well-known key formats in the lines you're adding
+    found=$(git diff --cached -U0 --no-color --diff-filter=ACM | python3 -c '
+import re, sys
+pats = {
+    "private key": r"-----BEGIN [A-Z ]*PRIVATE KEY-----",
+    "AWS key": r"\bAKIA[0-9A-Z]{16}\b",
+    "GitHub token": r"\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\b|\bgithub_pat_[A-Za-z0-9_]{50,}\b",
+    "Slack token": r"\bxox[abprs]-[A-Za-z0-9-]{10,}",
+    "Discord webhook": r"discord(app)?\.com/api/webhooks/\d+/[\w-]+",
+    "Discord bot token": r"\b[MN][A-Za-z\d]{23,25}\.[\w-]{6}\.[\w-]{27,}\b",
+    "Google API key": r"\bAIza[0-9A-Za-z_-]{35}\b",
+    "Stripe key": r"\b(sk|rk)_live_[0-9A-Za-z]{20,}\b",
+    "OpenAI-style key": r"\bsk-(proj-)?[A-Za-z0-9_-]{32,}\b",
+    "password in code": r"(?i)\b(password|passwd|secret|api_?key|token)\b\s*[:=]\s*[\"\x27][^\"\x27\s]{8,}[\"\x27]",
+}
+file = "?"
+hits = []
+for line in sys.stdin:
+    if line.startswith("+++ b/"):
+        file = line[6:].strip()
+    elif line.startswith("+") and not line.startswith("+++"):
+        for name, p in pats.items():
+            if re.search(p, line):
+                hits.append(f"  {file}: looks like a {name}")
+                break
+print("\n".join(dict.fromkeys(hits)))
+')
+fi
+# a .env file is almost always secret
+envs=$(git diff --cached --name-only --diff-filter=A | grep -E '(^|/)\.env(\..+)?$' | grep -vE '\.(example|sample|template)$')
+[[ -n $envs ]] && found+=$'\n'"  $(echo "$envs" | tr '\n' ' ') is a .env file (secrets). Add it to .gitignore."
+
+found="${found#$'\n'}"
+if [[ -n ${found//[[:space:]]/} ]]; then
+    printf '\n\e[1;33mDevium secret guard stopped this commit:\e[0m\n%s\n\n' "$found"
+    printf 'Remove the secret (put it in .env and add .env to .gitignore), then commit again.\n'
+    printf 'Sure it is not a secret? \e[36mgit commit --no-verify\e[0m skips the check once.\n\n'
+    exit 1
+fi
+
+# then run the project's own pre-commit hook, if it has one
+repo_hook="$(git rev-parse --git-dir)/hooks/pre-commit"
+[[ -x $repo_hook ]] && exec "$repo_hook" "$@"
+exit 0

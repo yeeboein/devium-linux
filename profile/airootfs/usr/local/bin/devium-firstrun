@@ -95,6 +95,13 @@ if [[ -d /run/archiso ]]; then
     exit 0
 fi
 
+# --- Guest account: say that nothing is kept
+if [[ -f $STATE/guest ]]; then
+    (sleep 6; notify-send --app-name="Devium" --icon=system-users "Guest session" \
+        "Use Devium as you like. Everything here is deleted when you log out." 2>/dev/null) &
+    exit 0
+fi
+
 # --- beta15: Meta+Space opens Devium Spotlight (KDE; new users get it from /etc/skel)
 if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [[ ! -f $STATE/spotlight-key ]]; then
     if ! grep -q "devium-spotlight.desktop" "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" 2>/dev/null; then
@@ -102,6 +109,19 @@ if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [
             --key _launch "Meta+Space"
     fi
     touch "$STATE/spotlight-key"
+fi
+
+# --- beta15: secret guard on by default (stops commits containing passwords/keys); not if you set your own hooks
+if [[ ! -f $STATE/git-guard ]] && command -v git >/dev/null; then
+    [[ -z $(git config --global core.hooksPath) ]] && git config --global core.hooksPath /usr/lib/devium/git-hooks
+    touch "$STATE/git-guard"
+fi
+
+# --- beta15: shell extras (long-command notifications, mise, zoxide, fzf) for people who had Devium before
+if [[ ! -f $STATE/shell-extras ]]; then
+    grep -qs "devium/shell/devium.zsh" ~/.zshrc || { [[ -f ~/.zshrc ]] && printf '\n# Devium extras\n[[ -f /usr/share/devium/shell/devium.zsh ]] && source /usr/share/devium/shell/devium.zsh\n' >> ~/.zshrc; }
+    grep -qs "devium/shell/devium.bash" ~/.bashrc || { [[ -f ~/.bashrc ]] && printf '\n# Devium extras\n[[ -f /usr/share/devium/shell/devium.bash ]] && source /usr/share/devium/shell/devium.bash\n' >> ~/.bashrc; }
+    touch "$STATE/shell-extras"
 fi
 
 # --- beta15: "What's new" after Devium Updater moved you to a new version (once per version)

@@ -28,6 +28,12 @@ Rectangle {
             Component.onCompleted: if (match) root.avatar = root.customIcon(model.icon)
         }
     }
+    // Guest account (Devium Tools > Privacy > Guest account): shows a Guest button
+    property bool hasGuest: false
+    Repeater {
+        model: userModel
+        delegate: Item { visible: false; Component.onCompleted: if (model.name === "guest") root.hasGuest = true }
+    }
     function customIcon(icon) {
         // SDDM falls back to its own generic face; treat that as "no picture" and show the Devium logo
         var s = icon ? String(icon) : ""
@@ -209,6 +215,23 @@ Rectangle {
                     }
                     Text { anchors.centerIn: parent; text: "➜"; color: "#1b2026"; font.pixelSize: 24 }
                     MouseArea { id: goArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.doLogin() }
+                }
+            }
+
+            Rectangle {
+                id: guestButton
+                visible: root.hasGuest && userField.text !== "guest"
+                width: parent.width; height: 40; radius: 14
+                color: guestArea.containsMouse ? "#33ffffff" : "#1affffff"
+                border.color: "#22ffffff"; border.width: 1
+                Text {
+                    anchors.centerIn: parent
+                    text: "Use as Guest  ·  nothing is kept"
+                    color: root.soft; font.family: "Noto Sans"; font.pixelSize: 15
+                }
+                MouseArea {
+                    id: guestArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                    onClicked: { message.text = ""; sddm.login("guest", "", root.sessionIndex) }
                 }
             }
 

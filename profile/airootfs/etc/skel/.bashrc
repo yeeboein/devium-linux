@@ -15,6 +15,9 @@ else
     PS1='\[\e[1;36m\]\u@\h\[\e[0m\] \[\e[1;35m\]\w\[\e[0m\] \$ '
 fi
 
+# Devium extras: notification when a long command finishes, mise, zoxide, fzf
+[[ -f /usr/share/devium/shell/devium.bash ]] && source /usr/share/devium/shell/devium.bash
+
 # fastfetch only runs when you type it. The first terminal you ever open shows one short tip.
 if [[ ! -e ~/.config/devium/terminal-tip-shown ]]; then
     mkdir -p ~/.config/devium && touch ~/.config/devium/terminal-tip-shown

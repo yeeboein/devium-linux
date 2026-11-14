@@ -22,6 +22,9 @@
 #   devium-helper move-install FILE  reinstall apps from a Backup / Move to a new PC file
 #   devium-helper sddm-accent A B    give the login screen the accent colour you picked
 #   devium-helper devpack ID...      install developer tools from Devium Tools > Developer
+#   devium-helper local-https USER   install mkcert and trust its local certificate authority (https://localhost)
+#   devium-helper guest on|off       add or remove the Guest account (wiped every time it logs out)
+#   devium-helper clean-system       old packages, unused Flatpaks, old logs, coredumps (Clean up page)
 set -uo pipefail
 export LC_ALL=C.UTF-8 TERM=dumb
 
@@ -505,6 +508,10 @@ EOF
                 k8s)      pkgs+=(kubectl k9s helm) ;;
                 api)      pkgs+=(httpie websocat) ;;
                 meld)     pkgs+=(meld) ;;
+                gitleaks) pkgs+=(gitleaks) ;;
+                share)    pkgs+=(cloudflared) ;;
+                zeal)     pkgs+=(zeal) ;;
+                mkcert)   pkgs+=(mkcert nss) ;;
                 *) echo "unknown pack: $id"; exit 1 ;;
             esac
         done
@@ -512,6 +519,77 @@ EOF
         step "Installing ${pkgs[*]}"
         pacman -S --needed --noconfirm "${pkgs[@]}"
         ;;
+    local-https)
+        user="${2:-}"; [[ $user =~ ^[a-z_][a-z0-9_-]*$ ]] && id "$user" >/dev/null 2>&1 || { echo "bad user"; exit 1; }
+        home=$(getent passwd "$user" | cut -d: -f6)
+        pacman_unlock || exit 1
+        step "Installing mkcert"
+        pacman -S --needed --noconfirm mkcert nss >/dev/null || exit 1
+        step "Making your own local certificate authority"
+        caroot="$home/.local/share/mkcert"
+        sudo -u "$user" mkdir -p "$caroot"
+        # system trust store (curl, Python, Node, Chromium) as root, using the user's CA
+        CAROOT="$caroot" mkcert -install 2>&1 | grep -v '^$'
+        chown -R "$user:" "$caroot"
+        step "Trusting it in Firefox and Chrome for $user"
+        sudo -u "$user" env CAROOT="$caroot" TRUST_STORES=nss HOME="$home" mkcert -install 2>&1 | grep -v '^$' || true
+        step "Making a certificate for localhost"
+        certs="$home/.local/share/devium/certs"
+        sudo -u "$user" mkdir -p "$certs"
+        (cd "$certs" && sudo -u "$user" env CAROOT="$caroot" mkcert -cert-file localhost.pem -key-file localhost-key.pem \
+            localhost 127.0.0.1 ::1 "$(hostname).local" 2>&1 | grep -v '^$')
+        echo "Certificate: $certs/localhost.pem"
+        echo "Key:         $certs/localhost-key.pem"
+        step "Done. https://localhost now works without warnings (restart your browser)."
+        ;;
+    guest)
+        case "${2:-}" in
+            on)
+                step "Adding the Guest account"
+                id guest >/dev/null 2>&1 || useradd -m -c "Guest" -s /bin/bash guest || exit 1
+                passwd -d guest >/dev/null       # no password
+                gpasswd -d guest wheel >/dev/null 2>&1 || true   # never an admin
+                uid=$(id -u guest)
+                mkdir -p "/etc/systemd/system/user@$uid.service.d"
+                printf '[Service]\n# Devium Guest: wipe the home folder when Guest logs out\nExecStopPost=+/usr/lib/devium/guest-reset\n' \
+                    > "/etc/systemd/system/user@$uid.service.d/devium-guest.conf"
+                systemctl daemon-reload
+                systemctl enable devium-guest-reset.service >/dev/null 2>&1
+                /usr/lib/devium/guest-reset
+                step "Done. On the login screen, press Guest (or type guest, no password)."
+                ;;
+            off)
+                step "Removing the Guest account"
+                if id guest >/dev/null 2>&1; then
+                    uid=$(id -u guest)
+                    loginctl terminate-user guest 2>/dev/null; sleep 1
+                    rm -rf "/etc/systemd/system/user@$uid.service.d/devium-guest.conf"
+                    systemctl daemon-reload
+                    userdel -r guest 2>/dev/null || userdel guest
+                fi
+                systemctl disable devium-guest-reset.service >/dev/null 2>&1
+                step "Done"
+                ;;
+            *) echo "usage: guest on|off"; exit 1 ;;
+        esac
+        ;;
+    clean-system)
+        step "Removing old package versions"
+        paccache -rk1 2>/dev/null; paccache -ruk0 2>/dev/null
+        if command -v flatpak >/dev/null; then
+            step "Removing unused Flatpak runtimes"
+            flatpak uninstall --system --unused -y --noninteractive 2>/dev/null
+        fi
+        step "Shrinking old system logs to 200 MB"
+        journalctl --vacuum-size=200M 2>&1 | tail -1
+        step "Removing old crash dumps"
+        find /var/lib/systemd/coredump -type f -mtime +3 -delete 2>/dev/null
+        if command -v pacman >/dev/null; then
+            orphans=$(pacman -Qdtq 2>/dev/null)
+            [[ -n $orphans ]] && echo "Unused packages you could remove: $(echo $orphans | tr '\n' ' ')  (sudo pacman -Rns \$(pacman -Qdtq))"
+        fi
+        step "Done"
+        ;;
     *)
-        sed -n '2,36p' "$0"; exit 1 ;;
+        sed -n '2,40p' "$0"; exit 1 ;;
 esac

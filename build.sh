@@ -200,6 +200,7 @@ tar -C "$STAGE/airootfs" \
     -cf - . | tar -C "$PKG/root" -xf -
 # Every Devium program must be runnable on the installed system too (not only on the ISO).
 find "$PKG/root/usr/local/bin" "$PKG/root/usr/lib/devium" -maxdepth 1 -type f ! -name '*.py' -exec chmod 755 {} +
+chmod 755 "$PKG/root/usr/lib/devium/git-hooks/"* 2>/dev/null || true
 # Files other packages own go to overrides/ (devium-setup copies them into place).
 for f in etc/skel/.bashrc etc/skel/.bash_profile etc/default/useradd etc/plymouth/plymouthd.conf \
          etc/lightdm/lightdm-gtk-greeter.conf; do

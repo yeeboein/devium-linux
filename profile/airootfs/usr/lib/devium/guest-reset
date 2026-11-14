@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Devium Guest: put the Guest account's home folder back to fresh. Runs (as root) every time Guest
+# logs out (user@UID.service drop-in) and at start-up (devium-guest-reset.service).
+set -u
+id guest >/dev/null 2>&1 || exit 0
+home=$(getent passwd guest | cut -d: -f6)
+[[ $home == /home/guest ]] || exit 1                # never touch anything else
+pkill -KILL -u guest 2>/dev/null; sleep 0.5
+mkdir -p "$home"
+find "$home" -mindepth 1 -delete 2>/dev/null
+cp -a /etc/skel/. "$home"/
+mkdir -p "$home/.config/devium"
+# Guest skips the first-run setup and tips; it just gets a clean Devium desktop
+touch "$home/.config/devium/"{setup-seen,terminal-tip-shown,guest}
+grep -s '^DEVIUM_VERSION=' /etc/devium-release | cut -d= -f2 > "$home/.config/devium/whats-new-seen"
+chown -R guest: "$home"
+chmod 700 "$home"
+exit 0

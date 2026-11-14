@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Devium crash catcher
+Comment=Offers to send a report when an app crashes
+Exec=/usr/lib/devium/crash-catcher
+Icon=dialog-warning
+NoDisplay=true
+X-KDE-autostart-phase=2

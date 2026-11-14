@@ -1,0 +1,11 @@
+[Unit]
+Description=Devium Guest: start with a fresh Guest account
+After=local-fs.target
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/devium/guest-reset
+
+[Install]
+WantedBy=multi-user.target

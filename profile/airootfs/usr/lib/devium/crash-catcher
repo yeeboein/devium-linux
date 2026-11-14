@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Devium crash catcher: when an app crashes, a friendly notification offers to send a report.
+
+Runs in the background at login. It asks systemd-coredump (which records every crash) about new crashes
+every 20 seconds. KDE apps already have their own crash reporter (DrKonqi), so they're skipped here.
+Pressing "Send report" opens Devium Tools' Report a problem window, filled in; you see everything
+before anything is sent.
+  crash-catcher            watch for crashes
+  crash-catcher --test     pretend something crashed (to try it)
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import threading
+import time
+
+STATE = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "devium")
+SEEN = os.path.join(STATE, "crashes-seen.json")
+IGNORE = {"crash-catcher", "python3", "bash", "zsh", "sh", "kwin_wayland", "Xwayland"}   # shells / the desktop itself
+QUIET_SECONDS = 3600   # one notification per app per hour
+
+
+def load_seen():
+    try:
+        return json.load(open(SEEN))
+    except (OSError, ValueError):
+        return {"since": int(time.time()), "apps": {}}
+
+
+def save_seen(s):
+    os.makedirs(STATE, exist_ok=True)
+    json.dump(s, open(SEEN, "w"))
+
+
+def new_crashes(since):
+    try:
+        out = subprocess.run(["coredumpctl", "list", "--json=short", "--no-pager", f"--since=@{since}"],
+                             capture_output=True, text=True, timeout=20).stdout
+        return json.loads(out) if out.strip() else []
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return []
+
+
+def handled_by_drkonqi(exe):
+    """KDE apps link KCrash and DrKonqi already asks the user about them."""
+    if not os.path.exists("/usr/lib/drkonqi") and not os.path.exists("/usr/lib/libexec/drkonqi"):
+        return False
+    try:
+        return "KF6Crash" in subprocess.run(["ldd", exe], capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def nice_name(exe):
+    """'firefox' -> 'Firefox' using the app's .desktop file when there is one."""
+    base = os.path.basename(exe)
+    for d in ("/usr/share/applications", os.path.expanduser("~/.local/share/applications")):
+        try:
+            for f in os.listdir(d):
+                if not f.endswith(".desktop"):
+                    continue
+                txt = open(os.path.join(d, f), errors="ignore").read()
+                m = re.search(r"^Exec=(\S+)", txt, re.M)
+                if m and os.path.basename(m.group(1)) == base:
+                    n = re.search(r"^Name=(.+)$", txt, re.M)
+                    if n:
+                        return n.group(1).strip()
+        except OSError:
+            pass
+    return base
+
+
+def notify(c):
+    exe = c.get("exe") or ""
+    app = nice_name(exe)
+    pid = str(c.get("pid", ""))
+    try:
+        act = subprocess.run(["notify-send", "--app-name=Devium", "--icon=dialog-warning",
+                              "--action=report=Send report", "--action=ignore=Not now",
+                              f"{app} closed unexpectedly",
+                              "Sorry about that. Sending a report helps the Devium team fix it."],
+                             capture_output=True, text=True, timeout=600).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return
+    if act == "report":
+        subprocess.Popen(["devium-tools", "report", "--crash", pid, exe], start_new_session=True)
+
+
+def watch():
+    seen = load_seen()
+    while True:
+        now = int(time.time())
+        for c in new_crashes(seen["since"]):
+            exe = c.get("exe") or ""
+            base = os.path.basename(exe)
+            if not exe or base in IGNORE or c.get("uid") not in (None, os.getuid()):
+                continue
+            if now - seen["apps"].get(base, 0) < QUIET_SECONDS or handled_by_drkonqi(exe):
+                continue
+            seen["apps"][base] = now
+            threading.Thread(target=notify, args=(c,), daemon=True).start()
+        seen["since"] = now
+        save_seen(seen)
+        time.sleep(20)
+
+
+if __name__ == "__main__":
+    if os.path.isdir("/run/archiso"):
+        sys.exit(0)
+    if "--test" in sys.argv:
+        notify({"exe": "/usr/bin/test-app", "pid": 0})
+        sys.exit(0)
+    if subprocess.run(["pgrep", "-u", str(os.getuid()), "-f", "crash-catcher$"],
+                      capture_output=True).stdout.count(b"\n") > 1:
+        sys.exit(0)   # already running
+    watch()

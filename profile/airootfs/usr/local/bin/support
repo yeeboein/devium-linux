@@ -12,6 +12,9 @@ TOPICS="devium updates apps files system network git python coding help"
 FILTER="${*,,}"
 [[ $FILTER == -h || $FILTER == --help ]] && FILTER=""
 
+# support dev: check your coding setup
+[[ $FILTER == dev ]] && exec /usr/lib/devium/support-dev
+
 # support learn: the 10-lesson terminal tutorial (beta15)
 if [[ $FILTER == learn || $FILTER == learn\ * ]]; then
     exec /usr/lib/devium/support-learn ${FILTER#learn}
@@ -65,6 +68,10 @@ cmd "support"                         "Show this list"
 cmd "support <word>"                  "Search the list (e.g. support zip)"
 cmd "support fix"                     "Check and repair common problems"
 cmd "support learn"                   "Learn the terminal: 10 short hands-on lessons"
+cmd "support dev"                     "Check your coding setup (Git, SSH, GitHub, languages, Docker)"
+cmd "snip / snip <name>"              "Your saved code snippets (snip add <name> to save one)"
+cmd "devium-tools coding"             "Databases, secret guard, local HTTPS, share a site, versions"
+cmd "devium-tools clean"              "Find what takes space and free it"
 cmd "Meta+Space  (devium-spotlight)"  "Search apps, settings, files; maths; > runs a command"
 cmd "devium-backup backup <drive>"    "Back up your home folder to a USB drive"
 cmd "devium-backup export <file>"     "Save your apps and settings to move to a new PC"
