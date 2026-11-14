@@ -126,6 +126,9 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] About Devium only on the live ISO
 - [x] yay ticked by default
 
+## beta13
+- [x] Dock: the Devium start button first, all apps behind it (start | apps | tray); login check keeps it that way
+
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website

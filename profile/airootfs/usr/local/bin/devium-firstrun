@@ -24,7 +24,7 @@ if [[ ! -d /run/archiso && -s $STATE/dock-launchers ]] && command -v qdbus6 >/de
     ) &
 fi
 
-# --- Dock safety net 2: Devium themes keep the start button in the middle of the dock
+# --- Dock safety net 2: Devium themes keep the start button first, apps behind it
 if [[ ! -d /run/archiso && -s $STATE/dock.js ]] && command -v qdbus6 >/dev/null; then
     (
         sleep 10
@@ -32,7 +32,7 @@ if [[ ! -d /run/archiso && -s $STATE/dock.js ]] && command -v qdbus6 >/dev/null;
         js="var wrong=false; panels().forEach(function(p){ if (p.location!='bottom') return; var ws=p.widgets(), k=-1, t=-1;
               for (var i=0; i<ws.length; i++) { if (ws[i].type=='org.kde.plasma.kickoff') k=i;
                                                  if (ws[i].type=='org.kde.plasma.icontasks') t=i; }
-              if (k>=0 && t>=0 && k<t) wrong=true; });
+              if (k>=0 && t>=0 && t<k) wrong=true; });
             if (wrong) { $fix }"
         qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$js" >/dev/null 2>&1
     ) &

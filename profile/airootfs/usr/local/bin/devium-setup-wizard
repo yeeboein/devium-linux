@@ -808,38 +808,23 @@ class Wizard(QWidget):
         else:
             dock_js = ("p.floating=true; p.alignment='center'; p.lengthMode='fit';"
                        "p.height=2*Math.ceil(gridUnit*3.4/2);")
-        # With ArchPill the pill shows time, battery, sound and network, so the dock keeps only
-        # the start button and app icons. Without ArchPill the dock keeps its tray and clock.
-        # Order: apps | start button | tray and clock (with ArchPill: just apps | start button).
-        # The task manager is never re-created (that loses its pinned apps); the start button and the
-        # right-hand widgets are moved by removing and adding them again after it.
+        # Order: Devium start button FIRST, then all your apps behind it, then tray and clock.
+        # With ArchPill the pill shows time, battery, sound and network, so the dock is just start | apps.
         right = [] if self.checked("archpill") else \
             ["org.kde.plasma.marginsseparator", "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock"]
-        moved = ["org.kde.plasma.kickoff", "org.kde.plasma.trash", "org.kde.plasma.marginsseparator",
-                 "org.kde.plasma.systemtray", "org.kde.plasma.digitalclock", "org.kde.plasma.panelspacer"]
+        icon = "" if self.checked("style-kde") else \
+            "k.currentConfigGroup=['General']; k.writeConfig('icon','/usr/share/devium/start-button.png'); k.reloadConfig();"
         js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';" + dock_js +
-              "p.widgets().forEach(function(w){ if (" + " || ".join(f"w.type=='{t}'" for t in moved) +
-              ") w.remove(); });"
-              "if (p.widgets('org.kde.plasma.icontasks').length==0) p.addWidget('org.kde.plasma.icontasks');"
-              "p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General'];"
-              "w.writeConfig('launchers','" + ",".join(launchers) + "'); w.writeConfig('iconSpacing','2');"
-              " w.reloadConfig(); });"
-              "var k=p.addWidget('org.kde.plasma.kickoff'); k.currentConfigGroup=['General'];"
-              "k.writeConfig('icon','/usr/share/devium/start-button.png'); k.reloadConfig();"
-              + "".join(f"p.addWidget('{t}');" for t in right) + " });")
-        if self.checked("style-kde"):
-            # Base KDE: KDE's usual order, start button on the left: start | apps | tray | clock
-            js = ("panels().forEach(function(p){ if (p.location!='bottom') return; p.hiding='" + hiding + "';" + dock_js +
-                  "p.widgets().forEach(function(w){ w.remove(); });"
-                  "var k=p.addWidget('org.kde.plasma.kickoff');"
-                  "var t=p.addWidget('org.kde.plasma.icontasks'); t.currentConfigGroup=['General'];"
-                  "t.writeConfig('launchers','" + ",".join(launchers) + "'); t.reloadConfig();"
-                  "p.addWidget('org.kde.plasma.marginsseparator'); p.addWidget('org.kde.plasma.systemtray');"
-                  "p.addWidget('org.kde.plasma.digitalclock'); });")
+              "p.widgets().forEach(function(w){ w.remove(); });"
+              "var k=p.addWidget('org.kde.plasma.kickoff');" + icon +
+              "var t=p.addWidget('org.kde.plasma.icontasks'); t.currentConfigGroup=['General'];"
+              "t.writeConfig('launchers','" + ",".join(launchers) + "'); t.writeConfig('iconSpacing','2');"
+              " t.reloadConfig();"
+              + "".join(f"p.addWidget('{w}');" for w in right) + " });")
         lines.append(f"(qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)} "
                      f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
-        # Remember the dock layout: at login, if the start button ever ends up back on the side
-        # (e.g. after a hard reboot), the same script puts it back in the middle.
+        # Remember the dock layout: at login, if the start button ever ends up behind the apps again
+        # (e.g. after a hard reboot), the same script puts it back in front.
         os.makedirs(CONFIG, exist_ok=True)
         dock_file = os.path.join(CONFIG, "dock.js")
         if self.checked("style-kde"):
