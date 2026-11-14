@@ -1,0 +1,33 @@
+name: Delete old releases
+
+# Run by hand (Actions > Delete old releases > Run workflow). Deletes every release except the one
+# you name, together with its tag. The ISOs of deleted releases can't be downloaded any more.
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: "Release to keep (everything else is deleted)"
+        required: true
+        default: "beta11"
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete every release except the one to keep
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: ${{ github.event.inputs.keep }}
+        run: |
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName --jq '.[].tagName' |
+          while read -r tag; do
+            if [[ "$tag" == "$KEEP" ]]; then
+              echo "Keeping $tag"
+            else
+              echo "Deleting $tag"
+              gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+            fi
+          done
