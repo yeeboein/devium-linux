@@ -112,6 +112,10 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] Devium Welcome no longer opens at login; updates live in Devium Tools (Meta+U)
 - [x] Installer upgrades in one step and refreshes mirrors and keys first (fixes "Package Manager error")
 - [x] README rewritten
+- [x] Devium Welcome removed (Devium Setup + Devium Tools cover it; driver tips moved to `support`)
+- [x] Fix: dock icons disappearing after a restart (restart goes through KDE so it saves first, Setup saves
+      the dock straight away, and a login check puts pinned apps back if they ever go missing)
+- [x] Devium Dark icons are a real copy, not a folder link
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

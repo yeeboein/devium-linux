@@ -34,7 +34,7 @@ TOP, BOTTOM = "#8fb4d8", "#b4b8e0"
 
 # glyph source -> icon names that use it.  si: = Simple Icons, bz: = Breeze, devium = Devium logo
 ICONS = {
-    "devium": ["devium", "devium-install", "devium-welcome", "devium-setup", "devium-tools",
+    "devium": ["devium", "devium-install", "devium-setup", "devium-tools",
                "devium-updater", "devium-about"],
     # browsers
     "si:firefox": ["firefox", "org.mozilla.firefox"],
@@ -254,8 +254,13 @@ def main():
         f.write(INDEX.format(name="Devium", inherits="breeze,Papirus,Adwaita,hicolor"))
     dark = os.path.join(OUT, "Devium-Dark")
     os.makedirs(dark, exist_ok=True)
-    if not os.path.islink(os.path.join(dark, "scalable")):
-        os.symlink("../Devium/scalable", os.path.join(dark, "scalable"))
+    # a real copy (not a folder symlink, which some icon caches don't follow after a restart)
+    import shutil
+    target = os.path.join(dark, "scalable")
+    if os.path.islink(target):
+        os.remove(target)
+    shutil.rmtree(target, ignore_errors=True)
+    shutil.copytree(os.path.join(OUT, "Devium/scalable"), target, symlinks=True)
     with open(os.path.join(dark, "index.theme"), "w") as f:
         f.write(INDEX.format(name="Devium Dark", inherits="breeze-dark,Papirus-Dark,Adwaita,hicolor"))
     total = sum(len(v) for v in ICONS.values())

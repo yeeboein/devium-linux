@@ -22,4 +22,6 @@ restart = box.addButton("Restart now", QMessageBox.ButtonRole.AcceptRole)
 box.addButton("Ignore", QMessageBox.ButtonRole.RejectRole)
 box.exec()
 if box.clickedButton() is restart:
-    subprocess.Popen(["systemctl", "reboot"])
+    # Restart through KDE so it saves the desktop (dock, pinned apps) first; plain reboot as a fallback
+    subprocess.Popen(["sh", "-c", "qdbus6 org.kde.Shutdown /Shutdown org.kde.Shutdown.logoutAndReboot "
+                      "|| qdbus6 org.kde.ksmserver /KSMServer logout 0 1 2 || systemctl reboot"])

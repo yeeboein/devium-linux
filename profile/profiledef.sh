@@ -21,7 +21,6 @@ file_permissions=(
   ["/etc/sudoers.d/10-devium-live"]="0:0:440"
   ["/root"]="0:0:750"
   ["/root/.gnupg"]="0:0:700"
-  ["/usr/local/bin/devium-welcome"]="0:0:755"
   ["/usr/local/bin/devium-update-manager"]="0:0:755"
   ["/usr/local/bin/devium-update-check"]="0:0:755"
   ["/usr/local/bin/devium-install"]="0:0:755"

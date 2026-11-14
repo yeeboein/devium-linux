@@ -103,7 +103,7 @@ Try everything before installing: Wi-Fi, sound, touchpad, screen brightness.
 
 You need **internet** for the installer (connect to Wi-Fi from the network icon at the bottom right).
 
-1. Double-click **Install Devium** on the desktop (or Welcome → **Install Devium**).
+1. Double-click **Install Devium** on the desktop.
 2. A terminal window opens. Read the notes, type **y** and press **Enter**.
 3. Arch's installer menu appears. Move with the **arrow keys**, select with **Enter**, go back with **Esc**.
 
@@ -135,11 +135,10 @@ You need **internet** for the installer (connect to Wi-Fi from the network icon 
 On your first login:
 - **ArchPill** sets itself up (move the mouse to the top-centre of the screen).
 - **VS Code** gets its Python extension in the background.
-- **Devium Welcome** opens. Good first steps:
-  1. **Devium Setup** – pick your apps, tools, games and theme.
-  2. **System → Restore points** – set up Timeshift, so you can undo a bad update.
-  3. **Drivers** – install anything suggested for your computer (e.g. NVIDIA).
-  4. **Update Manager** (Meta+U) – install the latest updates.
+- **Devium Setup** opens: pick your browser, editor, languages, games and look.
+- Afterwards, **Devium Tools** (Meta+T) is where you look after your computer:
+  updates with undo (Meta+U), App Manager, Make it faster, battery, privacy and help.
+- Tip: open the **Timeshift** app once to turn on restore points, so you can undo a bad update.
 
 ### Everyday tips
 
@@ -149,8 +148,8 @@ On your first login:
 | Screenshot an area | **Meta+Shift+S** – it's copied, just paste it |
 | Get apps | **Discover** (the shopping bag icon) |
 | Update everything | **Update Manager** or type `update` in a terminal |
-| Start a Python project | Welcome → **Coding → New Python project** |
-| See all shortcuts | Welcome → **Shortcuts** |
+| Start a Python project | In a terminal: `devium-new-project myapp` |
+| See all commands | In a terminal: `support` |
 
 *Meta = the Windows key.*
 
@@ -160,9 +159,9 @@ On your first login:
 
 | Problem | Fix |
 |---|---|
-| Black screen after the boot menu | Choose **safe graphics** in the boot menu. On NVIDIA laptops, install the NVIDIA driver from Welcome → Drivers afterwards. |
+| Black screen after the boot menu | Choose **safe graphics** in the boot menu. On NVIDIA laptops, install the NVIDIA driver afterwards (type `support nvidia` to see the command). |
 | USB stick doesn't show in the boot menu | Turn off **Secure Boot** and **Fast Boot** in the BIOS. Re-flash the stick with balenaEtcher. |
-| No Wi-Fi | Click the network icon (bottom right). Broadcom card? Welcome → **Drivers**. Or use an Ethernet cable / phone USB tethering. |
+| No Wi-Fi | Click the network icon (bottom right). Broadcom card? Type `support broadcom`. Or use an Ethernet cable / phone USB tethering. |
 | VM is very slow or the screen flickers | Give it 4 GB RAM and 2 CPUs, turn on 3D acceleration (VirtualBox: VMSVGA). |
 | Installer says "No internet connection" | Connect to Wi-Fi first, then start the installer again. |
 | Installer shows an error | Take a photo/screenshot of the message and [open an issue](https://github.com/yeeboein/devium-linux/issues). Nothing on the disk changes until you choose **Install**. |

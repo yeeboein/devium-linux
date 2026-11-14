@@ -302,7 +302,7 @@ class Wizard(QWidget):
             intro = ("Let's set up your computer. On the next pages, pick the apps and tools you want.\n"
                      "Devium only installs what you choose, so it stays fast and light.\n\n"
                      "Not sure? Just keep clicking Next: good choices are already selected.\n"
-                     "You can change everything later from Devium Welcome.\n\n")
+                     "You can change everything later: just open Devium Setup again.\n\n")
         txt = label(intro + f"Free disk space: {free_mb() / 1024:.1f} GB")
         txt.setAlignment(Qt.AlignmentFlag.AlignCenter)
         l.addWidget(txt)
@@ -576,7 +576,7 @@ class Wizard(QWidget):
         l.addWidget(self.done_text)
         row = QHBoxLayout()
         row.addStretch(1)
-        for text, icon, cmd in [("Devium Welcome", "devium", ["devium-welcome"]),
+        for text, icon, cmd in [("Devium Tools", "devium", ["devium-tools"]),
                                 ("Get more apps", "plasmadiscover", ["plasma-discover"]),
                                 ("Updates", "system-software-update", ["devium-update-manager"])]:
             b = QPushButton(QIcon.fromTheme(icon), text)
@@ -825,6 +825,12 @@ class Wizard(QWidget):
                   "p.addWidget('org.kde.plasma.digitalclock'); });")
         lines.append(f"(qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)} "
                      f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
+        # Remember the pinned apps (the login check puts them back if they ever go missing), then restart
+        # the panel cleanly so Plasma writes the new dock to disk now, not only at logout.
+        lines.append(f"mkdir -p {q(CONFIG)} && printf '%s\\n' {q(','.join(launchers))} > {q(os.path.join(CONFIG, 'dock-launchers'))}")
+        if not XFCE:
+            lines.append("sleep 2; systemctl --user restart plasma-plasmashell.service 2>/dev/null || "
+                         "(kquitapp6 plasmashell; sleep 1; setsid kstart plasmashell >/dev/null 2>&1 &); sleep 4")
         # theme (the Devium themes come with the big floating dock; Base KDE gets KDE's normal panel)
         light = self.checked("theme-light")
         if self.checked("style-kde"):
@@ -1036,7 +1042,7 @@ class Wizard(QWidget):
         if code in (126, 127) and self.proc.program() == "pkexec":
             self.queue = []
             QMessageBox.information(self, "Cancelled", "Nothing was installed. You can run Devium Setup "
-                                    "again any time from Devium Welcome.")
+                                    "again any time from the app menu.")
             self.go(self.stack.indexOf(self.summary_w))
             return
         if code != 0:
@@ -1051,7 +1057,7 @@ class Wizard(QWidget):
         msg = "Everything you picked is installed."
         if getattr(self, "failed", 0):
             msg = ("Most things are installed, but some steps had problems.\n"
-                   "Click Show details on the previous page, or try again later from Devium Welcome.")
+                   "Click Show details on the previous page, or try again later from Devium Setup.")
         if self.p["groups"] or self.p["shell"]["id"] != "zsh":
             msg += "\n\nLog out and back in to finish (for your new shell / Docker access)."
         self.done_text.setText(msg)

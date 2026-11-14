@@ -11,6 +11,19 @@ LOG="$STATE/firstrun.log"
 exec >>"$LOG" 2>&1
 echo "=== devium-firstrun $(date)"
 
+# --- Dock safety net: if the dock's pinned apps went missing (e.g. after a hard reboot), restore them
+if [[ ! -d /run/archiso && -s $STATE/dock-launchers ]] && command -v qdbus6 >/dev/null; then
+    (
+        sleep 8
+        launchers=$(head -1 "$STATE/dock-launchers")
+        js="panels().forEach(function(p){ if (p.location!='bottom') return;
+              p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General'];
+                if (String(w.readConfig('launchers','')).length==0) {
+                  w.writeConfig('launchers','$launchers'); w.reloadConfig(); } }); });"
+        qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$js" >/dev/null 2>&1
+    ) &
+fi
+
 # --- beta10 fix: its custom window buttons didn't show up, so windows couldn't be closed.
 #     Put KDE's normal title bar back (once).
 if grep -q "__aurorae__svg__Devium" "${XDG_CONFIG_HOME:-$HOME/.config}/kwinrc" 2>/dev/null; then
@@ -37,7 +50,6 @@ if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-done ]]; then
     sc "<Super><Shift>s" "xfce4-screenshooter -r -c"
     sc "<Super>u" "devium-tools updates"
     sc "<Super>t" "devium-tools"
-    sc "<Super>F1" "devium-welcome"
     sc "<Super>e" "exo-open --launch FileManager"
     sc "<Primary><Alt>t" "exo-open --launch TerminalEmulator"
     touch "$STATE/xfce-done"

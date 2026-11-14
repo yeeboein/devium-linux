@@ -48,7 +48,7 @@ snapshot() {
         timeshift --create --scripted --comments "${1:-Devium restore point}" --tags O \
             || echo "Snapshot failed - continuing."
     else
-        echo "(Timeshift is not set up yet, skipping restore point. Set it up in Devium Welcome > System.)"
+        echo "(Timeshift is not set up yet, skipping restore point. Open the Timeshift app once to set it up.)"
     fi
 }
 

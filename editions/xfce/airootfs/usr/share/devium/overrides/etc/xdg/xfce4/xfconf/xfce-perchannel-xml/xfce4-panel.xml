@@ -43,7 +43,7 @@
     <property name="plugin-4" type="string" value="launcher"><property name="items" type="array"><value type="string" value="devium-terminal.desktop"/></property></property>
     <property name="plugin-5" type="string" value="launcher"><property name="items" type="array"><value type="string" value="org.xfce.mousepad.desktop"/></property></property>
     <property name="plugin-6" type="string" value="launcher"><property name="items" type="array"><value type="string" value="devium-snip.desktop"/></property></property>
-    <property name="plugin-7" type="string" value="launcher"><property name="items" type="array"><value type="string" value="devium-welcome.desktop"/></property></property>
+    <property name="plugin-7" type="string" value="launcher"><property name="items" type="array"><value type="string" value="devium-tools.desktop"/></property></property>
     <property name="plugin-20" type="string" value="separator"><property name="style" type="uint" value="0"/></property>
     <property name="plugin-21" type="string" value="tasklist"><property name="show-labels" type="bool" value="false"/><property name="flat-buttons" type="bool" value="true"/><property name="show-handle" type="bool" value="false"/></property>
     <property name="plugin-22" type="string" value="separator"/>

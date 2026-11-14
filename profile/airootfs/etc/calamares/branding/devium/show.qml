@@ -24,7 +24,7 @@ Presentation {
     Slide {
         Text { anchors.centerIn: parent; width: parent.width * 0.8; horizontalAlignment: Text.AlignHCenter
                wrapMode: Text.WordWrap; color: "#dde3ea"; font.pixelSize: 18
-               text: "<b>Handy shortcuts</b><br><br>Meta+Shift+S: snip part of the screen<br>Meta+U: updates<br>Meta+F1: Devium Welcome<br>Type <b>support</b> in a terminal for helpful commands" }
+               text: "<b>Handy shortcuts</b><br><br>Meta+Shift+S: snip part of the screen<br>Meta+U: updates<br>Meta+T: Devium Tools<br>Type <b>support</b> in a terminal for helpful commands" }
     }
     Slide {
         Text { anchors.centerIn: parent; width: parent.width * 0.8; horizontalAlignment: Text.AlignHCenter

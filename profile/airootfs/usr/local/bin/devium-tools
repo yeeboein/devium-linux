@@ -245,7 +245,8 @@ class HomePage(Page):
              lambda: ui.launch("devium-updater")),
             (T("Make it faster"), "Safe tweaks for speed and memory", "speedometer", lambda: win.go("speed")),
             (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
-            ("Devium Welcome", "Tips, shortcuts and first steps", "help-about", lambda: ui.launch("devium-welcome")),
+            ("Devium Setup again", "Add or remove apps any time", "system-software-install",
+             lambda: ui.launch("devium-setup-wizard")),
             ("About Devium", "Version, credits and links", "devium", lambda: ui.launch("devium-about")),
         ]
         for i, (name, desc, icon, act) in enumerate(tiles):

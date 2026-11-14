@@ -5,9 +5,6 @@ FullScreenScreenShot=Shift+Print
 RecordRegion=Meta+Shift+R
 _launch=Print
 
-[services][devium-welcome.desktop]
-_launch=Meta+F1
-
 [services][devium-tools.desktop]
 _launch=Meta+T
 
