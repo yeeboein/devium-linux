@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Id": "devium-snap-assist",
+        "Name": "Devium Snap Assist",
+        "Description": "Snap a window to one side, then pick (or open) another window for the other side.",
+        "Authors": [ { "Name": "Devium" } ],
+        "License": "GPL-3.0-or-later",
+        "Version": "1.0",
+        "Website": "https://github.com/yeeboein/devium-linux",
+        "EnabledByDefault": true
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPackageStructure": "KWin/Script"
+}

@@ -885,6 +885,9 @@ class AccessibilityPage(Page):
                       kread("kaccessrc", "Keyboard", "StickyKeys", "false") == "true", self.sticky)
             self.make(T("Reduce motion"), "Turns off animations.",
                       kread("kdeglobals", "KDE", "AnimationDurationFactor", "1") == "0", self.motion)
+            self.make("Snap Assist", "Snap a window to one side (drag it to the edge, or Meta + arrow), then pick "
+                      "or open the window for the other side.",
+                      kread("kwinrc", "Plugins", "devium-snap-assistEnabled", "true") != "false", self.snap)
         self.finish()
 
     def make(self, name, desc, state, fn):
@@ -918,6 +921,10 @@ class AccessibilityPage(Page):
         kwrite("kaccessrc", "Keyboard", "StickyKeys", "true" if on else "false")
         subprocess.run("qdbus6 org.kde.kaccess /kaccess reloadConfig", shell=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def snap(self, on):
+        kwrite("kwinrc", "Plugins", "devium-snap-assistEnabled", "true" if on else "false")
+        kwin_reconfigure()
 
     def motion(self, on):
         kwrite("kdeglobals", "KDE", "AnimationDurationFactor", 0 if on else 1)

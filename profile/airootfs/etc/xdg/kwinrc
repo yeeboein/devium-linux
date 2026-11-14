@@ -1,5 +1,7 @@
 # Light on old laptops: no blur/translucency, fast animations.
 [Plugins]
+# Devium Snap Assist: snap a window to one side, then pick or open the window for the other side
+devium-snap-assistEnabled=true
 blurEnabled=false
 contrastEnabled=false
 slidingpopupsEnabled=false

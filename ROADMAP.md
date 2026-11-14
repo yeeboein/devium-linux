@@ -142,6 +142,10 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] If the installer crashes, its log is saved to the Desktop (devium-installer-log.txt)
 - [x] Live USB: Wi-Fi screen first (skips itself when online); Install checks for internet first too
 
+## beta15
+- [x] Snap Assist (KDE): snap a window to one side, then pick or open the window for the other side
+      (on by default; switch in Devium Tools > Accessibility). Hyprland tiles windows like this already.
+
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website
