@@ -1,5 +1,15 @@
 # Devium beta13
 
+**New: a Hyprland edition!** Three ISOs now: KDE Plasma, Xfce and Hyprland.
+
+## Hyprland edition (new)
+- A tiling desktop in the Devium colours: windows arrange themselves, with soft corners and a gradient border.
+- Waybar on top with the Devium logo as the start button, fuzzel to open apps, mako notifications,
+  hyprlock lock screen, kitty terminal and Thunar for files.
+- Beginner-friendly shortcuts: SUPER+Space apps, SUPER+Return terminal, SUPER+Q close, SUPER+T Devium Tools.
+  **SUPER + /** shows every shortcut.
+- Same installer, Devium Configure and Devium Tools as the other editions.
+
 ## Dock
 - **The Devium start button comes first, all your apps behind it** (start | apps | tray). A login check keeps it
   that way, even after a restart.
