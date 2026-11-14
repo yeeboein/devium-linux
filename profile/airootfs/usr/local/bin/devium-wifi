@@ -1,0 +1,191 @@
+#!/usr/bin/env python3
+"""Devium Wi-Fi: the first screen on the live USB. Get online before installing.
+
+  devium-wifi                  show the Wi-Fi screen (closes by itself if you're already online)
+  devium-wifi --then CMD...    run CMD afterwards (e.g. devium-about), whether you connected or skipped
+  devium-wifi --needed         only show it when there's no internet; exit 0 if online, 1 if skipped
+"""
+import os
+import subprocess
+import sys
+
+sys.path.insert(0, "/usr/lib/devium")
+
+from PyQt6.QtCore import QProcess, Qt, QTimer
+from PyQt6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+                             QPushButton, QVBoxLayout, QWidget)
+
+import devium_ui as ui
+from devium_i18n import T
+
+
+def online():
+    try:
+        out = subprocess.run(["nmcli", "-t", "networking", "connectivity", "check"],
+                             capture_output=True, text=True, timeout=8).stdout.strip()
+        if out == "full":
+            return True
+    except Exception:
+        pass
+    return subprocess.run(["curl", "-fsI", "-m", "6", "https://archlinux.org"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+
+def bars(signal):
+    s = int(signal or 0)
+    return "▂▄▆█" if s >= 75 else "▂▄▆ " if s >= 50 else "▂▄  " if s >= 25 else "▂   "
+
+
+class WiFi(QWidget):
+    def __init__(self, then):
+        super().__init__()
+        self.then = then
+        self.connected_ok = False
+        self.setWindowTitle(T("Connect to Wi-Fi"))
+        self.setWindowIcon(ui.app_icon())
+        self.resize(560, 600)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(26, 22, 26, 20)
+        lay.addWidget(ui.header(T("Connect to Wi-Fi"),
+                                T("Devium needs the internet to install. Pick your network below.")))
+        self.status = QLabel(T("Looking for networks…"))
+        self.status.setObjectName("subtitle")
+        self.status.setWordWrap(True)
+        lay.addWidget(self.status)
+        self.list = QListWidget()
+        self.list.setStyleSheet("QListWidget::item { padding: 10px 8px; }")
+        self.list.itemSelectionChanged.connect(self.picked)
+        self.list.itemDoubleClicked.connect(lambda _i: self.connect_wifi())
+        lay.addWidget(self.list, 1)
+        self.password = QLineEdit()
+        self.password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password.setPlaceholderText(T("Wi-Fi password"))
+        self.password.setMinimumHeight(38)
+        self.password.returnPressed.connect(self.connect_wifi)
+        self.password.hide()
+        lay.addWidget(self.password)
+        row = QHBoxLayout()
+        self.rescan_btn = QPushButton(T("Refresh"))
+        self.rescan_btn.clicked.connect(self.scan)
+        self.skip_btn = QPushButton(T("Skip (I'm using a cable)"))
+        self.skip_btn.clicked.connect(self.done)
+        self.go_btn = QPushButton(T("Connect"))
+        self.go_btn.setObjectName("primary")
+        self.go_btn.setEnabled(False)
+        self.go_btn.clicked.connect(self.connect_wifi)
+        row.addWidget(self.rescan_btn)
+        row.addStretch(1)
+        row.addWidget(self.skip_btn)
+        row.addWidget(self.go_btn)
+        lay.addLayout(row)
+        self.proc = None
+        QTimer.singleShot(100, self.start)
+
+    def start(self):
+        if online():
+            self.status.setText(T("You're online. Opening Devium…"))
+            self.connected_ok = True
+            QTimer.singleShot(900, self.done)
+            return
+        self.scan()
+
+    def scan(self):
+        self.list.clear()
+        self.status.setText(T("Looking for networks…"))
+        p = QProcess(self)
+        p.finished.connect(lambda *_: self.got(bytes(p.readAllStandardOutput()).decode(errors="replace")))
+        p.start("nmcli", ["-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "dev", "wifi", "list", "--rescan", "yes"])
+        self.proc = p
+
+    def got(self, out):
+        seen = {}
+        for line in out.splitlines():
+            # fields are ':'-separated; SSIDs with ':' are escaped as '\:'
+            parts = line.replace("\\:", "\0").split(":")
+            if len(parts) < 4:
+                continue
+            inuse, ssid, signal, sec = (x.replace("\0", ":") for x in parts[:4])
+            if not ssid:
+                continue
+            if ssid not in seen or int(signal or 0) > int(seen[ssid][0] or 0):
+                seen[ssid] = (signal, sec, inuse == "*")
+        for ssid, (signal, sec, active) in sorted(seen.items(), key=lambda kv: -int(kv[1][0] or 0)):
+            lock = "🔒" if sec and sec != "--" else "  "
+            it = QListWidgetItem(f"{bars(signal)}   {ssid}   {lock}" + ("   ✓" if active else ""))
+            it.setData(Qt.ItemDataRole.UserRole, (ssid, bool(sec and sec != "--")))
+            self.list.addItem(it)
+        if self.list.count():
+            self.status.setText(T("Pick your network, then press Connect."))
+        else:
+            self.status.setText(T("No Wi-Fi networks found. Plug in a network cable, or press Refresh."))
+
+    def picked(self):
+        items = self.list.selectedItems()
+        self.go_btn.setEnabled(bool(items))
+        if items:
+            ssid, secured = items[0].data(Qt.ItemDataRole.UserRole)
+            self.password.setVisible(secured)
+            self.password.clear()
+            if secured:
+                self.password.setFocus()
+
+    def connect_wifi(self):
+        items = self.list.selectedItems()
+        if not items:
+            return
+        ssid, secured = items[0].data(Qt.ItemDataRole.UserRole)
+        if secured and not self.password.text():
+            self.status.setText(T("Type the Wi-Fi password first."))
+            self.password.setFocus()
+            return
+        self.status.setText(T("Connecting to") + f" {ssid}…")
+        for w in (self.go_btn, self.rescan_btn, self.list, self.password):
+            w.setEnabled(False)
+        args = ["dev", "wifi", "connect", ssid]
+        if secured:
+            args += ["password", self.password.text()]
+        p = QProcess(self)
+        p.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        p.finished.connect(lambda code, _s: self.connected(code, bytes(p.readAllStandardOutput()).decode(errors="replace")))
+        p.start("nmcli", args)
+        self.proc = p
+
+    def connected(self, code, out):
+        for w in (self.go_btn, self.rescan_btn, self.list, self.password):
+            w.setEnabled(True)
+        if code == 0:
+            self.status.setText(T("Connected! Opening Devium…"))
+            self.connected_ok = True
+            QTimer.singleShot(1200, self.done)
+        elif "Secrets were required" in out or "password" in out.lower():
+            self.status.setText(T("That password didn't work. Try again."))
+            self.password.clear()
+            self.password.setFocus()
+        else:
+            self.status.setText(T("Couldn't connect.") + " " + out.strip().splitlines()[-1][:120] if out.strip()
+                                else T("Couldn't connect."))
+
+    def done(self):
+        if self.then:
+            subprocess.Popen(self.then, start_new_session=True)
+        QApplication.instance().exit(0 if self.connected_ok else 1)
+
+
+def main():
+    args = sys.argv[1:]
+    then = args[args.index("--then") + 1:] if "--then" in args else []
+    if "--needed" in args and online():
+        if then:
+            subprocess.Popen(then, start_new_session=True)
+        return 0
+    app = QApplication(sys.argv)
+    app.setApplicationName("Devium Wi-Fi")
+    app.setDesktopFileName("devium-wifi")
+    ui.style_app(app)
+    w = WiFi(then)
+    w.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

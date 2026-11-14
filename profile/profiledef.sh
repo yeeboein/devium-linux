@@ -31,6 +31,7 @@ file_permissions=(
   ["/usr/local/bin/devium-setup-wizard"]="0:0:755"
   ["/usr/local/bin/devium-updater"]="0:0:755"
   ["/usr/local/bin/devium-tools"]="0:0:755"
+  ["/usr/local/bin/devium-wifi"]="0:0:755"
   ["/usr/local/bin/devium-ram"]="0:0:755"
   ["/usr/lib/devium/lowram-user"]="0:0:755"
   ["/usr/lib/devium/devium-installed-check"]="0:0:755"

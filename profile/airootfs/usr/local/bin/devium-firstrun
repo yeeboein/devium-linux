@@ -86,7 +86,8 @@ if [[ -d /run/archiso ]]; then
     fi
     # Already installed? (the computer started from the ISO / USB again after installing)
     if /usr/lib/devium/devium-installed-check; then exit 0; fi
-    devium-about &
+    # First: get online (Wi-Fi), then About Devium with the Install button
+    devium-wifi --then devium-about &
     exit 0
 fi
 
