@@ -124,6 +124,15 @@ DEVIUM_REF=${DEVIUM_REF:-$repo_ref}
 DEVIUM_EDITION=$EDITION
 EOF
 
+# 4b. "What's new" notes for this version (devium-whats-new), and the list of Devium's own packages
+#     (devium-backup leaves those out when you move to a new PC: the new PC already has them).
+if [[ -f $HERE/docs/releases/${DEVIUM_VERSION:-none}.md ]]; then
+    install -Dm644 "$HERE/docs/releases/$DEVIUM_VERSION.md" "$STAGE/airootfs/usr/share/devium/whats-new.md"
+fi
+mkdir -p "$STAGE/airootfs/usr/share/devium"
+cat "$STAGE/packages.x86_64" "$STAGE/airootfs/usr/share/devium/install-packages.txt" 2>/dev/null \
+    | sed -e 's/#.*//' -e 's/[[:space:]]//g' | grep -v '^$' | sort -u > "$STAGE/airootfs/usr/share/devium/base-packages.txt"
+
 # 4a. Report a problem (Devium Tools) sends to a Discord webhook. The URL is a GitHub secret
 #     (DEVIUM_REPORT_WEBHOOK), never stored in the repository. Without it, reports open a GitHub issue.
 mkdir -p "$STAGE/airootfs/etc/devium"

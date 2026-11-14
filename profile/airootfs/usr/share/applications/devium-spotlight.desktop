@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Devium Spotlight
+Comment=Search apps, settings and files, do quick maths, run commands (Meta+Space)
+Exec=devium-spotlight
+Icon=devium
+Terminal=false
+Categories=Utility;
+Keywords=search;find;launcher;calculator;spotlight;
+X-KDE-Shortcuts=Meta+Space

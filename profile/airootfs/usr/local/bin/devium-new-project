@@ -1,15 +1,48 @@
 #!/usr/bin/env bash
-# Create a ready-to-code Python project and open it in VS Code.
-#   devium-new-project my-app        -> ~/Projects/my-app
+# Start a ready-to-run project in ~/Projects, with Git, a README and the right .gitignore.
+#
+#   devium-new-project my-app                       Python (default)
+#   devium-new-project my-site --template web       plain HTML, CSS and JavaScript
+#   devium-new-project NAME --template TYPE [--no-open]
+#
+# Types: python, web, node, flask, rust, go, cpp, c, java, discord-bot
 set -euo pipefail
-name="${1:?usage: devium-new-project <name>}"
+
+usage() { sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+name=""; tpl=python; open=1
+while (( $# )); do
+    case "$1" in
+        -t|--template) tpl="${2:-}"; shift ;;
+        --template=*)  tpl="${1#*=}" ;;
+        --no-open)     open=0 ;;
+        -h|--help)     usage ;;
+        -*)            echo "Unknown option $1"; usage 1 ;;
+        *)             name="$1" ;;
+    esac
+    shift
+done
+[[ -n $name ]] || usage 1
 [[ $name =~ ^[A-Za-z0-9._-]+$ ]] || { echo "Use letters, numbers, - _ . only"; exit 1; }
 dir="${PROJECTS_DIR:-$HOME/Projects}/$name"
 [[ -e $dir ]] && { echo "$dir already exists"; exit 1; }
+mod="${name//[-.]/_}"                      # a name that works as a Python/Go/Rust identifier
 mkdir -p "$dir"
 cd "$dir"
+echo "### Creating a $tpl project in $dir"
 
-cat > main.py <<PY
+need() {   # warn (don't fail) when a language isn't installed yet
+    command -v "$1" >/dev/null || echo "Note: $1 isn't installed yet. Add $2 in Devium Configure > Languages."
+}
+readme() {   # readme "how to run" lines...
+    { printf '# %s\n\nCreated with Devium (%s template).\n\n## Run it\n\n```bash\n' "$name" "$tpl"
+      printf '%s\n' "$@"; printf '```\n'; } > README.md
+}
+main_file=""
+
+case "$tpl" in
+python)
+    need python Python
+    cat > main.py <<PY
 """$name - created with Devium."""
 
 
@@ -20,7 +53,7 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 PY
-cat > test_main.py <<'PY'
+    cat > test_main.py <<'PY'
 from main import main
 
 
@@ -28,21 +61,213 @@ def test_main(capsys):
     main()
     assert "Hello" in capsys.readouterr().out
 PY
-cat > .gitignore <<'GI'
-.venv/
-__pycache__/
-*.pyc
-.pytest_cache/
-.ruff_cache/
-GI
-printf '# %s\n\nRun it:\n\n    source .venv/bin/activate\n    python main.py\n    pytest\n' "$name" > README.md
-: > requirements.txt
+    printf '.venv/\n__pycache__/\n*.pyc\n.pytest_cache/\n.ruff_cache/\n' > .gitignore
+    : > requirements.txt
+    readme "source .venv/bin/activate" "python main.py" "pytest"
+    # --system-site-packages: numpy, pandas, requests... from Devium work right away.
+    python -m venv --system-site-packages .venv 2>/dev/null || true
+    mkdir -p .vscode
+    printf '{\n    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"\n}\n' > .vscode/settings.json
+    main_file=main.py ;;
+flask)
+    need python Python
+    mkdir -p templates static
+    cat > app.py <<'PY'
+from flask import Flask, render_template
 
-# --system-site-packages: numpy, pandas, requests... from Devium work right away.
-python -m venv --system-site-packages .venv
-git init -q && git add -A && git commit -qm "Start $name" 2>/dev/null || true
-mkdir -p .vscode
-printf '{\n    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"\n}\n' > .vscode/settings.json
+app = Flask(__name__)
 
-echo "Created $dir"
-command -v code >/dev/null && (code "$dir" main.py >/dev/null 2>&1 &)
+
+@app.route("/")
+def home():
+    return render_template("index.html", title="It works!")
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+PY
+    cat > templates/index.html <<'HTML'
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{ title }}</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><main><h1>{{ title }}</h1><p>Edit <code>templates/index.html</code> and refresh.</p></main></body>
+</html>
+HTML
+    printf 'body { font-family: system-ui, sans-serif; background: #2b323b; color: #eef2f7; }\nmain { max-width: 40rem; margin: 15vh auto; }\nh1 { color: #8fb4d8; }\n' > static/style.css
+    echo flask > requirements.txt
+    printf '.venv/\n__pycache__/\n*.pyc\ninstance/\n' > .gitignore
+    readme "python -m venv .venv && source .venv/bin/activate" "pip install -r requirements.txt" \
+           "flask --app app run --debug     # then open http://localhost:5000"
+    python -m venv .venv 2>/dev/null && .venv/bin/pip install -q flask 2>/dev/null || true
+    main_file=app.py ;;
+discord-bot)
+    need python Python
+    cat > bot.py <<'PY'
+"""A small Discord bot. Put your bot token in .env (DISCORD_TOKEN=...), then run: python bot.py
+Make a bot at https://discord.com/developers/applications and turn on the Message Content intent."""
+import os
+
+import discord
+from discord import app_commands
+from dotenv import load_dotenv
+
+load_dotenv()
+intents = discord.Intents.default()
+client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
+
+
+@tree.command(name="hello", description="Say hello")
+async def hello(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Hello, {interaction.user.display_name}! 👋")
+
+
+@client.event
+async def on_ready():
+    await tree.sync()
+    print(f"Logged in as {client.user}")
+
+
+client.run(os.environ["DISCORD_TOKEN"])
+PY
+    printf 'discord.py\npython-dotenv\n' > requirements.txt
+    printf 'DISCORD_TOKEN=paste-your-bot-token-here\n' > .env.example
+    printf '.venv/\n__pycache__/\n.env\n' > .gitignore
+    readme "python -m venv .venv && source .venv/bin/activate" "pip install -r requirements.txt" \
+           "cp .env.example .env    # then put your bot token in .env" "python bot.py"
+    python -m venv .venv 2>/dev/null && .venv/bin/pip install -q -r requirements.txt 2>/dev/null || true
+    main_file=bot.py ;;
+web)
+    cat > index.html <<HTML
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>$name</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>$name</h1>
+    <p>Edit <code>index.html</code>, <code>style.css</code> and <code>script.js</code>.</p>
+    <button id="btn">Click me</button>
+    <p id="out"></p>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
+HTML
+    cat > style.css <<'CSS'
+:root { --bg: #2b323b; --ink: #eef2f7; --accent: #8fb4d8; --accent2: #b4b8e0; }
+body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+main { max-width: 40rem; margin: 15vh auto; padding: 0 1rem; }
+h1 { color: var(--accent); }
+button { border: 0; border-radius: 10px; padding: .7rem 1.2rem; font-weight: 600;
+         background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #1b2026; cursor: pointer; }
+CSS
+    cat > script.js <<'JS'
+let clicks = 0;
+document.getElementById("btn").addEventListener("click", () => {
+  clicks++;
+  document.getElementById("out").textContent = `Clicked ${clicks} time${clicks === 1 ? "" : "s"}.`;
+});
+JS
+    printf '.DS_Store\nnode_modules/\n' > .gitignore
+    readme "python -m http.server 8000     # then open http://localhost:8000"
+    main_file=index.html ;;
+node)
+    need node Node.js
+    cat > package.json <<JSON
+{
+  "name": "$(echo "$name" | tr 'A-Z' 'a-z')",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "node --test"
+  }
+}
+JSON
+    cat > index.js <<'JS'
+import { createServer } from "node:http";
+
+const port = process.env.PORT || 3000;
+createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+  res.end("Hello from Node on Devium!\n");
+}).listen(port, () => console.log(`Running on http://localhost:${port}`));
+JS
+    cat > index.test.js <<'JS'
+import { test } from "node:test";
+import assert from "node:assert";
+
+test("maths still works", () => assert.strictEqual(1 + 1, 2));
+JS
+    printf 'node_modules/\n.env\n' > .gitignore
+    readme "npm run dev      # restarts when you save; open http://localhost:3000" "npm test"
+    main_file=index.js ;;
+rust)
+    need cargo Rust
+    if command -v cargo >/dev/null; then
+        cd .. && rmdir "$name" && cargo new -q "$name" && cd "$name"
+    else
+        mkdir -p src
+        printf '[package]\nname = "%s"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\n' "$mod" > Cargo.toml
+        printf 'fn main() {\n    println!("Hello from %s!");\n}\n' "$name" > src/main.rs
+        printf '/target\n' > .gitignore
+    fi
+    readme "cargo run" "cargo test"
+    main_file=src/main.rs ;;
+go)
+    need go Go
+    printf 'module %s\n\ngo 1.22\n' "$mod" > go.mod
+    printf 'package main\n\nimport "fmt"\n\nfunc main() {\n\tfmt.Println("Hello from %s!")\n}\n' "$name" > main.go
+    printf '/%s\n' "$name" > .gitignore
+    readme "go run ." "go build && ./$name"
+    main_file=main.go ;;
+cpp)
+    need cmake "C/C++"
+    mkdir -p src
+    cat > CMakeLists.txt <<CM
+cmake_minimum_required(VERSION 3.20)
+project($mod CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_executable($mod src/main.cpp)
+CM
+    printf '#include <iostream>\n\nint main() {\n    std::cout << "Hello from %s!\\n";\n}\n' "$name" > src/main.cpp
+    printf 'build/\n.cache/\n' > .gitignore
+    readme "cmake -B build && cmake --build build" "./build/$mod"
+    main_file=src/main.cpp ;;
+c)
+    need gcc "C/C++"
+    printf '#include <stdio.h>\n\nint main(void) {\n    printf("Hello from %s!\\n");\n    return 0;\n}\n' "$name" > main.c
+    printf 'CFLAGS = -Wall -Wextra -O2 -g\n\n%s: main.c\n\t$(CC) $(CFLAGS) -o $@ $<\n\nclean:\n\trm -f %s\n' "$mod" "$mod" > Makefile
+    printf '%s\n*.o\n' "$mod" > .gitignore
+    readme "make" "./$mod"
+    main_file=main.c ;;
+java)
+    need javac Java
+    mkdir -p src
+    printf 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from %s!");\n    }\n}\n' "$name" > src/Main.java
+    printf 'out/\n*.class\n' > .gitignore
+    readme "javac -d out src/Main.java" "java -cp out Main"
+    main_file=src/Main.java ;;
+*)
+    cd .. && rmdir "$name"
+    echo "Unknown type: $tpl"; usage 1 ;;
+esac
+
+git init -q 2>/dev/null && git add -A && git commit -qm "Start $name" 2>/dev/null || true
+echo "### Done: $dir"
+echo "$(sed -n '/```bash/,/```/p' README.md | sed '1d;$d' | sed 's/^/  /')"
+if (( open )); then
+    for ed in code codium zed kate; do
+        if command -v "$ed" >/dev/null; then
+            ("$ed" "$dir" ${main_file:+"$dir/$main_file"} >/dev/null 2>&1 &)
+            break
+        fi
+    done
+fi

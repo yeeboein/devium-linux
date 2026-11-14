@@ -164,6 +164,7 @@ package_setup() {
     setup_pacman
     enable_services
     systemctl enable devium-firstboot.service >/dev/null 2>&1
+    systemctl enable devium-health.timer >/dev/null 2>&1    # daily disk health check (beta15)
     setup_firewall
     setup_flathub
     setup_archpill_source

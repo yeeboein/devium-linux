@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Devium Hyprland: show every keyboard shortcut (SUPER + /).
 fuzzel --dmenu --prompt "Shortcuts  " --width 60 --lines 22 >/dev/null <<'KEYS'
-SUPER + Space        Open apps (or click the Devium logo)
+SUPER + Space        Devium Spotlight: apps, settings, files, maths
+SUPER + D            App list (or click the Devium logo)
 SUPER + Return       Terminal
 SUPER + E            Files
 SUPER + T            Devium Tools

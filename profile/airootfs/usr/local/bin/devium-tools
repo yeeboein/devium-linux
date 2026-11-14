@@ -3,8 +3,9 @@
 help for people coming from Windows, accessibility, language and support - in one app.
 
   devium-tools            open on the Home page (Devium Hub)
-  devium-tools <page>     open a page: apps, updates, speed, battery, privacy, printers,
-                          developer, windows, accessibility, language, help, report
+  devium-tools <page>     open a page: apps, updates, look, backup, drivers, health, phone, speed,
+                          battery, privacy, printers, developer, windows, accessibility, language,
+                          help, report
 """
 import glob
 import json
@@ -27,6 +28,7 @@ from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QFormL
                              QTextEdit, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import devium_ui as ui
+import tools_extra as extra
 from devium_i18n import LANGUAGES, T, current as current_language, set_language
 
 HELPER = "/usr/lib/devium/devium-helper"
@@ -244,6 +246,13 @@ class HomePage(Page):
             ("Devium Updater", "Get new Devium versions", "devium",
              lambda: ui.launch("devium-updater")),
             (T("Make it faster"), "Safe tweaks for speed and memory", "speedometer", lambda: win.go("speed")),
+            (T("Look"), "Accent colour, and reset the desktop", "preferences-desktop-color", lambda: win.go("look")),
+            (T("Backup and move"), "Back up to USB, or move to a new PC", "document-save", lambda: win.go("backup")),
+            (T("Drivers"), "NVIDIA, Wi-Fi and other drivers", "preferences-system-hardware",
+             lambda: win.go("drivers")),
+            (T("Health check"), "Disks, temperatures and battery wear", "heart", lambda: win.go("health")),
+            (T("Phone link"), "Files, notifications and clipboard with your phone", "smartphone",
+             lambda: win.go("phone")),
             (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
             (T("Privacy"), "Firewall, Wi-Fi tracking, location", "security-high", lambda: win.go("privacy")),
             (T("Report a problem"), "Tell the Devium team what went wrong", "tools-report-bug",
@@ -742,12 +751,14 @@ class DeveloperPage(Page):
                                                                 done=lambda c: self.on_show())),
                           button("Stop selected", self.stop, icon="media-playback-stop"),
                           button(T("Refresh"), self.on_show, icon="view-refresh"))))
+        self.load_ports = extra.add_developer_extras(self)
         self.finish()
 
     def tool(self):
         return "docker" if shutil.which("docker") else "podman" if shutil.which("podman") else None
 
     def on_show(self):
+        self.load_ports()
         self.tree.clear()
         t = self.tool()
         if not t:
@@ -1105,10 +1116,18 @@ class HelpPage(Page):
 
 
 # ---------------------------------------------------------------------------- window
+extra.setup(Page=Page, card=card, row=row, button=button, label=label, root=root, run=run, read=read,
+            human=human, RunDialog=RunDialog, in_terminal=in_terminal)
+
 PAGES = [
     ("home", T("Home"), "go-home", HomePage),
     ("apps", T("App Manager"), "view-list-details", AppsPage),
     ("updates", T("Updates"), "system-software-update", UpdatesPage),
+    ("look", T("Look"), "preferences-desktop-color", extra.make_look_page),
+    ("backup", T("Backup and move"), "document-save", extra.make_backup_page),
+    ("drivers", T("Drivers"), "preferences-system-hardware", extra.make_drivers_page),
+    ("health", T("Health check"), "heart", extra.make_health_page),
+    ("phone", T("Phone link"), "smartphone", extra.make_phone_page),
     ("speed", T("Speed and memory"), "speedometer", SpeedPage),
     ("battery", T("Battery"), "battery", BatteryPage),
     ("privacy", T("Privacy"), "security-high", PrivacyPage),

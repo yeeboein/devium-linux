@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""What's new in Devium: shown once after Devium Updater moves you to a new version.
+
+  devium-whats-new           show it now
+  devium-whats-new --login   show it only if this version's notes haven't been seen yet (at login)
+"""
+import json
+import os
+import sys
+import urllib.request
+
+sys.path.insert(0, "/usr/lib/devium")
+
+NOTES = "/usr/share/devium/whats-new.md"
+SEEN = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium", "whats-new-seen")
+
+
+def version():
+    try:
+        for line in open("/etc/devium-release"):
+            if line.startswith("DEVIUM_VERSION="):
+                return line.strip().split("=", 1)[1]
+    except OSError:
+        pass
+    return ""
+
+
+def notes(ver):
+    try:
+        text = open(NOTES, encoding="utf-8").read().strip()
+        if text:
+            return text
+    except OSError:
+        pass
+    try:   # older installs: ask GitHub for the release notes
+        req = urllib.request.Request(f"https://api.github.com/repos/yeeboein/devium-linux/releases/tags/{ver}",
+                                     headers={"User-Agent": "devium-whats-new"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            return json.load(r).get("body") or ""
+    except Exception:
+        return ""
+
+
+def main():
+    ver = version()
+    if "--login" in sys.argv:
+        if os.path.isdir("/run/archiso") or not ver:
+            return 0
+        try:
+            seen = open(SEEN).read().strip()
+        except OSError:
+            seen = None
+        if seen is None:   # first login on a fresh install: nothing is "new" yet
+            os.makedirs(os.path.dirname(SEEN), exist_ok=True)
+            open(SEEN, "w").write(ver)
+            return 0
+        if seen == ver:
+            return 0
+    text = notes(ver)
+    os.makedirs(os.path.dirname(SEEN), exist_ok=True)
+    open(SEEN, "w").write(ver)
+    if not text:
+        return 0
+
+    from PyQt6.QtWidgets import QApplication, QHBoxLayout, QPushButton, QTextBrowser, QVBoxLayout, QWidget
+    import devium_ui as ui
+    from devium_i18n import T
+
+    app = QApplication(sys.argv)
+    app.setApplicationName("What's new in Devium")
+    app.setDesktopFileName("devium-whats-new")
+    ui.style_app(app)
+    w = QWidget()
+    w.setWindowTitle(T("What's new in Devium"))
+    w.setWindowIcon(ui.app_icon())
+    w.resize(680, 600)
+    lay = QVBoxLayout(w)
+    lay.setContentsMargins(22, 18, 22, 18)
+    lay.addWidget(ui.header(T("What's new in Devium") + f" {ver}", T("Here's what changed in this update.")))
+    tb = QTextBrowser()
+    tb.setOpenLinks(False)
+    tb.anchorClicked.connect(lambda u: ui.open_link(u.toString(), w))
+    # drop the first heading (the header above already says it)
+    lines = text.splitlines()
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    tb.setMarkdown("\n".join(lines))
+    lay.addWidget(tb, 1)
+    row = QHBoxLayout()
+    row.addStretch(1)
+    ok = QPushButton(T("Got it"))
+    ok.setObjectName("primary")
+    ok.clicked.connect(w.close)
+    row.addWidget(ok)
+    lay.addLayout(row)
+    w.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

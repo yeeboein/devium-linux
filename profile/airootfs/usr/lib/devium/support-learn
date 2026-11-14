@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# support learn - a hands-on terminal tutorial: 10 short lessons, done for real in a practice folder.
+#   support learn        start (or carry on where you stopped)
+#   support learn 4      jump to lesson 4
+#   support learn reset  start again from lesson 1
+# While in a lesson: type the command, or  hint,  skip,  quit.
+
+B=$'\e[1m'; D=$'\e[2m'; N=$'\e[0m'
+T=$'\e[38;2;180;184;224m'; C=$'\e[38;2;150;178;208m'; G=$'\e[38;2;143;212;184m'; W=$'\e[38;2;232;205;150m'
+
+PRACTICE="$HOME/devium-learn"
+PROGRESS="${XDG_CONFIG_HOME:-$HOME/.config}/devium/learn-progress"
+mkdir -p "$(dirname "$PROGRESS")"
+
+setup_practice() {
+    rm -rf "$PRACTICE"
+    mkdir -p "$PRACTICE"/{projects/website,photos,music}
+    printf 'The password is: penguin\n' > "$PRACTICE/secret.txt"
+    printf 'delete me\n' > "$PRACTICE/junk.txt"
+    printf '<h1>My site</h1>\n' > "$PRACTICE/projects/website/index.html"
+    touch "$PRACTICE"/photos/{beach,mountain,cat,dog,party}.jpg
+    printf '%s\n' "10:01 started" "10:02 loading settings" "10:03 ERROR: could not find config.json" \
+                  "10:04 using defaults" "10:05 ready" > "$PRACTICE/log.txt"
+}
+
+lesson=1
+case "${1:-}" in
+    reset) rm -f "$PROGRESS"; setup_practice ;;
+    [0-9]|10) lesson=$1 ;;
+    "") [[ -s $PROGRESS ]] && lesson=$(cat "$PROGRESS") ;;
+esac
+[[ -d $PRACTICE ]] || setup_practice
+(( lesson < 1 || lesson > 10 )) && lesson=1
+CWD="$PRACTICE"
+
+# ---------------------------------------------------------------------------- lessons
+# Each lesson: title | explanation | task | hint | check (bash, sees $CMD and $CWD)
+title=(); explain=(); task=(); hint=(); check=()
+L() { title+=("$1"); explain+=("$2"); task+=("$3"); hint+=("$4"); check+=("$5"); }
+
+L "Where am I?" \
+  "The terminal is always \"in\" a folder. ${C}pwd${N} (print working directory) tells you which one." \
+  "Type ${C}pwd${N} and press Enter." \
+  "Just the three letters: pwd" \
+  '[[ $CMD == pwd* ]]'
+L "What's in here?" \
+  "${C}ls${N} lists the files and folders where you are. ${C}ls -l${N} shows details, ${C}ls -a${N} shows hidden files too." \
+  "List what's in this folder." \
+  "ls" \
+  '[[ $CMD == ls* ]]'
+L "Moving around" \
+  "${C}cd name${N} goes into a folder. ${C}cd ..${N} goes back up one, and ${C}cd${N} on its own goes home.\n  Tip: type the first letters and press ${B}Tab${N} to finish the name for you." \
+  "Go into the ${B}projects${N} folder." \
+  "cd projects" \
+  '[[ $CWD == "$PRACTICE/projects" ]]'
+L "Making folders" \
+  "${C}mkdir name${N} makes a new folder. ${C}mkdir -p a/b/c${N} makes all the folders in between too." \
+  "Go back up (${C}cd ..${N}), then make a folder called ${B}notes${N}. (Or do it from here: ${C}mkdir ../notes${N})" \
+  "cd ..   then   mkdir notes" \
+  '[[ -d $PRACTICE/notes ]]'
+L "Making a file" \
+  "${C}echo text > file${N} writes text into a file (and replaces what was there). ${C}>>${N} adds to the end instead." \
+  "Make a file called ${B}hello.txt${N} with the word hi in it." \
+  "echo hi > hello.txt   (make sure you're in the devium-learn folder: cd ~/devium-learn)" \
+  '[[ -s $PRACTICE/hello.txt ]]'
+L "Reading a file" \
+  "${C}cat file${N} prints a whole file. For long files use ${C}less file${N} (q to quit), or ${C}head${N} / ${C}tail${N} for the start or end." \
+  "Show what's inside ${B}secret.txt${N}." \
+  "cat secret.txt" \
+  '[[ $CMD == *cat*secret* || $CMD == *less*secret* || $CMD == *head*secret* || $CMD == *bat*secret* ]]'
+L "Copy and move" \
+  "${C}cp a b${N} copies a to b. ${C}mv a b${N} moves or renames it. Add ${C}-r${N} to copy whole folders." \
+  "Make a copy of ${B}hello.txt${N} called ${B}backup.txt${N}." \
+  "cp hello.txt backup.txt" \
+  '[[ -f $PRACTICE/backup.txt ]]'
+L "Deleting" \
+  "${C}rm file${N} deletes a file ${W}straight away, with no bin${N}. ${C}rm -r folder${N} deletes a folder. Double-check before pressing Enter!" \
+  "Delete ${B}junk.txt${N}." \
+  "rm junk.txt" \
+  '[[ ! -e $PRACTICE/junk.txt ]]'
+L "Searching inside files" \
+  "${C}grep word file${N} shows only the lines containing word. ${C}grep -i${N} ignores upper/lower case, ${C}grep -r word .${N} searches every file in a folder." \
+  "Find the line with ${B}ERROR${N} in ${B}log.txt${N}." \
+  "grep ERROR log.txt" \
+  '[[ $CMD == *grep* && ${CMD,,} == *error* ]]'
+L "Pipes: joining commands" \
+  "The ${C}|${N} pipe sends one command's output into the next. ${C}wc -l${N} counts lines, so ${C}ls | wc -l${N} counts files." \
+  "Count how many photos there are in the ${B}photos${N} folder." \
+  "ls photos | wc -l" \
+  '[[ $CMD == *"|"* && $CMD == *wc* ]]'
+
+# ---------------------------------------------------------------------------- run
+run_cmd() {   # run the user's command in the practice folder, remembering cd
+    local out
+    out=$(cd "$CWD" 2>/dev/null && bash -c "$1"$'\n''echo "__PWD__$PWD"' 2>&1)
+    local newcwd="${out##*__PWD__}"
+    out="${out%__PWD__*}"
+    printf '%s' "$out" | sed 's/^/  /'
+    [[ -n $out && ${out: -1} != $'\n' ]] && echo
+    [[ -d $newcwd ]] && CWD="$newcwd"
+}
+
+clear
+printf "${B}${T}Learn the terminal${N}  ${D}- 10 short lessons, about 10 minutes. Everything happens in ~/devium-learn.${N}\n"
+printf "${D}Type the command and press Enter. Stuck? Type ${N}${C}hint${N}${D}. Type ${N}${C}skip${N}${D} or ${N}${C}quit${N}${D} any time.${N}\n"
+
+while (( lesson <= 10 )); do
+    i=$((lesson - 1))
+    echo "$lesson" > "$PROGRESS"
+    printf "\n${B}${T}Lesson %d of 10: %s${N}\n" "$lesson" "${title[$i]}"
+    printf "  %b\n\n" "${explain[$i]}"
+    printf "  ${B}Your turn:${N} %b\n" "${task[$i]}"
+    while true; do
+        short="${CWD/#$HOME/\~}"
+        read -r -e -p $'\001'"${G}"$'\002'"$short"$'\001'"${N}"$'\002'" \$ " CMD || { echo; exit 0; }
+        CMD="${CMD#"${CMD%%[![:space:]]*}"}"
+        [[ -z $CMD ]] && continue
+        history -s "$CMD"
+        case "$CMD" in
+            quit|exit|q) printf "\n  ${D}See you later! Type ${N}${C}support learn${N}${D} to carry on from lesson %d.${N}\n\n" "$lesson"; exit 0 ;;
+            hint)  printf "  ${W}Hint:${N} %b\n" "${hint[$i]}"; continue ;;
+            skip)  break ;;
+        esac
+        if [[ $CMD == *"rm -rf /"* || $CMD == *"sudo "* || $CMD == *":(){"* ]]; then
+            printf "  ${W}Let's not do that here!${N} Try the lesson's command.\n"; continue
+        fi
+        run_cmd "$CMD"
+        if eval "${check[$i]}"; then
+            printf "  ${G}✓ Nice!${N}\n"
+            break
+        else
+            printf "  ${D}Not quite. Try again, or type ${N}${C}hint${N}${D}.${N}\n"
+        fi
+    done
+    lesson=$((lesson + 1))
+done
+
+echo 1 > "$PROGRESS"
+printf "\n${B}${G}🎉 You finished all 10 lessons!${N}\n\n"
+printf "  ${B}Where to go next:${N}\n"
+printf "  ${C}%-22s${N} %s\n" "support" "about 100 useful commands, by topic" \
+       "tldr <command>" "short examples for any command (e.g. tldr tar)" \
+       "man <command>" "the full manual (q to quit)" \
+       "history" "everything you've typed; Ctrl+R searches it" \
+       "Ctrl+C" "stop whatever is running" \
+       "↑ / Tab" "repeat the last command / finish a name"
+printf "\n  ${D}Your practice folder is ~/devium-learn. Delete it with: rm -r ~/devium-learn${N}\n\n"

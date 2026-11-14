@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Devium health check (runs as root once a day from devium-health.timer, and from Devium Tools).
+# Writes /var/lib/devium/health.json: each disk's SMART result, wear and temperature.
+# At login, devium-firstrun warns you if a disk is failing.
+set -uo pipefail
+export LC_ALL=C
+out=/var/lib/devium/health.json
+mkdir -p /var/lib/devium
+
+command -v smartctl >/dev/null || { echo '{"disks": [], "error": "smartmontools is not installed"}' > "$out"; cat "$out"; exit 0; }
+
+python3 - "$out" <<'PY'
+import json, subprocess, sys, time
+disks = []
+try:
+    devs = json.loads(subprocess.run(["lsblk", "-J", "-d", "-o", "NAME,TYPE,MODEL,SIZE,ROTA,TRAN"],
+                                     capture_output=True, text=True).stdout)["blockdevices"]
+except Exception:
+    devs = []
+for d in devs:
+    if d.get("type") != "disk" or d["name"].startswith(("loop", "zram", "sr", "ram")):
+        continue
+    r = subprocess.run(["smartctl", "-j", "-H", "-A", "-i", f"/dev/{d['name']}"], capture_output=True, text=True)
+    try:
+        j = json.loads(r.stdout or "{}")
+    except ValueError:
+        j = {}
+    disk = {"name": d["name"], "model": (d.get("model") or j.get("model_name") or "").strip(),
+            "size": d.get("size"), "type": "HDD" if d.get("rota") in (True, "1") else "SSD",
+            "usb": d.get("tran") == "usb", "supported": "smart_status" in j}
+    if "smart_status" in j:
+        disk["passed"] = bool(j["smart_status"].get("passed"))
+    disk["temp"] = (j.get("temperature") or {}).get("current")
+    disk["hours"] = (j.get("power_on_time") or {}).get("hours")
+    nv = j.get("nvme_smart_health_information_log") or {}
+    if nv:
+        disk["used_pct"] = nv.get("percentage_used")
+        disk["media_errors"] = nv.get("media_errors")
+    warn = []
+    for a in (j.get("ata_smart_attributes") or {}).get("table", []):
+        raw = (a.get("raw") or {}).get("value", 0)
+        if a.get("id") in (5, 187, 197, 198) and raw:        # reallocated / uncorrectable / pending sectors
+            warn.append(f"{a.get('name', 'attribute ' + str(a['id'])).replace('_', ' ')}: {raw}")
+        if a.get("id") in (177, 231, 233) and a.get("value") is not None and disk.get("type") == "SSD":
+            disk.setdefault("life_left", a["value"])
+    if disk.get("used_pct") is not None:
+        disk["life_left"] = max(0, 100 - disk["used_pct"])
+    disk["warnings"] = warn
+    disk["ok"] = disk.get("passed", True) and not warn and (disk.get("life_left") is None or disk["life_left"] > 10)
+    disks.append(disk)
+data = {"checked": int(time.time()), "disks": disks}
+open(sys.argv[1], "w").write(json.dumps(data, indent=1))
+print(json.dumps(data, indent=1))
+PY
+chmod 644 "$out"

@@ -145,6 +145,15 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 ## beta15
 - [x] Snap Assist (KDE): snap a window to one side, then pick or open the window for the other side
       (on by default; switch in Devium Tools > Accessibility). Hyprland tiles windows like this already.
+- [x] Devium Spotlight (Meta+Space): apps, settings, files, maths, unit conversions, > commands
+- [x] Accent colour picker and Reset desktop (Devium Tools > Look)
+- [x] Phone link: KDE Connect set up with a QR code
+- [x] Backup to USB and restore; Move to a new PC (.devium file)
+- [x] Drivers page (NVIDIA, Broadcom Wi-Fi, sound firmware, fingerprint)
+- [x] Health check: disk health and wear, temperatures, battery wear, daily disk check with a login warning
+- [x] "What's new" window after Devium Updater
+- [x] `support learn`: 10-lesson terminal tutorial
+- [x] Project starters (10 templates), Ports and servers panel, more developer tools
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=What's new in Devium
+Comment=What changed in the latest Devium update
+Exec=devium-whats-new
+Icon=devium
+Terminal=false
+NoDisplay=true
+Categories=System;

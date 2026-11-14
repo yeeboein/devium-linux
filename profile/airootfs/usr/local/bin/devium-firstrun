@@ -68,6 +68,10 @@ if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-done ]]; then
     sc "<Primary><Alt>t" "exo-open --launch TerminalEmulator"
     touch "$STATE/xfce-done"
 fi
+if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-spotlight ]]; then   # beta15
+    xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/<Super>space" -n -t string -s devium-spotlight
+    touch "$STATE/xfce-spotlight"
+fi
 
 # --- Live ISO: a simple preview with just "Install Devium" and "About Devium" ----
 if [[ -d /run/archiso ]]; then
@@ -89,6 +93,32 @@ if [[ -d /run/archiso ]]; then
     # First: get online (Wi-Fi), then About Devium with the Install button
     devium-wifi --then devium-about &
     exit 0
+fi
+
+# --- beta15: Meta+Space opens Devium Spotlight (KDE; new users get it from /etc/skel)
+if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [[ ! -f $STATE/spotlight-key ]]; then
+    if ! grep -q "devium-spotlight.desktop" "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" 2>/dev/null; then
+        kwriteconfig6 --file kglobalshortcutsrc --group services --group devium-spotlight.desktop \
+            --key _launch "Meta+Space"
+    fi
+    touch "$STATE/spotlight-key"
+fi
+
+# --- beta15: "What's new" after Devium Updater moved you to a new version (once per version)
+(sleep 12; devium-whats-new --login) &
+
+# --- beta15: warn about a failing disk (the daily health check writes /var/lib/devium/health.json)
+if [[ -s /var/lib/devium/health.json && $(cat "$STATE/health-warned" 2>/dev/null) != "$(date +%F)" ]]; then
+    bad=$(python3 -c 'import json; d=json.load(open("/var/lib/devium/health.json"))
+print(", ".join(x.get("model") or x["name"] for x in d.get("disks", []) if not x.get("ok", True)))' 2>/dev/null)
+    if [[ -n $bad ]]; then
+        (sleep 20
+         act=$(notify-send --app-name="Devium" --icon=dialog-warning --urgency=critical \
+                 --action=open="Open Health check" "A disk may be failing" \
+                 "$bad is showing signs of wear. Back up your files soon (Devium Tools > Backup and move)." 2>/dev/null)
+         [[ $act == open ]] && devium-tools health) &
+        date +%F > "$STATE/health-warned"
+    fi
 fi
 
 # --- ArchPill: install Quickshell automatically if ArchPill is wanted but it's missing ---

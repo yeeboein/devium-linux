@@ -38,12 +38,21 @@ It's still in beta, so expect the odd bug. If you find one, tell me on
   time to add or remove stuff.
 - **Devium Tools** (Meta+T). App manager with size and RAM use, updates with undo, a "make it faster"
   button, low-RAM mode, battery charge limit, privacy switches, printers, Docker, Git/GitHub setup,
-  help for people coming from Windows, and a way to report bugs.
+  help for people coming from Windows, and a way to report bugs. Also:
+  - **Look:** accent colours, and a button to reset the desktop if you break it.
+  - **Backup and move:** back up to a USB stick, or move your whole setup to a new PC with one file.
+  - **Drivers:** NVIDIA, Broadcom Wi-Fi and fingerprint readers in one click.
+  - **Health check:** disks, temperatures and battery wear. You get a warning before a disk dies.
+  - **Phone link:** KDE Connect, set up with a QR code.
+- **Spotlight** (Meta+Space). Search apps, settings and files, do quick maths and unit conversions,
+  or type `> command` to run something.
 - **[ArchPill](https://github.com/yeeboein/archpill)** if you want it: a little pill at the top of the
   screen with the time, music, volume and battery, and a control centre when you click it.
 - **Linux Magnify** if you want a macOS-style dock where the icons grow under your mouse.
 - **`support`** in the terminal lists about 100 useful commands. `support fix` checks for common
-  problems and fixes what it can.
+  problems and fixes what it can, and `support learn` teaches you the terminal in 10 short lessons.
+- **`devium-new-project`** starts a Python, web, Node, Flask, Rust, Go, C, C++, Java or Discord bot
+  project with Git already set up. Devium Tools also shows what's running on which port.
 - Small touches: Devium icon pack, light and dark themes, disk encryption option, Irish/Spanish/
   French/German/Hungarian in the Devium apps, and a fastfetch logo made out of the word DEVIUM.
 

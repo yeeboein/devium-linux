@@ -16,6 +16,12 @@
 #   devium-helper undo-update       put back package versions from before the last update
 #   devium-helper faster | lowram on|off | charge-limit N | autoupdate on|off
 #   devium-helper printers | containers USER docker|podman | privacy KEY on|off
+#   devium-helper drivers ID...      install drivers found by Devium Tools > Drivers (nvidia, broadcom, fingerprint)
+#   devium-helper phone              install KDE Connect (Phone link) and open its firewall ports
+#   devium-helper health             check disk health now (installs smartmontools the first time)
+#   devium-helper move-install FILE  reinstall apps from a Backup / Move to a new PC file
+#   devium-helper sddm-accent A B    give the login screen the accent colour you picked
+#   devium-helper devpack ID...      install developer tools from Devium Tools > Developer
 set -uo pipefail
 export LC_ALL=C.UTF-8 TERM=dumb
 
@@ -231,6 +237,9 @@ PY
         DEVIUM_REFRESH=1 bash /tmp/devium-refresh/profile/airootfs/usr/lib/devium/devium-setup --installed /tmp/devium-refresh || exit 1
         sed -i "s/^DEVIUM_VERSION=.*/DEVIUM_VERSION=${tag#v}/" /etc/devium-release 2>/dev/null \
             || echo "DEVIUM_VERSION=${tag#v}" >> /etc/devium-release
+        # "What's new" window after the update (shown by devium-whats-new)
+        [[ -f /tmp/devium-refresh/docs/releases/$tag.md ]] && \
+            install -Dm644 "/tmp/devium-refresh/docs/releases/$tag.md" /usr/share/devium/whats-new.md
         rm -rf /tmp/devium-refresh
         step "Done"
         ;;
@@ -398,6 +407,111 @@ EOF
             *) echo "usage: privacy firewall|mac|location on|off"; exit 1 ;;
         esac
         ;;
+    drivers)
+        shift
+        pacman_unlock || exit 1
+        pkgs=()
+        headers=()
+        for k in linux linux-lts linux-zen linux-hardened; do pacman -Q "$k" >/dev/null 2>&1 && headers+=("$k-headers"); done
+        for id in "$@"; do
+            case "$id" in
+                nvidia)      pkgs+=(nvidia-open-dkms nvidia-utils nvidia-settings "${headers[@]}")
+                             pacman -Si lib32-nvidia-utils >/dev/null 2>&1 && pkgs+=(lib32-nvidia-utils) ;;
+                broadcom)    pkgs+=(broadcom-wl-dkms "${headers[@]}") ;;
+                fingerprint) pkgs+=(fprintd) ;;
+                intel-video) pkgs+=(intel-media-driver vulkan-intel libva-utils) ;;
+                amd-video)   pkgs+=(vulkan-radeon libva-utils) ;;
+                sound)       pkgs+=(sof-firmware alsa-ucm-conf alsa-firmware) ;;
+                *) echo "unknown driver: $id"; exit 1 ;;
+            esac
+        done
+        (( ${#pkgs[@]} )) || { echo "nothing to install"; exit 0; }
+        step "Installing ${pkgs[*]}"
+        pacman -S --needed --noconfirm "${pkgs[@]}" || exit 1
+        if printf '%s\n' "$@" | grep -qx nvidia; then
+            step "Setting up the NVIDIA driver"
+            mkdir -p /etc/modprobe.d
+            echo 'options nvidia_drm modeset=1 fbdev=1' > /etc/modprobe.d/90-devium-nvidia.conf
+            mkinitcpio -P >/dev/null 2>&1 || true
+        fi
+        printf '%s\n' "$@" | grep -qx broadcom && { modprobe -r b43 bcma ssb 2>/dev/null; modprobe wl 2>/dev/null; }
+        step "Done. Restart your computer to start using the new drivers."
+        ;;
+    phone)
+        pacman_unlock || exit 1
+        step "Installing KDE Connect"
+        pkgs=(kdeconnect)
+        command -v plasmashell >/dev/null || pkgs+=(sshfs)
+        pacman -S --needed --noconfirm "${pkgs[@]}" || exit 1
+        if command -v ufw >/dev/null; then
+            step "Letting your phone through the firewall (ports 1714-1764, home network only)"
+            ufw allow 1714:1764/udp >/dev/null; ufw allow 1714:1764/tcp >/dev/null
+        fi
+        step "Done. Install KDE Connect on your phone and pick this computer."
+        ;;
+    health)
+        if ! command -v smartctl >/dev/null; then
+            pacman_unlock || exit 1
+            step "Installing smartmontools (reads your disks' health)"
+            pacman -S --needed --noconfirm smartmontools >/dev/null || exit 1
+        fi
+        systemctl enable devium-health.timer >/dev/null 2>&1
+        /usr/lib/devium/devium-health >/dev/null
+        cat /var/lib/devium/health.json
+        ;;
+    move-install)
+        f="${2:?usage: move-install FILE}"
+        [[ -f $f ]] || { echo "no such file"; exit 1; }
+        pacman_unlock || exit 1
+        step "Finding your apps in the Arch repositories"
+        mapfile -t want < <(python3 -c 'import json,sys,re; [print(p) for p in json.load(open(sys.argv[1])).get("pacman",[]) if re.fullmatch(r"[a-z0-9@._+-]+",p)]' "$f")
+        mapfile -t flat < <(python3 -c 'import json,sys,re; [print(p) for p in json.load(open(sys.argv[1])).get("flatpak",[]) if re.fullmatch(r"[A-Za-z0-9._-]+",p)]' "$f")
+        avail=()
+        if (( ${#want[@]} )); then
+            mapfile -t avail < <(comm -12 <(printf '%s\n' "${want[@]}" | sort -u) <(pacman -Slq | sort -u))
+            missing=$(comm -23 <(printf '%s\n' "${want[@]}" | sort -u) <(pacman -Slq | sort -u) | tr '\n' ' ')
+            [[ -n $missing ]] && echo "Not in the Arch repos (skipped): $missing"
+        fi
+        if (( ${#avail[@]} )); then
+            step "Installing ${#avail[@]} apps"
+            pacman -Sy --needed --noconfirm "${avail[@]}" || echo "Some apps could not be installed."
+        fi
+        if (( ${#flat[@]} )) && command -v flatpak >/dev/null; then
+            step "Installing ${#flat[@]} Flatpak apps"
+            flatpak install -y --noninteractive flathub "${flat[@]}" || echo "Some Flatpaks could not be installed."
+        fi
+        step "Apps done"
+        ;;
+    sddm-accent)
+        a="${2:-}"; b="${3:-$2}"
+        [[ $a =~ ^#[0-9a-fA-F]{6}$ && $b =~ ^#[0-9a-fA-F]{6}$ ]] || { echo "usage: sddm-accent #rrggbb #rrggbb"; exit 1; }
+        [[ -d /usr/share/sddm/themes/devium ]] || exit 0
+        printf '[General]\naccent=%s\naccent2=%s\n' "$a" "$b" > /usr/share/sddm/themes/devium/theme.conf.user
+        echo "The login screen now uses $a."
+        ;;
+    devpack)
+        shift
+        pacman_unlock || exit 1
+        pkgs=()
+        for id in "$@"; do
+            case "$id" in
+                cli)      pkgs+=(ripgrep fd fzf bat eza zoxide jq yq tree httpie) ;;
+                neovim)   pkgs+=(neovim tree-sitter-cli wl-clipboard xclip) ;;
+                tmux)     pkgs+=(tmux) ;;
+                lazygit)  pkgs+=(lazygit git-delta) ;;
+                act)      pkgs+=(act) ;;
+                mise)     pkgs+=(mise direnv just) ;;
+                db)       pkgs+=(postgresql-libs sqlite sqlitebrowser dbeaver) ;;
+                k8s)      pkgs+=(kubectl k9s helm) ;;
+                api)      pkgs+=(httpie websocat) ;;
+                meld)     pkgs+=(meld) ;;
+                *) echo "unknown pack: $id"; exit 1 ;;
+            esac
+        done
+        (( ${#pkgs[@]} )) || exit 0
+        step "Installing ${pkgs[*]}"
+        pacman -S --needed --noconfirm "${pkgs[@]}"
+        ;;
     *)
-        sed -n '2,30p' "$0"; exit 1 ;;
+        sed -n '2,36p' "$0"; exit 1 ;;
 esac

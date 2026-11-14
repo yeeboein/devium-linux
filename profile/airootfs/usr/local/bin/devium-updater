@@ -155,6 +155,7 @@ class Updater(QWidget):
             self.info = release_info()
             self.status.setText(f"Devium is updated to {self.info['DEVIUM_VERSION']}. "
                                 "Log out and back in to see everything new.")
+            ui.launch("devium-whats-new")   # what changed in this version
         elif code in (126, 127):
             self.status.setText("Update cancelled.")
             self.update_btn.setEnabled(True)

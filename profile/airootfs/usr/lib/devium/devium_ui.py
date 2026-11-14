@@ -11,6 +11,14 @@ LOGO = "/usr/share/devium/logo.png"
 DISCORD = "https://discord.gg/YTMattgyG3"
 ACCENT = "#8fb4d8"
 ACCENT2 = "#b4b8e0"
+# Accent colour picked in Devium Tools > Look (beta15)
+try:
+    _a = open(os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+                           "devium", "accent")).read().split()
+    if len(_a) >= 2 and all(len(x) == 7 and x.startswith("#") for x in _a[:2]):
+        ACCENT, ACCENT2 = _a[0], _a[1]
+except OSError:
+    pass
 
 STYLE = f"""
 QWidget {{ font-size: 10.5pt; }}

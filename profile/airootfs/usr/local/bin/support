@@ -12,6 +12,11 @@ TOPICS="devium updates apps files system network git python coding help"
 FILTER="${*,,}"
 [[ $FILTER == -h || $FILTER == --help ]] && FILTER=""
 
+# support learn: the 10-lesson terminal tutorial (beta15)
+if [[ $FILTER == learn || $FILTER == learn\ * ]]; then
+    exec /usr/lib/devium/support-learn ${FILTER#learn}
+fi
+
 # support fix: check and repair the most common problems
 if [[ $FILTER == fix ]]; then
     ok()   { printf "  ${C}OK${N}    %s\n" "$1"; }
@@ -59,6 +64,14 @@ section "Devium"
 cmd "support"                         "Show this list"
 cmd "support <word>"                  "Search the list (e.g. support zip)"
 cmd "support fix"                     "Check and repair common problems"
+cmd "support learn"                   "Learn the terminal: 10 short hands-on lessons"
+cmd "Meta+Space  (devium-spotlight)"  "Search apps, settings, files; maths; > runs a command"
+cmd "devium-backup backup <drive>"    "Back up your home folder to a USB drive"
+cmd "devium-backup export <file>"     "Save your apps and settings to move to a new PC"
+cmd "devium-tools look"               "Accent colour, and reset the desktop"
+cmd "devium-tools drivers"            "Find and install NVIDIA, Wi-Fi and other drivers"
+cmd "devium-tools health"             "Disk health, temperatures, battery wear"
+cmd "devium-tools phone"              "Phone link: files, notifications, clipboard"
 cmd "devium-tools"                    "App Manager, speed, battery, privacy, help"
 cmd "devium-ram"                      "What is using your memory"
 cmd "linux-magnify --settings"        "Linux Magnify settings (if installed)"
@@ -66,7 +79,7 @@ cmd "linux-magnify --disable"         "Turn Linux Magnify off and get the Devium
 cmd "devium-setup-wizard"             "Pick apps, languages, games and theme"
 cmd "devium-tools updates  (update)"  "Install updates (Meta+U)"
 cmd "devium-updater"                  "Get new Devium versions and ISOs"
-cmd "devium-new-project <name>"       "New Python project in ~/Projects, opens your editor"
+cmd "devium-new-project <name>"       "New project in ~/Projects (add --template web/node/rust/go/cpp/...)"
 cmd "fastfetch"                       "Show the Devium logo and system info"
 
 section "Updates and software"

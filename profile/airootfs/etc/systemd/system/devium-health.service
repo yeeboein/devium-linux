@@ -1,0 +1,9 @@
+[Unit]
+Description=Devium health check (disk health and wear)
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/devium/devium-health
+Nice=19
+IOSchedulingClass=idle

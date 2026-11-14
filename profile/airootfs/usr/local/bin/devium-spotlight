@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""Devium Spotlight (Meta+Space): one search box for apps, settings, files, maths, unit
+conversions and terminal commands.
+
+  type an app name        open it
+  type a setting          "wifi", "battery", "printer", "dark mode"...
+  type a file name        files in your home folder
+  2+2*3, sqrt(16), 15%    quick maths (Enter copies the answer)
+  10 km in miles          unit conversions (length, weight, temperature, data, time)
+  > htop                  run a command in the terminal
+"""
+import ast
+import configparser
+import glob
+import math
+import operator
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+
+sys.path.insert(0, "/usr/lib/devium")
+
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QGuiApplication, QIcon
+from PyQt6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+
+import devium_ui as ui
+from devium_i18n import T
+
+HOME = os.path.expanduser("~")
+
+# ---------------------------------------------------------------------------- settings people search for
+SETTINGS = [
+    # words, title, command
+    ("wifi wi-fi network internet ethernet", "Wi-Fi and network", ["systemsettings", "kcm_networkmanagement"]),
+    ("bluetooth headphones", "Bluetooth", ["systemsettings", "kcm_bluetooth"]),
+    ("display screen monitor resolution scale", "Display", ["systemsettings", "kcm_kscreen"]),
+    ("sound audio volume speaker microphone", "Sound", ["systemsettings", "kcm_pulseaudio"]),
+    ("wallpaper background", "Wallpaper", ["systemsettings", "kcm_wallpaper"]),
+    ("theme dark mode light mode colours colors", "Colours and theme", ["systemsettings", "kcm_colors"]),
+    ("accent colour color", "Accent colour (Devium Tools)", ["devium-tools", "look"]),
+    ("keyboard layout language", "Keyboard", ["systemsettings", "kcm_keyboard"]),
+    ("shortcuts keys hotkeys", "Shortcuts", ["systemsettings", "kcm_keys"]),
+    ("mouse touchpad trackpad", "Mouse and touchpad", ["systemsettings", "kcm_touchpad"]),
+    ("users account password profile picture", "Users", ["systemsettings", "kcm_users"]),
+    ("power sleep suspend energy", "Power and sleep", ["systemsettings", "kcm_powerdevilprofilesconfig"]),
+    ("battery charge limit health", "Battery (Devium Tools)", ["devium-tools", "battery"]),
+    ("update updates upgrade", "Updates (Devium Tools)", ["devium-tools", "updates"]),
+    ("apps uninstall remove programs", "App Manager (Devium Tools)", ["devium-tools", "apps"]),
+    ("install add apps configure", "Devium Configure", ["devium-setup-wizard"]),
+    ("printer scanner print", "Printers and scanners", ["devium-tools", "printers"]),
+    ("privacy firewall location", "Privacy (Devium Tools)", ["devium-tools", "privacy"]),
+    ("faster speed memory ram slow", "Speed and memory (Devium Tools)", ["devium-tools", "speed"]),
+    ("backup restore usb move new pc", "Backup and move (Devium Tools)", ["devium-tools", "backup"]),
+    ("drivers nvidia graphics broadcom", "Drivers (Devium Tools)", ["devium-tools", "drivers"]),
+    ("health disk temperature smart", "Health check (Devium Tools)", ["devium-tools", "health"]),
+    ("phone android iphone kde connect", "Phone link (Devium Tools)", ["devium-tools", "phone"]),
+    ("reset desktop dock panel default", "Reset desktop (Devium Tools)", ["devium-tools", "look"]),
+    ("git github ssh docker ports developer", "Developer (Devium Tools)", ["devium-tools", "developer"]),
+    ("help support fix problem", "Get help (Devium Tools)", ["devium-tools", "help"]),
+    ("date time clock timezone", "Date and time", ["systemsettings", "kcm_clock"]),
+    ("notifications do not disturb", "Notifications", ["systemsettings", "kcm_notifications"]),
+]
+
+# ---------------------------------------------------------------------------- safe maths
+OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
+       ast.Pow: operator.pow, ast.Mod: operator.mod, ast.FloorDiv: operator.floordiv,
+       ast.USub: operator.neg, ast.UAdd: operator.pos}
+FUNCS = {n: getattr(math, n) for n in ("sqrt", "sin", "cos", "tan", "log", "log10", "log2", "exp",
+                                        "floor", "ceil", "factorial")}
+FUNCS.update(abs=abs, round=round)
+CONSTS = {"pi": math.pi, "e": math.e, "tau": math.tau}
+
+
+def _ev(n):
+    if isinstance(n, ast.Constant) and isinstance(n.value, (int, float)):
+        return n.value
+    if isinstance(n, ast.BinOp) and type(n.op) in OPS:
+        a, b = _ev(n.left), _ev(n.right)
+        if isinstance(n.op, ast.Pow) and abs(b) > 1000:
+            raise ValueError
+        return OPS[type(n.op)](a, b)
+    if isinstance(n, ast.UnaryOp) and type(n.op) in OPS:
+        return OPS[type(n.op)](_ev(n.operand))
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in FUNCS and not n.keywords:
+        return FUNCS[n.func.id](*[_ev(a) for a in n.args])
+    if isinstance(n, ast.Name) and n.id in CONSTS:
+        return CONSTS[n.id]
+    raise ValueError
+
+
+def calc(text):
+    s = text.strip().replace("×", "*").replace("÷", "/").replace("^", "**").replace(",", "")
+    s = re.sub(r"(\d+(?:\.\d+)?)%", r"(\1/100)", s)
+    if not re.search(r"\d", s) or not re.fullmatch(r"[\d\s.+\-*/%()a-z_]+", s) or re.fullmatch(r"[\d.]+", s):
+        return None
+    try:
+        v = _ev(ast.parse(s, mode="eval").body)
+    except Exception:
+        return None
+    if isinstance(v, float):
+        v = round(v, 10)
+        if v.is_integer():
+            v = int(v)
+    return f"{v:,}" if isinstance(v, int) else f"{v:,.10g}"
+
+
+# ---------------------------------------------------------------------------- unit conversions
+UNITS = {   # unit: (kind, factor to the base unit)
+    "mm": ("len", 0.001), "cm": ("len", 0.01), "m": ("len", 1), "km": ("len", 1000),
+    "in": ("len", 0.0254), "inch": ("len", 0.0254), "inches": ("len", 0.0254), "ft": ("len", 0.3048),
+    "feet": ("len", 0.3048), "foot": ("len", 0.3048), "yd": ("len", 0.9144), "mi": ("len", 1609.344),
+    "mile": ("len", 1609.344), "miles": ("len", 1609.344),
+    "mg": ("mass", 0.001), "g": ("mass", 1), "kg": ("mass", 1000), "lb": ("mass", 453.592),
+    "lbs": ("mass", 453.592), "oz": ("mass", 28.3495), "st": ("mass", 6350.29), "stone": ("mass", 6350.29),
+    "ml": ("vol", 0.001), "l": ("vol", 1), "litre": ("vol", 1), "liter": ("vol", 1), "gal": ("vol", 3.78541),
+    "pint": ("vol", 0.568261), "pints": ("vol", 0.568261), "cup": ("vol", 0.24),
+    "b": ("data", 1), "kb": ("data", 1e3), "mb": ("data", 1e6), "gb": ("data", 1e9), "tb": ("data", 1e12),
+    "kib": ("data", 1024), "mib": ("data", 1024 ** 2), "gib": ("data", 1024 ** 3), "tib": ("data", 1024 ** 4),
+    "s": ("time", 1), "sec": ("time", 1), "min": ("time", 60), "h": ("time", 3600), "hr": ("time", 3600),
+    "hours": ("time", 3600), "day": ("time", 86400), "days": ("time", 86400), "week": ("time", 604800),
+    "weeks": ("time", 604800), "year": ("time", 31557600), "years": ("time", 31557600),
+    "kmh": ("speed", 1 / 3.6), "km/h": ("speed", 1 / 3.6), "mph": ("speed", 0.44704), "m/s": ("speed", 1),
+    "c": ("temp", None), "f": ("temp", None), "k": ("temp", None),
+}
+
+
+def convert(text):
+    m = re.fullmatch(r"\s*(-?[\d.,]+)\s*([a-z/°]+)\s+(?:in|to|as|=)\s+([a-z/°]+)\s*", text.lower())
+    if not m:
+        return None
+    try:
+        v = float(m.group(1).replace(",", ""))
+    except ValueError:
+        return None
+    a, b = m.group(2).strip("°"), m.group(3).strip("°")
+    if a not in UNITS or b not in UNITS or UNITS[a][0] != UNITS[b][0]:
+        return None
+    if UNITS[a][0] == "temp":
+        c = v if a == "c" else (v - 32) * 5 / 9 if a == "f" else v - 273.15
+        r = c if b == "c" else c * 9 / 5 + 32 if b == "f" else c + 273.15
+    else:
+        r = v * UNITS[a][1] / UNITS[b][1]
+    return f"{m.group(1)} {m.group(2)} = {r:,.6g} {m.group(3)}"
+
+
+# ---------------------------------------------------------------------------- apps
+def load_apps():
+    apps, seen = [], set()
+    dirs = [os.path.expanduser("~/.local/share/applications"), "/usr/share/applications",
+            "/var/lib/flatpak/exports/share/applications",
+            os.path.expanduser("~/.local/share/flatpak/exports/share/applications")]
+    lang = (os.environ.get("LANG") or "en").split("_")[0]
+    for d in dirs:
+        for f in sorted(glob.glob(os.path.join(d, "*.desktop"))):
+            base = os.path.basename(f)
+            if base in seen:
+                continue
+            seen.add(base)
+            cp = configparser.ConfigParser(interpolation=None, strict=False)
+            try:
+                cp.read(f, encoding="utf-8")
+                e = cp["Desktop Entry"]
+            except Exception:
+                continue
+            if e.get("Type") != "Application" or e.get("NoDisplay", "").lower() == "true" \
+                    or e.get("Hidden", "").lower() == "true":
+                continue
+            if e.get("OnlyShowIn") and not any(x in os.environ.get("XDG_CURRENT_DESKTOP", "")
+                                                for x in e["OnlyShowIn"].split(";") if x):
+                continue
+            name = e.get(f"Name[{lang}]") or e.get("Name", base)
+            apps.append({"name": name, "desc": e.get("Comment", "") or e.get("GenericName", ""),
+                         "icon": e.get("Icon", ""), "file": f,
+                         "words": " ".join([name, e.get("GenericName", ""), e.get("Keywords", ""),
+                                            base]).lower()})
+    return apps
+
+
+def score(words, name, q):
+    n = name.lower()
+    if n == q:
+        return 100
+    if n.startswith(q):
+        return 80
+    if any(w.startswith(q) for w in n.split()):
+        return 60
+    if q in n:
+        return 45
+    if q in words:
+        return 30
+    return 0
+
+
+def find_files(q, limit=8):
+    """Files in your home folder whose name contains q (skips hidden folders and caches)."""
+    if len(q) < 3:
+        return []
+    out = []
+    if shutil.which("fd"):
+        try:
+            r = subprocess.run(["fd", "-i", "-F", "--max-results", str(limit), "--max-depth", "6", q, HOME],
+                               capture_output=True, text=True, timeout=1.5)
+            return [l for l in r.stdout.splitlines() if l][:limit]
+        except Exception:
+            pass
+    for top, dirs, files in os.walk(HOME):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ("node_modules", "__pycache__", ".venv")]
+        if top.count(os.sep) - HOME.count(os.sep) > 5:
+            dirs[:] = []
+        for f in files + dirs:
+            if q in f.lower():
+                out.append(os.path.join(top, f))
+                if len(out) >= limit:
+                    return out
+    return out
+
+
+def terminal(command):
+    for t in (["konsole", "--hold", "-e"], ["kitty", "--hold"], ["xfce4-terminal", "--hold", "-x"],
+              ["alacritty", "--hold", "-e"]):
+        if shutil.which(t[0]):
+            subprocess.Popen(t + ["bash", "-lc", command], start_new_session=True)
+            return
+
+
+# ---------------------------------------------------------------------------- window
+class Spotlight(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Devium Spotlight")
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint
+                            | Qt.WindowType.Tool)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedWidth(680)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        box = QWidget()
+        box.setObjectName("spot")
+        box.setStyleSheet(f"""
+            QWidget#spot {{ background: palette(window); border: 1px solid {ui.ACCENT}; border-radius: 18px; }}
+            QLineEdit {{ font-size: 17pt; padding: 12px 14px; border: none; background: transparent; }}
+            QListWidget {{ border: none; background: transparent; font-size: 11pt; }}
+            QListWidget::item {{ padding: 7px 10px; border-radius: 10px; }}
+            QListWidget::item:selected {{ background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+                stop:0 {ui.ACCENT}, stop:1 {ui.ACCENT2}); color: #1b2026; }}""")
+        outer.addWidget(box)
+        lay = QVBoxLayout(box)
+        lay.setContentsMargins(10, 8, 10, 10)
+        self.edit = QLineEdit()
+        self.edit.setPlaceholderText(T("Search apps, settings, files… or type 2+2, 5 km in miles, > command"))
+        self.edit.textChanged.connect(lambda: self.timer.start(90))
+        self.edit.returnPressed.connect(self.activate)
+        self.edit.installEventFilter(self)
+        lay.addWidget(self.edit)
+        self.list = QListWidget()
+        self.list.setIconSize(self.list.iconSize() * 2)
+        self.list.itemActivated.connect(lambda _i: self.activate())
+        self.list.hide()
+        lay.addWidget(self.list)
+        self.hint = QLabel(T("Enter to open · ↑↓ to choose · Esc to close"))
+        self.hint.setObjectName("subtitle")
+        self.hint.setAlignment(Qt.AlignmentFlag.AlignRight)
+        lay.addWidget(self.hint)
+        self.timer = QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.search)
+        self.apps = load_apps()
+        self.adjustSize()
+        scr = QGuiApplication.primaryScreen().availableGeometry()
+        self.move(scr.x() + (scr.width() - self.width()) // 2, scr.y() + int(scr.height() * 0.2))
+
+    def eventFilter(self, obj, ev):
+        if ev.type() == ev.Type.KeyPress:
+            if ev.key() == Qt.Key.Key_Escape:
+                self.close()
+                return True
+            if ev.key() in (Qt.Key.Key_Down, Qt.Key.Key_Up) and self.list.count():
+                r = self.list.currentRow() + (1 if ev.key() == Qt.Key.Key_Down else -1)
+                self.list.setCurrentRow(max(0, min(self.list.count() - 1, r)))
+                return True
+        return super().eventFilter(obj, ev)
+
+    def add(self, title, sub, icon, action):
+        it = QListWidgetItem(QIcon.fromTheme(icon, ui.app_icon()) if icon and not icon.startswith("/")
+                             else QIcon(icon) if icon else ui.app_icon(),
+                             title + (f"\n{sub}" if sub else ""))
+        it.setData(Qt.ItemDataRole.UserRole, action)
+        self.list.addItem(it)
+
+    def search(self):
+        self.list.clear()
+        raw = self.edit.text()
+        q = raw.strip().lower()
+        if q:
+            if q.startswith(">"):
+                cmd = raw.strip()[1:].strip()
+                if cmd:
+                    self.add(f"Run in terminal: {cmd}", "", "utilities-terminal", ("term", cmd))
+            else:
+                ans = convert(q)
+                if ans:
+                    self.add(ans, T("Press Enter to copy"), "accessories-calculator", ("copy", ans.split(" = ")[1]))
+                ans = calc(q)
+                if ans is not None:
+                    self.add(f"= {ans}", T("Press Enter to copy"), "accessories-calculator", ("copy", ans))
+                apps = sorted(((score(a["words"], a["name"], q), a) for a in self.apps), key=lambda x: -x[0])
+                for s, a in [x for x in apps if x[0]][:7]:
+                    self.add(a["name"], a["desc"], a["icon"], ("app", a["file"]))
+                for words, title, cmd in SETTINGS:
+                    if any(w.startswith(q) for w in words.split()) or q in title.lower():
+                        if shutil.which(cmd[0]):
+                            self.add(title, T("Setting"), "preferences-system", ("cmd", cmd))
+                for f in find_files(q):
+                    self.add(os.path.basename(f), f.replace(HOME, "~", 1),
+                             "folder" if os.path.isdir(f) else "text-x-generic", ("open", f))
+                first = raw.strip().split()[0]
+                if shutil.which(first) and not self.list.count():   # looks like a command, and nothing else matched
+                    self.add(f"Run in terminal: {raw.strip()}", T("Tip: start with > to run a command"),
+                             "utilities-terminal", ("term", raw.strip()))
+        self.list.setVisible(self.list.count() > 0)
+        self.list.setFixedHeight(min(self.list.count(), 8) * 54 + 6)
+        if self.list.count():
+            self.list.setCurrentRow(0)
+        self.layout().activate()
+        self.resize(self.width(), self.sizeHint().height())
+
+    def activate(self):
+        it = self.list.currentItem()
+        if not it:
+            return
+        kind, val = it.data(Qt.ItemDataRole.UserRole)
+        if kind == "copy":
+            QGuiApplication.clipboard().setText(val)
+            self.hint.setText(T("Copied!"))
+            QTimer.singleShot(500, self.close)
+            return
+        if kind == "app":
+            if shutil.which("kioclient"):
+                subprocess.Popen(["kioclient", "exec", val], start_new_session=True)
+            elif shutil.which("gtk-launch"):
+                subprocess.Popen(["gtk-launch", os.path.basename(val)[:-8]], start_new_session=True)
+            else:
+                subprocess.Popen(["xdg-open", val], start_new_session=True)
+        elif kind == "cmd":
+            ui.launch(*val)
+        elif kind == "open":
+            subprocess.Popen(["xdg-open", val], start_new_session=True)
+        elif kind == "term":
+            terminal(val)
+        self.close()
+
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("Devium Spotlight")
+    app.setDesktopFileName("devium-spotlight")
+    ui.style_app(app)
+    w = Spotlight()
+    w.show()
+    w.activateWindow()
+    w.edit.setFocus()
+    # close when you click somewhere else (once it has had focus)
+    seen = {"active": False}
+
+    def state(s):
+        if s == Qt.ApplicationState.ApplicationActive:
+            seen["active"] = True
+        elif seen["active"] and s == Qt.ApplicationState.ApplicationInactive:
+            w.close()
+    app.applicationStateChanged.connect(state)
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

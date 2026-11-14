@@ -10,3 +10,6 @@ _launch=Meta+T
 
 [services][devium-tools-updates.desktop]
 _launch=Meta+U
+
+[services][devium-spotlight.desktop]
+_launch=Meta+Space
