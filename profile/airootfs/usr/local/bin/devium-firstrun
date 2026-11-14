@@ -24,6 +24,20 @@ if [[ ! -d /run/archiso && -s $STATE/dock-launchers ]] && command -v qdbus6 >/de
     ) &
 fi
 
+# --- Dock safety net 2: Devium themes keep the start button in the middle of the dock
+if [[ ! -d /run/archiso && -s $STATE/dock.js ]] && command -v qdbus6 >/dev/null; then
+    (
+        sleep 10
+        fix=$(cat "$STATE/dock.js")
+        js="var wrong=false; panels().forEach(function(p){ if (p.location!='bottom') return; var ws=p.widgets(), k=-1, t=-1;
+              for (var i=0; i<ws.length; i++) { if (ws[i].type=='org.kde.plasma.kickoff') k=i;
+                                                 if (ws[i].type=='org.kde.plasma.icontasks') t=i; }
+              if (k>=0 && t>=0 && k<t) wrong=true; });
+            if (wrong) { $fix }"
+        qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$js" >/dev/null 2>&1
+    ) &
+fi
+
 # --- beta10 fix: its custom window buttons didn't show up, so windows couldn't be closed.
 #     Put KDE's normal title bar back (once).
 if grep -q "__aurorae__svg__Devium" "${XDG_CONFIG_HOME:-$HOME/.config}/kwinrc" 2>/dev/null; then

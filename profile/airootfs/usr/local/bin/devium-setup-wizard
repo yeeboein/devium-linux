@@ -825,6 +825,16 @@ class Wizard(QWidget):
                   "p.addWidget('org.kde.plasma.digitalclock'); });")
         lines.append(f"(qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)} "
                      f"|| qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript {q(js)}) >/dev/null 2>&1")
+        # Remember the dock layout: at login, if the start button ever ends up back on the side
+        # (e.g. after a hard reboot), the same script puts it back in the middle.
+        os.makedirs(CONFIG, exist_ok=True)
+        dock_file = os.path.join(CONFIG, "dock.js")
+        if self.checked("style-kde"):
+            if os.path.exists(dock_file):
+                os.remove(dock_file)
+        else:
+            with open(dock_file, "w") as fh:
+                fh.write(js)
         # Remember the pinned apps (the login check puts them back if they ever go missing), then restart
         # the panel cleanly so Plasma writes the new dock to disk now, not only at logout.
         lines.append(f"mkdir -p {q(CONFIG)} && printf '%s\\n' {q(','.join(launchers))} > {q(os.path.join(CONFIG, 'dock-launchers'))}")
