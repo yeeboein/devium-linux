@@ -27,6 +27,11 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
 - **fastfetch fits your window:** big DEVIUM logo in wide terminals, a smaller logo in medium ones, and just the
   info in narrow ones, so nothing wraps onto the next line.
 
+- **Emoji style** (Devium Configure): pick how emoji look everywhere: Android / Linux (Noto, the default),
+  glossy and round (JoyPixels, the closest to the iPhone look), flat (Twemoji, like Discord) or hand-drawn
+  (OpenMoji). Works in apps, websites (Firefox too) and the terminal.
+- **Brightness only in ArchPill:** with ArchPill on, Plasma's own brightness popup is switched off, so the
+  brightness keys only show the pill's popup. (On Hyprland the keys now show it in the pill too.)
 - **Clean up** (Devium Tools > Clean up): finds app caches, the bin, old `node_modules` / Rust `target` /
   `.venv` folders in projects you haven't touched for a month, old installers and duplicate files in Downloads,
   big forgotten files, unused Docker images and old system packages and logs. Nothing goes until you tick it.

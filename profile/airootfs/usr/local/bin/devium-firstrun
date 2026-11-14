@@ -111,6 +111,14 @@ if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [
     touch "$STATE/spotlight-key"
 fi
 
+# --- beta15: with ArchPill, brightness shows only in the pill (Plasma's own brightness popup off), once
+if [[ ! -f $STATE/archpill-osd ]] && command -v plasmashell >/dev/null && \
+   [[ -f $STATE/archpill-wanted || -d ${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/archpill ]]; then
+    kwriteconfig6 --notify --file plasmarc --group OSD --key Enabled false
+    mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/archpill" && touch "${XDG_CONFIG_HOME:-$HOME/.config}/archpill/.plasma-osd-off"
+    touch "$STATE/archpill-osd"
+fi
+
 # --- beta15: secret guard on by default (stops commits containing passwords/keys); not if you set your own hooks
 if [[ ! -f $STATE/git-guard ]] && command -v git >/dev/null; then
     [[ -z $(git config --global core.hooksPath) ]] && git config --global core.hooksPath /usr/lib/devium/git-hooks

@@ -125,6 +125,44 @@ def ram_gb():
 _FLATPAKS = None
 
 
+EMOJI_CONF = os.path.expanduser("~/.config/fontconfig/conf.d/75-devium-emoji.conf")
+
+
+def current_emoji():
+    """The emoji style picked in Devium Configure (Noto unless something else was chosen)."""
+    try:
+        return open(os.path.join(CONFIG, "emoji")).read().strip() or "emoji-noto"
+    except OSError:
+        return "emoji-noto"
+
+
+def emoji_fontconfig(family):
+    """fontconfig rules: use `family` for every emoji, including websites that ask for Apple's or Windows' emoji."""
+    asked = ["emoji", "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+             "Twemoji", "Twemoji Mozilla", "JoyPixels", "EmojiOne Color", "OpenMoji Color", "Android Emoji"]
+    rules = "".join(f"""  <match target="pattern">
+    <test qual="any" name="family"><string>{a}</string></test>
+    <edit name="family" mode="assign" binding="same"><string>{family}</string></edit>
+  </match>
+""" for a in asked if a != family)
+    rejects = "".join(f"      <pattern><patelt name=\"family\"><string>{a}</string></patelt></pattern>\n"
+                      for a in ("Noto Color Emoji", "Twemoji", "JoyPixels", "OpenMoji Color") if a != family)
+    return f"""<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<!-- Devium Configure > Emoji style: {family}. Delete this file to go back to Noto Color Emoji. -->
+<fontconfig>
+{rules}  <!-- other emoji fonts step aside, so missing-glyph fallback also lands on {family} -->
+  <selectfont>
+    <rejectfont>
+{rejects}    </rejectfont>
+  </selectfont>
+  <alias binding="weak"><family>sans-serif</family><accept><family>{family}</family></accept></alias>
+  <alias binding="weak"><family>serif</family><accept><family>{family}</family></accept></alias>
+  <alias binding="weak"><family>monospace</family><accept><family>{family}</family></accept></alias>
+</fontconfig>
+"""
+
+
 def flatpak_installed(app):
     global _FLATPAKS
     if _FLATPAKS is None:
@@ -373,7 +411,10 @@ class Wizard(QWidget):
                 # Running Devium Configure again: installed things start ticked; untick to remove them
                 self.was_installed.add(it["id"])
                 box.setText(box.text() + "   ✓ installed")
-            box.setChecked(bool(it.get("default")) or bool(already))
+            if page["id"] == "emoji":   # the emoji style you picked last time stays picked
+                box.setChecked(it["id"] == current_emoji())
+            else:
+                box.setChecked(bool(it.get("default")) or bool(already))
             if it["id"] == best:
                 box.setText(box.text() + "   ★ best fit for your RAM")
             box.setStyleSheet("padding: 4px 4px 0px 4px; font-weight: 600;")
@@ -797,6 +838,25 @@ class Wizard(QWidget):
                 lines.append(f"kwriteconfig6 --file kdeglobals --group General --key TerminalApplication {q(it['exec'])} 2>/dev/null")
                 lines.append(f"mkdir -p ~/.config/xfce4 && printf 'TerminalEmulator=%s\\n' {q(it['exec'])} > ~/.config/xfce4/helpers.rc")
                 lines.append(f"kwriteconfig6 --file kdeglobals --group General --key TerminalService {q(it['desktop'])}")
+        # Emoji style: fontconfig for every app, Firefox's own setting, and Flatpak apps can read it too
+        emo = next((it for it in p["items"] if it.get("emoji_font")), None)
+        if emo:
+            fam = emo["emoji_font"]
+            lines.append(f"mkdir -p {q(CONFIG)} && printf '%s\\n' {q(emo['id'])} > {q(os.path.join(CONFIG, 'emoji'))}")
+            if emo["id"] == "emoji-noto":
+                lines.append(f"rm -f {q(EMOJI_CONF)}")
+            else:
+                lines.append(f"mkdir -p {q(os.path.dirname(EMOJI_CONF))} && cat > {q(EMOJI_CONF)} <<'DEVIUM_EMOJI'\n"
+                             f"{emoji_fontconfig(fam)}DEVIUM_EMOJI")
+            # Firefox ships its own emoji font: tell every Firefox profile to use the chosen one
+            pref = "" if emo["id"] == "emoji-noto" else fam
+            lines.append("for prof in ~/.mozilla/firefox/*.default* ~/.var/app/org.mozilla.firefox/.mozilla/firefox/*.default*; do "
+                         "[ -d \"$prof\" ] || continue; touch \"$prof/user.js\"; "
+                         "sed -i '/font.name-list.emoji/d' \"$prof/user.js\"; "
+                         + (f"echo 'user_pref(\"font.name-list.emoji\", \"{pref}\");' >> \"$prof/user.js\"; " if pref else "")
+                         + "done")
+            lines.append("fc-cache -f >/dev/null 2>&1; flatpak override --user --filesystem=xdg-config/fontconfig:ro "
+                         ">/dev/null 2>&1; true")
         # editor extensions for the chosen languages
         for ed in ("vscodium", "vscode"):
             if ed in chosen:
@@ -934,6 +994,11 @@ class Wizard(QWidget):
             lines.append("kwriteconfig6 --notify --file plasmaparc --group General --key VolumeOsd false")
             lines.append("kwriteconfig6 --notify --file plasmaparc --group General --key MuteOsd false")
             lines.append("mkdir -p ~/.config/archpill && touch ~/.config/archpill/.plasma-notifications-off")
+            # ...and the brightness popup: ArchPill shows brightness in the pill, so Plasma's is switched off
+            # (Plasma has one switch for its small popups; ArchPill's uninstall.sh turns it back on)
+            lines.append("if command -v plasmashell >/dev/null; then "
+                         "kwriteconfig6 --notify --file plasmarc --group OSD --key Enabled false; "
+                         "touch ~/.config/archpill/.plasma-osd-off; fi")
             # Devium shows its own ArchPill tour, so skip ArchPill's built-in one (only on a fresh config)
             lines.append("[ -f ~/.config/archpill/config.json ] || "
                          "echo '{\"setup\": {\"done\": true}}' > ~/.config/archpill/config.json")
@@ -942,6 +1007,8 @@ class Wizard(QWidget):
             lines.append("[ -x ~/archpill/uninstall.sh ] && ~/archpill/uninstall.sh")
             lines.append("kwriteconfig6 --notify --file plasmaparc --group General --key VolumeOsd true")
             lines.append("kwriteconfig6 --notify --file plasmaparc --group General --key MuteOsd true")
+            lines.append("command -v plasmashell >/dev/null && "
+                         "kwriteconfig6 --notify --file plasmarc --group OSD --key Enabled true; true")
         # Linux Magnify last, so it copies the finished dock (pinned apps, start icon, hide setting)
         if self.checked("magnify"):
             # as its README says: install.sh (yes to autostart), then --enable. On Plasma that backs up and

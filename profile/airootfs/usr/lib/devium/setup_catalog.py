@@ -277,6 +277,24 @@ PAGES = [
             {"id": "vlc", "name": "VLC", "desc": "Plays every video", "mb": 150, "flatpak": ["org.videolan.VLC"]},
         ],
     },
+    {
+        "id": "emoji", "title": "Emoji style", "single": True,
+        "intro": "Pick how emoji look everywhere: in apps, websites, chats and the terminal. 😀 🎉 🐱 👍 🔥",
+        "items": [
+            {"id": "emoji-noto", "name": "Android / Linux (Noto)",
+             "desc": "Google's emoji, the same as Android phones. Devium's default.", "mb": 0,
+             "pacman": ["noto-fonts-emoji"], "emoji_font": "Noto Color Emoji", "default": True},
+            {"id": "emoji-joypixels", "name": "Glossy and round (JoyPixels)",
+             "desc": "Shiny, rounded emoji: the closest to the iPhone look", "mb": 10,
+             "pacman": ["ttf-joypixels"], "emoji_font": "JoyPixels"},
+            {"id": "emoji-twemoji", "name": "Flat (Twemoji)",
+             "desc": "Clean flat emoji, like Discord and X (Twitter)", "mb": 10,
+             "pacman": ["ttf-twemoji"], "emoji_font": "Twemoji"},
+            {"id": "emoji-openmoji", "name": "Hand-drawn (OpenMoji)",
+             "desc": "Open-source emoji with an outlined, sketchy style", "mb": 15,
+             "pacman": ["ttf-openmoji"], "emoji_font": "OpenMoji Color"},
+        ],
+    },
 ]
 
 # Look & feel choices (handled by the wizard itself)
