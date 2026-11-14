@@ -859,7 +859,6 @@ class Wizard(QWidget):
             # KDE's stock Breeze: the easiest starting point for your own customising
             scheme = "BreezeLight" if light else "BreezeDark"
             lines.append("kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key DefaultProfile ''")
-            lines.append("kwriteconfig6 --file kdeglobals --group General --key AccentColor 61,174,233")
         elif self.checked("style-deviumdark"):
             light = False
             scheme = "DeviumDark"
@@ -875,7 +874,14 @@ class Wizard(QWidget):
                          f"xfconf-query -c xsettings -p /Net/IconThemeName -s {icons}; "
                          "xfconf-query -c xfwm4 -p /general/theme -s Default")
         if KDE:
+            # Accent colour: Devium blue by default, or the one picked in Devium Tools > Look
+            accent = "#8fb4d8"
+            try:
+                accent = open(os.path.join(CONFIG, "accent")).read().split()[0]
+            except (OSError, IndexError):
+                pass
             lines.append(f"plasma-apply-colorscheme {scheme}; "
+                         f"plasma-apply-colorscheme --accent-color {q(accent)} >/dev/null 2>&1; "
                          f"plasma-apply-desktoptheme {'breeze-light' if light else 'breeze-dark'}")
         # Icons: the Devium themes get the Devium icon pack (gradient rounded squares, white logos);
         # Base KDE gets KDE's own Breeze icons.
