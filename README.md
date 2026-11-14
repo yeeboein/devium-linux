@@ -46,7 +46,7 @@ It's still in beta, so expect the odd bug. If you find one, tell me on
 - **`support`** in the terminal lists about 100 useful commands. `support fix` checks for common
   problems and fixes what it can.
 - Small touches: Devium icon pack, light and dark themes, disk encryption option, Irish/Spanish/
-  French/German in the Devium apps, and a fastfetch logo made out of the word DEVIUM.
+  French/German/Hungarian in the Devium apps, and a fastfetch logo made out of the word DEVIUM.
 
 ## Screenshots
 

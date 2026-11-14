@@ -9,12 +9,13 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 import devium_ui as ui
+from devium_i18n import T
 
 
 class About(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("About Devium")
+        self.setWindowTitle(T("About Devium"))
         self.setWindowIcon(ui.app_icon())
         self.setMinimumWidth(540)
         lay = QVBoxLayout(self)
@@ -30,13 +31,13 @@ class About(QWidget):
         title.setObjectName("title")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(title)
-        ver = QLabel(f"Version {ui.devium_version()}  ·  KDE Plasma edition")
+        ver = QLabel(f"{T('Version')} {ui.devium_version()}  ·  {T('KDE Plasma edition')}")
         ver.setObjectName("subtitle")
         ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(ver)
-        desc = QLabel("A light, fast Arch Linux desktop made for coding. Easy for beginners, nice for pros, "
-                      "and it runs well on older laptops. After installing, Devium Configure lets you pick "
-                      "exactly what you want, so nothing you don't need gets installed.")
+        desc = QLabel(T("A light, fast Arch Linux desktop made for coding. Easy for beginners, nice for pros, "
+                        "and it runs well on older laptops. After installing, Devium Configure lets you pick "
+                        "exactly what you want, so nothing you don't need gets installed."))
         desc.setWordWrap(True)
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(desc)
@@ -45,28 +46,28 @@ class About(QWidget):
         lay.addSpacing(8)
 
         row = QHBoxLayout()
-        gh = QPushButton("Devium on GitHub")
+        gh = QPushButton(T("Devium on GitHub"))
         gh.clicked.connect(lambda: ui.open_link("https://github.com/yeeboein/devium-linux", self))
         row.addWidget(gh)
-        dc = QPushButton("Join our Discord")
+        dc = QPushButton(T("Join our Discord"))
         dc.setToolTip(ui.DISCORD)
         dc.clicked.connect(lambda: ui.open_link(ui.DISCORD, self))
         row.addWidget(dc)
         row.addStretch(1)
         if ui.is_live():
-            pw = QLabel("Live preview login: user devium, password devium")
+            pw = QLabel(T("Live preview login: user devium, password devium"))
             pw.setObjectName("subtitle")
             pw.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lay.insertWidget(lay.count() - 1, pw)
-            inst = QPushButton("Install Devium")
+            inst = QPushButton(T("Install Devium"))
             inst.setObjectName("primary")
             inst.clicked.connect(lambda: ui.launch("devium-install"))
             row.addWidget(inst)
-        close = QPushButton("Close")
+        close = QPushButton(T("Close"))
         close.clicked.connect(self.close)
         row.addWidget(close)
         lay.addLayout(row)
-        self.resize(540, self.sizeHint().height() + 20)
+        self.resize(max(540, self.sizeHint().width() + 20), self.sizeHint().height() + 20)
 
 
 def main():

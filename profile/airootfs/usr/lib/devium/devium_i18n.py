@@ -2,11 +2,12 @@
 
 T("English text") returns the text in the user's language (from $LANGUAGE / $LANG,
 or ~/.config/devium/language), falling back to English. Languages: ga (Irish / Gaeilge),
-es, fr, de. To add a language, add a column to STRINGS below - missing entries stay English.
+es, fr, de, hu (Hungarian / Magyar). To add a language, add a column to STRINGS below - missing entries stay English.
 """
 import os
 
-LANGUAGES = {"en": "English", "ga": "Gaeilge (Irish)", "es": "Español", "fr": "Français", "de": "Deutsch"}
+LANGUAGES = {"en": "English", "ga": "Gaeilge (Irish)", "es": "Español", "fr": "Français", "de": "Deutsch",
+             "hu": "Magyar (Hungarian)"}
 
 # English: (Irish, Spanish, French, German)
 STRINGS = {
@@ -74,6 +75,41 @@ STRINGS = {
 
 _COLS = ["ga", "es", "fr", "de"]
 
+# Hungarian (Magyar), contributed by the Devium community
+HU = {
+    "Version": "Verzió",
+    "Beta": "Béta",
+    "KDE Plasma edition": "KDE Plazma kiadás",
+    "A light, fast Arch Linux desktop made for coding. Easy for beginners, nice for pros, and it runs well on "
+    "older laptops. After installing, Devium Configure lets you pick exactly what you want, so nothing you "
+    "don't need gets installed.":
+        "Egy pehelysúlyú, gyors Arch Linux disztribúció kódoláshoz. Könnyű kezdőknek, jó profiknak, és jól fut "
+        "régebbi gépeken. A telepítés után a Devium Configure-ral kiválaszthatod, pontosan mit szeretnél, így "
+        "semmi olyan nem lesz telepítve, ami nem kell.",
+    "Developers": "Fejlesztők",
+    "Owner": "Tulajdonos",
+    "Built with": "Készítve",
+    "Dynamic-Island-style pill": "Dynamic-Island stílusú tabletta",
+    "Lighter KDE Plasma": "Könnyebb KDE Plazma",
+    "The base system": "A rendszeralap",
+    "The desktop": "Az asztali környezet",
+    "Live preview login: user devium, password devium":
+        "Előnézet bejelentkezési adatok: felhasználó devium, jelszó devium",
+    "Devium on GitHub": "Devium a GitHubon",
+    "Join our Discord": "Csatlakozz a Discord szerverhez",
+    "Install Devium": "Devium telepítése",
+    "Close": "Bezárás",
+    "About Devium": "A Deviumról",
+    "Starting the Devium installer": "A Devium telepítő megnyitása",
+    "Back": "Vissza",
+    "Next": "Következő",
+    "Cancel": "Megszakítás",
+    "Install": "Telepítés",
+    "Welcome": "Üdvözlés",
+    "Desktop": "Asztal",
+    "Password": "Jelszó",
+}
+
 
 def current():
     try:
@@ -97,8 +133,11 @@ _LANG = current()
 def T(text):
     if _LANG == "en":
         return text
+    if _LANG == "hu":
+        return HU.get(text, text)
     row = STRINGS.get(text)
-    return row[_COLS.index(_LANG)] if row else text
+    i = _COLS.index(_LANG) if _LANG in _COLS else -1
+    return row[i] if row and 0 <= i < len(row) else text
 
 
 def set_language(code):

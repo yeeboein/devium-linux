@@ -13,6 +13,7 @@ from PyQt6.QtGui import QColor, QPainter, QPixmap
 from PyQt6.QtWidgets import QApplication, QWidget
 
 import devium_ui as ui
+from devium_i18n import T
 
 
 class Splash(QWidget):
@@ -57,7 +58,7 @@ class Splash(QWidget):
         f.setPointSize(13)
         f.setBold(True)
         p.setFont(f)
-        p.drawText(0, 190, self.width(), 30, Qt.AlignmentFlag.AlignCenter, "Starting the Devium installer")
+        p.drawText(0, 190, self.width(), 30, Qt.AlignmentFlag.AlignCenter, T("Starting the Devium installer"))
         for i in range(3):                                  # three pulsing dots
             a = 0.25 + 0.75 * abs(math.sin(t * 3 - i * 0.6))
             p.setBrush(QColor(143, 180, 216, int(255 * a)))

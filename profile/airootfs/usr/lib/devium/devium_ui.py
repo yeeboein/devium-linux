@@ -193,7 +193,8 @@ def developers_widget():
     w = QWidget()
     col = QVBoxLayout(w)
     col.setContentsMargins(0, 0, 0, 0)
-    t = QLabel("Developers")
+    from devium_i18n import T
+    t = QLabel(T("Developers"))
     t.setObjectName("h2")
     col.addWidget(t)
     for name, role, pic, link in DEVELOPERS:
@@ -208,15 +209,15 @@ def developers_widget():
         img.setPixmap(round_pixmap(pic, 64))
         row.addWidget(img)
         txt = QLabel(f"<b style='font-size:13pt'>{name}</b><br>"
-                     f"<span style='color:{ACCENT}'>{role}</span><br>"
+                     f"<span style='color:{ACCENT}'>{T(role)}</span><br>"
                      f"<a href='{link}' style='color:#8a93a6'>{link.replace('https://', '')}</a>")
         txt.linkActivated.connect(lambda url: open_link(url, w))
         row.addWidget(txt, 1)
         col.addWidget(card)
-    c = QLabel("Built with")
+    c = QLabel(T("Built with"))
     c.setObjectName("h2")
     col.addWidget(c)
-    links = QLabel("<br>".join(f"<a href='{u}' style='color:{ACCENT}'>{n}</a> &nbsp;—&nbsp; {d}"
+    links = QLabel("<br>".join(f"<a href='{u}' style='color:{ACCENT}'>{n}</a> &nbsp;—&nbsp; {T(d)}"
                                for n, d, u in CREDITS))
     links.linkActivated.connect(lambda url: open_link(url, w))
     links.setMinimumHeight(links.sizeHint().height() + 8)
