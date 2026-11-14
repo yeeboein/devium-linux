@@ -24,6 +24,8 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
 - **`support learn`:** a hands-on terminal tutorial. Ten short lessons (pwd, ls, cd, mkdir, files, cat, cp/mv, rm,
   grep and pipes) in a safe practice folder.
 - **Snap Assist (KDE):** snap a window to one side, then pick or open the window for the other side.
+- **fastfetch fits your window:** big DEVIUM logo in wide terminals, a smaller logo in medium ones, and just the
+  info in narrow ones, so nothing wraps onto the next line.
 
 ## For coders
 - **Project starters:** `devium-new-project my-app --template rust`, or Devium Tools > Developer > New project.

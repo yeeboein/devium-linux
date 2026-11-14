@@ -32,6 +32,7 @@ file_permissions=(
   ["/usr/local/bin/devium-updater"]="0:0:755"
   ["/usr/local/bin/devium-tools"]="0:0:755"
   ["/usr/local/bin/devium-wifi"]="0:0:755"
+  ["/usr/local/bin/fastfetch"]="0:0:755"
   ["/usr/local/bin/devium-spotlight"]="0:0:755"
   ["/usr/local/bin/devium-backup"]="0:0:755"
   ["/usr/local/bin/devium-whats-new"]="0:0:755"

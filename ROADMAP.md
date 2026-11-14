@@ -154,6 +154,7 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] "What's new" window after Devium Updater
 - [x] `support learn`: 10-lesson terminal tutorial
 - [x] Project starters (10 templates), Ports and servers panel, more developer tools
+- [x] fastfetch fits any window: big logo, small logo, or info only, picked from the terminal size
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

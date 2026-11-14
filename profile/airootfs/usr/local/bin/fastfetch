@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Devium's fastfetch: picks a layout that fits the terminal window, so nothing wraps.
+#   wide window    big DEVIUM logo + full info
+#   medium window  small logo + short info
+#   narrow window  info only
+# Your own ~/.config/fastfetch/config.jsonc, or any options you pass, are used as they are.
+real=/usr/bin/fastfetch
+[[ -x $real ]] || { echo "fastfetch is not installed"; exit 1; }
+
+own="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/config.jsonc"
+if (( $# )) || [[ -f $own || -f ${own%c} ]] || [[ ! -t 1 ]]; then
+    exec "$real" "$@"
+fi
+
+read -r rows cols < <(stty size </dev/tty 2>/dev/null)
+cols=${cols:-$(tput cols 2>/dev/null || echo 120)}
+rows=${rows:-$(tput lines 2>/dev/null || echo 40)}
+
+dir=/etc/xdg/fastfetch
+if (( cols >= 100 && rows >= 22 )); then
+    exec "$real" -c "$dir/config.jsonc"
+elif (( cols >= 66 && rows >= 16 )); then
+    exec "$real" -c "$dir/medium.jsonc"
+else
+    exec "$real" -c "$dir/compact.jsonc"
+fi
