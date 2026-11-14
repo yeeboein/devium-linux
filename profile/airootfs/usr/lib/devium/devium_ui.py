@@ -97,8 +97,11 @@ def is_light():
     """Is the desktop using a light colour scheme? (Devium Light / Breeze Light / a light GTK theme)"""
     import configparser, os
     cfg = configparser.ConfigParser(strict=False, interpolation=None)
-    cfg.read([os.path.expanduser("~/.config/kdeglobals")])
-    scheme = cfg.get("General", "ColorScheme", fallback="")
+    try:
+        cfg.read([os.path.expanduser("~/.config/kdeglobals")])
+        scheme = cfg.get("General", "ColorScheme", fallback="")
+    except configparser.Error:
+        scheme = ""
     if scheme:
         return "light" in scheme.lower()
     try:   # Xfce: GTK theme name

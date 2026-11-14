@@ -128,6 +128,9 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 
 ## beta13
 - [x] Dock: the Devium start button first, all apps behind it (start | apps | tray); login check keeps it that way
+- [x] Uninstalling Linux Magnify puts back the exact look from before it was turned on (dock, panels, colours,
+      icons, KDE theme, window style)
+- [x] Devium Configure no longer crashes if kdeglobals is damaged
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

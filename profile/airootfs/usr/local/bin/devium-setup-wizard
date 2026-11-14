@@ -80,11 +80,19 @@ def available_packages(names):
     return set(re.findall(r"^Name\s*:\s*(\S+)", r.stdout, re.M))
 
 
+# Snapshot of the look taken just before Linux Magnify is turned on (restored when it's uninstalled)
+SNAP = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium", "before-magnify")
+SNAP_FILES = ["plasma-org.kde.plasma.desktop-appletsrc", "plasmashellrc", "kdeglobals", "plasmarc", "kwinrc"]
+
+
 def current_scheme():
     import configparser
     c = configparser.ConfigParser(strict=False, interpolation=None)
-    c.read([os.path.expanduser("~/.config/kdeglobals")])
-    return c.get("General", "ColorScheme", fallback="")
+    try:
+        c.read([os.path.expanduser("~/.config/kdeglobals")])
+        return c.get("General", "ColorScheme", fallback="")
+    except configparser.Error:
+        return ""
 
 
 def ram_gb():
@@ -912,6 +920,11 @@ class Wizard(QWidget):
             lines.append("if [ -d /opt/linux-magnify ]; then rm -rf ~/.cache/linux-magnify-src && "
                          "cp -r /opt/linux-magnify ~/.cache/linux-magnify-src && "
                          "(cd ~/.cache/linux-magnify-src && ./install.sh --yes); fi")
+            # Snapshot the look first (dock, panels, colours, icons, theme, window style), so uninstalling
+            # Linux Magnify later puts back exactly what they had. Only once: re-enabling keeps the original.
+            if not XFCE:
+                lines.append(f"if [ ! -d {q(SNAP)} ]; then mkdir -p {q(SNAP)} && for f in {' '.join(SNAP_FILES)}; do "
+                             "[ -f ~/.config/$f ] && cp -a ~/.config/$f " + q(SNAP) + "/; done; fi")
             lines.append("if [ -x ~/.local/bin/linux-magnify ]; then ~/.local/bin/linux-magnify --disable >/dev/null 2>&1; "
                          "~/.local/bin/linux-magnify --enable; fi")
         elif self.reconfig and os.path.exists(os.path.expanduser("~/.local/bin/linux-magnify")):
@@ -923,6 +936,13 @@ class Wizard(QWidget):
                          "~/.local/share/applications/linux-magnify.desktop "
                          "~/.local/share/applications/linux-magnify-settings.desktop "
                          "~/.config/autostart/magdoc.desktop ~/.config/autostart/linux-magnify.desktop")
+            # Put the look back exactly as it was before Linux Magnify was turned on
+            if not XFCE and os.path.isdir(SNAP):
+                lines.append("systemctl --user stop plasma-plasmashell.service 2>/dev/null || kquitapp6 plasmashell; sleep 1")
+                lines.append(f"cp -a {q(SNAP)}/. ~/.config/ && rm -rf {q(SNAP)}")
+                lines.append("systemctl --user start plasma-plasmashell.service 2>/dev/null || "
+                             "(setsid kstart plasmashell >/dev/null 2>&1 &)")
+                lines.append("qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1; true")
         lines.append(f"mkdir -p {q(CONFIG)} && touch {q(DONE_MARKER)}")
         return "\n".join(lines)
 
