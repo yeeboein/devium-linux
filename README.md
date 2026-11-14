@@ -42,7 +42,6 @@ It's still in beta, so expect the odd bug. If you find one, tell me on
 - **[ArchPill](https://github.com/yeeboein/archpill)** if you want it: a little pill at the top of the
   screen with the time, music, volume and battery, and a control centre when you click it.
 - **Linux Magnify** if you want a macOS-style dock where the icons grow under your mouse.
-- **Optional local AI.** Ollama with a model that fits your RAM. Off unless you pick it.
 - **`support`** in the terminal lists about 100 useful commands. `support fix` checks for common
   problems and fixes what it can.
 - Small touches: Devium icon pack, light and dark themes, disk encryption option, Irish/Spanish/

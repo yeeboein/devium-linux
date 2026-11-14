@@ -160,7 +160,7 @@ import json, re, shlex, sys
 p = json.load(open(sys.argv[1]))
 ok_pkg = re.compile(r"^[a-z0-9@._+-]+$")
 ok_app = re.compile(r"^[A-Za-z0-9._-]+$")
-ok_svc = {"docker.socket", "ollama.service"}
+ok_svc = {"docker.socket"}
 ok_grp = {"docker"}
 ok_shell = {"/usr/bin/zsh", "/usr/bin/fish", "/bin/bash"}
 def arr(name, items, rx):

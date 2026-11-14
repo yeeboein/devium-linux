@@ -78,8 +78,7 @@ Open it with **Meta+T**.
 ### Code from the first minute.
 
 VS Code or VSCodium, Python, C/C++, Rust, Go, Java, Node.js and more are one click away in Devium Configure.
-Git and GitHub set up step by step. Docker or Podman when you need them. An optional AI that runs on your own
-computer, sized to fit your RAM.
+Git and GitHub set up step by step. Docker or Podman when you need them.
 
 And when something breaks, type `support fix` and Devium checks and repairs the usual suspects.
 

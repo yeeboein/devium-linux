@@ -170,7 +170,7 @@ PAGES = [
             {"id": "docker", "name": "Docker", "desc": "Run apps in containers (starts only when used)", "mb": 450,
              "pacman": ["docker", "docker-compose", "docker-buildx"], "services": ["docker.socket"],
              "group": "docker"},
-            {"id": "continue", "name": "AI coding helper", "desc": "Continue extension for VSCodium/VS Code (works with Ollama)",
+            {"id": "continue", "name": "AI coding helper", "desc": "Continue extension for VSCodium/VS Code (connect it to the AI you use)",
              "mb": 20, "ext": ["continue.continue"]},
             {"id": "sqlite", "name": "DB Browser for SQLite", "desc": "Look inside databases", "mb": 30,
              "pacman": ["sqlitebrowser"]},
@@ -207,23 +207,6 @@ PAGES = [
             {"id": "ncdu", "name": "ncdu", "desc": "See what's filling your disk", "mb": 1, "pacman": ["ncdu"]},
             {"id": "ranger", "name": "ranger", "desc": "Browse files with the keyboard", "mb": 5,
              "pacman": ["ranger"]},
-        ],
-    },
-    {
-        "id": "ai", "title": "Local AI", "single": True,
-        "intro": "Run an AI chatbot on your own computer: private, offline, no account. It uses a lot of "
-                 "memory and disk, so only pick one if you want it. Models that don't fit your RAM are hidden.",
-        "items": [
-            {"id": "ai-none", "name": "No local AI", "desc": "Skip this (you can add it later from Devium Configure)",
-             "mb": 0, "default": True},
-            {"id": "ai-llama1b", "name": "Llama 3.2 1B", "desc": "Tiny and quick, basic answers (needs 4 GB RAM)",
-             "mb": 1400, "min_ram": 4, "model": "llama3.2:1b"},
-            {"id": "ai-llama3b", "name": "Llama 3.2 3B", "desc": "Good everyday helper (needs 8 GB RAM)",
-             "mb": 2100, "min_ram": 8, "model": "llama3.2:3b"},
-            {"id": "ai-qwencoder", "name": "Qwen 2.5 Coder 7B", "desc": "Strong at writing and explaining code (needs 16 GB RAM)",
-             "mb": 4800, "min_ram": 16, "model": "qwen2.5-coder:7b"},
-            {"id": "ai-llama8b", "name": "Llama 3.1 8B", "desc": "Smartest here, slower (needs 16 GB RAM)",
-             "mb": 4900, "min_ram": 16, "model": "llama3.1:8b"},
         ],
     },
     {
@@ -290,4 +273,3 @@ MAGNIFY = {"id": "magnify", "mb": 90, "pacman": ["git", "python", "gtk4", "gtk4-
                                                  "python-cairo", "python-xlib", "libnotify", "quickshell"],
            # removed again when Linux Magnify is unticked (if nothing else needs them)
            "own": ["gtk4-layer-shell", "python-xlib"]}
-AI_EXTRAS = {"pacman": ["ollama"], "flatpak": ["com.jeffser.Alpaca"], "services": ["ollama.service"], "mb": 150}

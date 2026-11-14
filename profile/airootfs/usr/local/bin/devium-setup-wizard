@@ -653,12 +653,6 @@ class Wizard(QWidget):
         if (self.checked("quickshell") or self.checked("archpill")) and not installed("quickshell"):
             pac += cat.ARCHPILL["pacman"]
             mb += cat.ARCHPILL["mb"]
-        ai = next((it for it in items if it.get("model")), None)
-        if ai:
-            pac += cat.AI_EXTRAS["pacman"]
-            fl += cat.AI_EXTRAS["flatpak"]
-            svcs += cat.AI_EXTRAS["services"]
-            mb += cat.AI_EXTRAS["mb"]
         if self.checked("magnify") and not all(installed(x) for x in cat.MAGNIFY["pacman"]):
             pac += cat.MAGNIFY["pacman"]
             mb += cat.MAGNIFY["mb"]
@@ -687,7 +681,6 @@ class Wizard(QWidget):
                 "removed_items": [self.items[i]["name"] for i in self.was_installed if not self.checked(i)]
                                  + (["Linux Magnify"] if magnify_gone else []),
                 "magnify_gone": magnify_gone,
-                "ai": ai,
                 "services": dedupe(svcs), "groups": dedupe(groups), "ext": dedupe(ext),
                 "shell": shell, "mb": mb}
 
@@ -744,7 +737,7 @@ class Wizard(QWidget):
         # Each step gets a share of the bar that matches how much it downloads (MB), so the bar moves
         # at a steady speed instead of jumping from step to step.
         items = p["items"]
-        model_mb = p["ai"]["mb"] if p.get("ai") else 0
+        model_mb = 0
         helper_mb = sum(it.get("mb", 0) for it in items if it.get("helper"))
         aur_mb = sum(it.get("mb", 0) for it in items if it.get("aur"))
         fl_mb = sum(it.get("mb", 0) for it in items if it.get("flatpak"))
@@ -814,10 +807,6 @@ class Wizard(QWidget):
                                  "cp /usr/share/devium/vscode-settings.json ~/.config/VSCodium/User/settings.json")
                 for e in p["ext"]:
                     lines.append(f"command -v {cli} >/dev/null && {cli} --install-extension {q(e)} --force")
-        if p.get("ai"):
-            model = p["ai"]["model"]
-            lines.append("for i in $(seq 1 30); do curl -fs http://127.0.0.1:11434 >/dev/null && break; sleep 1; done")
-            lines.append(f"command -v ollama >/dev/null && ollama pull {q(model)}")
         if "rust" in chosen:
             lines.append("command -v rustup >/dev/null && rustup default stable")
         # dock: swap Konsole / Dolphin launchers for the chosen apps, add the editor, dock auto-hide
@@ -1031,7 +1020,7 @@ class Wizard(QWidget):
 
     # ------------------------------------------------------------------ progress bar
     def parse_progress(self, text):
-        """Work out how far the current step is from what pacman, flatpak and ollama print."""
+        """Work out how far the current step is from what pacman and flatpak print."""
         c = getattr(self, "cur", None)
         if not c:
             return
@@ -1069,7 +1058,7 @@ class Wizard(QWidget):
         elif c["kind"] == "pacman":
             frac = pac
         elif c["kind"] == "user":
-            frac = c["pct"]   # ollama pull prints percentages
+            frac = c["pct"]   # tools that print percentages
         else:
             frac = 0.0
         if frac > c["sub"]:

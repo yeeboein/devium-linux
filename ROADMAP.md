@@ -133,6 +133,9 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] Devium Configure no longer crashes if kdeglobals is damaged
 - [x] Hungarian (Magyar): About Devium, install splash, credits; KDE's Hungarian kept on the ISO
 
+## beta14
+- [x] Local AI removed from Devium Configure (Ollama, Alpaca and the model downloads)
+
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website

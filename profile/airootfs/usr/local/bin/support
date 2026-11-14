@@ -158,7 +158,6 @@ cmd "javac Main.java && java Main"    "Compile and run Java"
 cmd "node app.js / npm install"       "Run JavaScript / install packages"
 cmd "lua script.lua"                  "Run Lua"
 cmd "docker run hello-world"          "Test Docker (if installed)"
-cmd "ollama run llama3.2"             "Chat with a local AI (if installed)"
 
 section "Help"
 cmd "man <command>"                   "Full manual for a command"
