@@ -17,6 +17,8 @@
 - **Glass mode done properly** (Customise > "Glass mode: see-through everything"): every window is slightly
   see-through with frosted blur, the dock and terminal too, while videos, games, photo apps and full-screen
   windows stay solid. Background windows are a little more see-through than the one you're using.
+- **See-through all the time** (Customise): every window see-through, always, with no exceptions (videos,
+  games and full-screen too), with strong frosted blur. KDE and Hyprland.
 - **Your own emoji font:** Devium Configure's Emoji style page also lists any colour emoji font you've installed
   yourself, and applies it everywhere like the others.
 

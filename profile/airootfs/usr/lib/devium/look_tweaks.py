@@ -121,6 +121,16 @@ T("glass-all", "glass", "Glass mode: see-through everything",
         "gamescope|com.obsproject.Studio|obs|gimp|org.gimp.GIMP|krita|org.kde.krita|kdenlive|org.kde.kdenlive|"
         "darktable|blender|org.kde.gwenview|loupe|org.gnome.Loupe)$"],
   func="glass_all", group="glass-level")
+T("glass-always", "glass", "See-through all the time",
+  "Every window is see-through, always: the one you're using, background windows, videos, games and full-screen "
+  "apps. Strong frosted blur behind, the dock and terminal too",
+  kde=[("kwinrc", "Plugins", "blurEnabled", "true")],
+  kde_js=("panels().forEach(function(p){ p.opacity = 'translucent'; });",
+          "panels().forEach(function(p){ p.opacity = 'adaptive'; });"),
+  hypr=["decoration:active_opacity = 0.85", "decoration:inactive_opacity = 0.85", "decoration:fullscreen_opacity = 0.85",
+        "decoration:blur:enabled = true", "decoration:blur:size = 8", "decoration:blur:passes = 3",
+        "decoration:blur:noise = 0.02", "decoration:blur:vibrancy = 0.2"],
+  func="glass_always", group="glass-level")
 T("glass-menus", "glass", "See-through menus", "Menus and pop-ups let the window behind show through",
   kde=[("kwinrc", "Plugins", "translucencyEnabled", "true"), ("kwinrc", "Effect-translucency", "Menus", "88"),
        ("kwinrc", "Effect-translucency", "DropdownMenus", "88"), ("kwinrc", "Effect-translucency", "PopupMenus", "88")])
@@ -442,6 +452,15 @@ SOLID_APPS = ("mpv|vlc|celluloid|io.github.celluloid_player.Celluloid|steam|stea
 
 def glass_all(on):
     """KDE: window rules. Videos, games and photo apps stay solid; every other window is 93% (85% in the background)."""
+    glass_rules(on, solid=True, active="93", inactive="85")
+
+
+def glass_always(on):
+    """KDE: every window 85% see-through, all the time, no exceptions."""
+    glass_rules(on, solid=False, active="85", inactive="85")
+
+
+def glass_rules(on, solid, active, inactive):
     if KDE:
         kset("kwinrc", "Effect-translucency", "ActiveWindows", None)   # beta15's glass mode used this; not any more
         import configparser
@@ -455,16 +474,17 @@ def glass_all(on):
         for sec in ("devium-solid", "devium-glass"):
             if cp.has_section(sec):
                 cp.remove_section(sec)
-        if on:
+        if on and solid:
             cp["devium-solid"] = {"Description": "Devium glass mode: keep videos, games and photo apps solid",
                                   "wmclass": SOLID_APPS, "wmclassmatch": "3", "wmclasscomplete": "false",
                                   "opacityactive": "100", "opacityactiverule": "2",
                                   "opacityinactive": "100", "opacityinactiverule": "2"}
-            cp["devium-glass"] = {"Description": "Devium glass mode: every window slightly see-through",
+        if on:
+            cp["devium-glass"] = {"Description": "Devium: every window see-through",
                                   "wmclass": ".*", "wmclassmatch": "3", "wmclasscomplete": "false", "types": "33",
-                                  "opacityactive": "93", "opacityactiverule": "2",
-                                  "opacityinactive": "85", "opacityinactiverule": "2"}
-            rules = ["devium-solid", "devium-glass"] + rules     # earlier rules win: solid apps first
+                                  "opacityactive": active, "opacityactiverule": "2",
+                                  "opacityinactive": inactive, "opacityinactiverule": "2"}
+            rules = (["devium-solid"] if solid else []) + ["devium-glass"] + rules   # earlier rules win: solid apps first
         cp.set("General", "rules", ",".join(rules))
         cp.set("General", "count", str(len(rules)))
         with open(path, "w") as f:
@@ -516,7 +536,7 @@ def dim_wallpaper(on):
 
 
 # ---------------------------------------------------------------------------- applying
-FUNC_DESKTOPS = {"glass_all": "any", "konsole_glass": "kde", "konsole_font": "kde", "kde_natural_scroll": "kde", "kde_tap_click": "kde",
+FUNC_DESKTOPS = {"glass_all": "any", "glass_always": "kde", "konsole_glass": "kde", "konsole_font": "kde", "kde_natural_scroll": "kde", "kde_tap_click": "kde",
                  "dim_wallpaper": "kde", "waybar_reload": "hypr", "waybar_clock": "hypr"}
 
 
