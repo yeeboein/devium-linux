@@ -9,7 +9,8 @@
   beta releases from its "latest release". It now sees every release, betas included.
 - **No loading screen after login:** you go straight from the login screen to your desktop.
 - **fastfetch shows your Devium version:** a new line, e.g. `Ver  Devium Beta16`.
-- **The fastfetch logo stays in one piece** when you make the terminal window smaller afterwards.
+- **fastfetch keeps one full-size logo:** in a wide window the info sits beside it; in a narrow window the
+  info goes underneath, so they never run into each other. Resizing afterwards doesn't jumble it either.
 
 ## Planned
 - **Safe mode at login:** hold Shift while logging in to skip Devium's extras (widgets, look tweaks), so you can always get back in and undo something.

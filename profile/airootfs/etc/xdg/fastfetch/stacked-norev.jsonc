@@ -1,7 +1,13 @@
-// Devium fastfetch without personal details (fastfetchnorev): no user name, computer name or IP address.
+// Devium fastfetch for narrow windows: the same DEVIUM logo on top, the info underneath (picked automatically by /usr/local/bin/fastfetch). No user name, computer name or IP.
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
-  "logo": { "type": "none" },
+  "logo": {
+    "type": "file",
+    "source": "/usr/share/devium/fastfetch-logo.txt",
+    "color": { "1": "38;2;184;206;228", "2": "38;2;150;178;208", "3": "38;2;122;146;176" },
+    "position": "top",
+    "padding": { "top": 1, "left": 1, "right": 0 }
+  },
   "display": {
     "separator": "  ",
     "color": { "keys": "38;2;150;178;208", "title": "38;2;180;184;224", "separator": "38;2;92;104;120" }
