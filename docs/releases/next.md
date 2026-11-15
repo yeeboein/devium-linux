@@ -12,6 +12,11 @@
 - **fastfetch keeps one full-size logo:** in a wide window the info sits beside it; in a narrow window the
   info goes underneath, so they never run into each other. Resizing afterwards doesn't jumble it either.
 
+- **Konsole (see-through):** a new choice on Devium Configure's Terminal page: Konsole with a frosted,
+  see-through background, in any Devium theme.
+- **Your own emoji font:** Devium Configure's Emoji style page also lists any colour emoji font you've installed
+  yourself, and applies it everywhere like the others.
+
 ## Planned
 - **Safe mode at login:** hold Shift while logging in to skip Devium's extras (widgets, look tweaks), so you can always get back in and undo something.
 - **`support selftest`:** checks that every Devium app, widget and helper works, and gives you a list to share.

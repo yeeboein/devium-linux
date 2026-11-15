@@ -61,6 +61,8 @@ PAGES = [
         "items": [
             {"id": "konsole", "name": "Konsole", "desc": "Full-featured: tabs, split panes, profiles",
              "mb": 0, "exec": "konsole", "desktop": "org.kde.konsole.desktop", "default": True},
+            {"id": "konsole-glass", "name": "Konsole (see-through)", "desc": "Konsole with a frosted, see-through background",
+             "mb": 0, "exec": "konsole", "desktop": "org.kde.konsole.desktop"},
             {"id": "kitty", "name": "Kitty", "desc": "Fast and very customisable", "mb": 30,
              "pacman": ["kitty"], "exec": "kitty", "desktop": "kitty.desktop"},
             {"id": "alacritty", "name": "Alacritty", "desc": "Super fast and minimal", "mb": 15,
