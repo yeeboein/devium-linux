@@ -17,9 +17,10 @@ import devium_tiles as T  # noqa: E402
 
 OUT = os.path.join(os.path.dirname(HERE), "profile/airootfs/usr/share/icons")
 
-# Dolphin isn't here on purpose: it keeps KDE's own icon (the theme falls back to Breeze)
+# Dolphin and system-file-manager (the icon name Dolphin's menu entry uses) aren't here on purpose:
+# they keep KDE's own Dolphin icon (the theme falls back to Breeze)
 APP_NAMES = {
-    "filemanager": ["system-file-manager", "thunar", "org.xfce.thunar", "Thunar", "pcmanfm-qt", "pcmanfm",
+    "filemanager": ["thunar", "org.xfce.thunar", "Thunar", "pcmanfm-qt", "pcmanfm",
                     "nemo", "org.gnome.Nautilus", "yazi"],
 }
 
@@ -48,7 +49,7 @@ def write(theme_dir):
     os.symlink("user-trash-full.svg", os.path.join(places, "trashcan_full.svg"))
     n += 2 + write_set(os.path.join(theme_dir, "scalable/mimetypes"), T.FILE_NAMES, T.file_svg)
     # the other file manager apps get a folder with a magnifier; Dolphin's Devium icon is removed
-    for name in ("org.kde.dolphin", "dolphin"):
+    for name in ("org.kde.dolphin", "dolphin", "system-file-manager"):
         p = os.path.join(theme_dir, "scalable/apps", name + ".svg")
         if os.path.lexists(p):
             os.remove(p)

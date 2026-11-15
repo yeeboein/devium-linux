@@ -163,7 +163,7 @@ package_setup() {
     # About Devium is for the live USB only (an update used to copy it onto installed systems)
     [[ -d /run/archiso ]] || rm -f /usr/share/applications/devium-about.desktop
     # Dolphin uses KDE's own icon again (older Devium versions shipped their own)
-    rm -f /usr/share/icons/Devium{,-Dark}/scalable/apps/{org.kde.dolphin,dolphin}.svg
+    rm -f /usr/share/icons/Devium{,-Dark}/scalable/apps/{org.kde.dolphin,dolphin,system-file-manager}.svg
     strip_live_repo
     apply_overrides
     write_os_release

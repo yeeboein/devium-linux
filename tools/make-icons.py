@@ -50,8 +50,9 @@ ICONS = {
     "bz:actions/16/globe": ["chromium", "helium", "helium-browser", "internet-web-browser",
                             "web-browser"],
     # file managers
-    # Dolphin keeps KDE's own Breeze icon (no Devium icon, so the theme falls back to Breeze)
-    "custom:filemanager": ["system-file-manager", "thunar", "org.xfce.thunar", "Thunar", "pcmanfm-qt",
+    # Dolphin keeps KDE's own Breeze icon: no Devium org.kde.dolphin / dolphin / system-file-manager
+    # (Dolphin's menu entry uses system-file-manager), so the theme falls back to Breeze
+    "custom:filemanager": ["thunar", "org.xfce.thunar", "Thunar", "pcmanfm-qt",
                            "pcmanfm", "nemo", "org.gnome.Nautilus", "yazi"],
     # terminals
     "bz:apps/16/utilities-terminal": ["utilities-terminal", "org.kde.konsole", "konsole", "kitty",
