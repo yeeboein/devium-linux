@@ -5,7 +5,7 @@ Drawn from scratch in tools/devium_tiles.py, nothing to download.
 
 Usage:  python3 tools/make-folder-icons.py
 Writes: profile/airootfs/usr/share/icons/Devium/scalable/places/  and  .../scalable/mimetypes/
-        (and the same in Devium-Dark). It also redraws the file manager app icons.
+        (and the same in Devium-Dark). It also redraws the Dolphin and file manager app icons.
 """
 import os
 import shutil
@@ -17,9 +17,9 @@ import devium_tiles as T  # noqa: E402
 
 OUT = os.path.join(os.path.dirname(HERE), "profile/airootfs/usr/share/icons")
 
-# Dolphin and system-file-manager (the icon name Dolphin's menu entry uses) aren't here on purpose:
-# they keep KDE's own Dolphin icon (the theme falls back to Breeze)
 APP_NAMES = {
+    # Dolphin gets a dolphin (its menu entry asks for "system-file-manager")
+    "dolphin": ["org.kde.dolphin", "dolphin", "system-file-manager"],
     "filemanager": ["thunar", "org.xfce.thunar", "Thunar", "pcmanfm-qt", "pcmanfm",
                     "nemo", "org.gnome.Nautilus", "yazi"],
 }
@@ -48,11 +48,7 @@ def write(theme_dir):
     os.symlink("user-trash.svg", os.path.join(places, "trashcan_empty.svg"))
     os.symlink("user-trash-full.svg", os.path.join(places, "trashcan_full.svg"))
     n += 2 + write_set(os.path.join(theme_dir, "scalable/mimetypes"), T.FILE_NAMES, T.file_svg)
-    # the other file manager apps get a folder with a magnifier; Dolphin's Devium icon is removed
-    for name in ("org.kde.dolphin", "dolphin", "system-file-manager"):
-        p = os.path.join(theme_dir, "scalable/apps", name + ".svg")
-        if os.path.lexists(p):
-            os.remove(p)
+    # the file manager apps: Dolphin gets a dolphin, the others a folder with a magnifier
     apps = os.path.join(theme_dir, "scalable/apps")
     if os.path.isdir(apps):
         for kind, names in APP_NAMES.items():

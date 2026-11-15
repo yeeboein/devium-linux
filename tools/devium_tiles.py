@@ -1,6 +1,6 @@
 """Shapes drawn from scratch for the Devium icon theme, in the same style as the app icons: a rounded square
 in the Devium gradient with a white shape on it. Folders and files have their symbol cut into the shape.
-Used by tools/make-folder-icons.py (folders, files, trash) and tools/make-icons.py (file managers)."""
+Used by tools/make-folder-icons.py (folders, files, trash) and tools/make-icons.py (Dolphin, file managers)."""
 TOP, BOTTOM = "#8fb4d8", "#b4b8e0"
 CUT = "#9fb4dc"        # the symbol is "cut out" of the white shape in the tile's own colour
 
@@ -138,6 +138,22 @@ def trash_svg(full):
 
 
 # --- app icons drawn here (no outside glyph) --------------------------------------------------------------
+# Dolphin: a white dolphin leaping up to the right (drawn here), so it doesn't look like a plain folder
+DOLPHIN = ("M55 29C54 26.5 51.5 25.6 49 25.8C47.5 21.5 43.5 18.5 38.5 18.3C35 18.2 31.5 19 29 20.5C27.8 17.5 25 "
+           "15 21.5 14C23.2 16.8 23.8 19.6 23.5 22.5C20 25.5 17.8 30 17.5 35C17.3 38.5 17.5 41 17.5 43C15 44.5 1"
+           "1.5 46.2 8.5 47.8C12 48.5 15.5 48.3 18.6 47.4C20.5 49.5 22.2 51.8 23.5 54.5C23.8 50.5 23 46 21 41.5C"
+           "23.5 37 27.5 34.5 32 33.8C33.5 37 35.5 40.5 38.8 43C39.5 39.5 39.2 36 38 33.6C42.5 33 46.5 31.5 50 3"
+           "0.8C51.8 30.6 53.5 30.4 55 29Z")
+
+
+def dolphin_svg():
+    return _tile('<g transform="translate(1.6 -0.6) scale(0.95)">'
+                 f'<path d="{DOLPHIN}" fill="#2b323b" opacity="0.2" transform="translate(0 1.4)"/>'
+                 f'<path d="{DOLPHIN}" fill="#ffffff"/>'
+                 f'<circle cx="45.3" cy="25" r="1.3" fill="{CUT}"/>'
+                 f'<path d="M54.3 29.3Q51.2 29.7 48.6 28.7" stroke="{CUT}" stroke-width="1.1" stroke-linecap="round" fill="none"/></g>')
+
+
 def file_manager_svg():
     """Other file managers: a folder with a magnifying glass (an app, not a folder)."""
     f = "M14 21.5a3 3 0 0 1 3-3h8l3 3h15a3 3 0 0 1 3 3V41a3 3 0 0 1-3 3H17a3 3 0 0 1-3-3z"
@@ -147,4 +163,4 @@ def file_manager_svg():
                  '<path d="M46.2 46.2 51 51" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>')
 
 
-CUSTOM_APPS = {"filemanager": file_manager_svg}
+CUSTOM_APPS = {"dolphin": dolphin_svg, "filemanager": file_manager_svg}

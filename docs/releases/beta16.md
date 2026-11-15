@@ -53,8 +53,9 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 tes
   into their dock icon like a genie when you minimise *and* when you close them, with a soft fade-in when apps
   open. On Hyprland, windows shrink away quickly when closed. Xfce's window manager has no animations.
 - **New folder and file icons:** folders and files now look like the app icons, a white folder or page on
-  the Devium tile with its symbol (Documents, Downloads, Pictures, PDF, photos, code, zips...). Dolphin keeps KDE's
-  own Dolphin icon, and other file managers get a folder with a magnifier, so no app looks like a plain folder.
+  the Devium tile with its symbol (Documents, Downloads, Pictures, PDF, photos, code, zips...). Dolphin's icon is
+  now a white leaping dolphin, and other file managers get a folder with a magnifier, so no app looks like a
+  plain folder.
 - **Photo widget** (Devium widgets, all three desktops): a picture, or a slideshow from a folder (your Pictures
   folder unless you pick another), with rounded corners and a soft fade between photos. Settings for the folder or a
   single picture, seconds per picture, random order, fill or fit, and the picture's name. Double-click to open
