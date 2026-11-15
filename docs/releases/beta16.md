@@ -44,6 +44,9 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 tes
   Brave, Google, Startpage, Bing or Ecosia in Devium Tools > Look). Site shortcuts: `yt`, `g`, `wiki`, `gh`, `aur`,
   `arch`, `pkg`, `so`, `maps` and `r` followed by your words, e.g. `yt lofi beats`. Typing an address like
   `github.com` opens it.
+- **Magic lamp for closing too** (Customise > Motion > "Magic lamp: minimise and close", KDE): windows pour
+  into their dock icon like a genie when you minimise *and* when you close them, with a soft fade-in when apps
+  open. On Hyprland, windows shrink away quickly when closed. Xfce's window manager has no animations.
 - **New folder and file icons:** folders and files now look like the app icons, a white folder or page on
   the Devium tile with its symbol (Documents, Downloads, Pictures, PDF, photos, code, zips...). Dolphin's icon is
   now a dolphin, and other file managers get a folder with a magnifier, so no app looks like a plain folder.

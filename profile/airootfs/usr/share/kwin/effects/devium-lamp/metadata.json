@@ -1,0 +1,17 @@
+{
+    "KPlugin": {
+        "Id": "devium-lamp",
+        "Name": "Devium Magic Lamp Close",
+        "Description": "Closed windows pour into their dock icon like a genie, the same way they minimise with Magic Lamp.",
+        "Category": "Appearance",
+        "Authors": [ { "Name": "Devium" } ],
+        "License": "GPL-3.0-or-later",
+        "Version": "1.0",
+        "Website": "https://github.com/yeeboein/devium-linux",
+        "EnabledByDefault": false
+    },
+    "X-KDE-Ordering": 60,
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPackageStructure": "KWin/Effect"
+}

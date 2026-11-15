@@ -160,12 +160,18 @@ T("glass-bar", "glass", "See-through top bar", "Waybar lets the wallpaper show t
 # ---------------------------------------------------------------------------- motion
 T("wobbly", "motion", "Wobbly windows", "Windows wobble like jelly when you move them",
   kde=[("kwinrc", "Plugins", "wobblywindowsEnabled", "true")])
-T("magic-lamp", "motion", "Magic lamp minimise", "Windows pour into the dock like a genie, like a Mac",
-  kde=[("kwinrc", "Plugins", "magiclampEnabled", "true"), ("kwinrc", "Plugins", "squashEnabled", "false")])
+T("magic-lamp", "motion", "Magic lamp: minimise and close",
+  "Windows pour into their dock icon like a genie when you minimise or close them, like a Mac",
+  kde=[("kwinrc", "Plugins", "magiclampEnabled", "true"), ("kwinrc", "Plugins", "squashEnabled", "false"),
+       ("kwinrc", "Plugins", "devium-lampEnabled", "true"), ("kwinrc", "Plugins", "scaleEnabled", "false"),
+       ("kwinrc", "Plugins", "fadeEnabled", "false")],
+  hypr=["bezier = deviumLamp, 0.55, 0, 0.9, 0.4", "animation = windowsOut, 1, 4, deviumLamp, popin 5%"],
+  group="close-anim")
 T("glide", "motion", "Windows glide in and out", "A smooth 3D glide when windows open and close",
-  kde=[("kwinrc", "Plugins", "glideEnabled", "true"), ("kwinrc", "Plugins", "scaleEnabled", "false")])
+  kde=[("kwinrc", "Plugins", "glideEnabled", "true"), ("kwinrc", "Plugins", "scaleEnabled", "false")],
+  group="close-anim")
 T("fall-apart", "motion", "Closed windows fall apart", "Windows break into pieces when you close them",
-  kde=[("kwinrc", "Plugins", "fallapartEnabled", "true")])
+  kde=[("kwinrc", "Plugins", "fallapartEnabled", "true")], group="close-anim")
 T("fade-desktops", "motion", "Fade between workspaces", "Fade instead of sliding when you switch workspace",
   kde=[("kwinrc", "Plugins", "fadedesktopEnabled", "true"), ("kwinrc", "Plugins", "slideEnabled", "false")],
   hypr=["animation = workspaces, 1, 5, default, fade"])
