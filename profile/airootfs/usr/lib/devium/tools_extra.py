@@ -293,6 +293,12 @@ def make_look_page(win):
                   label(f"Changes {what}, the Devium apps and the login screen to match.", "subtitle"),
                   w, row(button(T("Pick any colour…"), custom, icon="color-picker"), login), page.current,
                   page.done_note))
+    page.add(card(label(T("Customise"), "h2"),
+                  label("Dozens of optional tweaks: macOS-style window buttons, see-through windows, blur, wobbly "
+                        "windows, magic lamp, hot corners, clock with seconds, bigger cursor, night light and more.",
+                        "subtitle"),
+                  row(button(T("Open Customise"), lambda: ui.launch("devium-setup-wizard", "--customise"), True,
+                             "preferences-desktop-theme"))))
     no_load = os.path.join(CONFIG, "no-loading-screen")
     load_box = QCheckBox(T("Show a loading screen after logging in"))
     load_box.setChecked(not os.path.exists(no_load))

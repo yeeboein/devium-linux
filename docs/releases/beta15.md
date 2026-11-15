@@ -12,6 +12,25 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
   it and your startup apps load, then fade away smoothly. Click to skip; turn it off in Devium Tools > Look.
 - **Devium folder icons:** folders in the Devium gradient with a white symbol for Documents, Downloads, Music,
   Pictures, Videos, Desktop, Home, Projects (code), Git, Cloud, Games and more, plus a matching bin.
+- **Customise** (new page in Devium Configure, also Devium Tools > Look): 80 optional look-and-feel tweaks,
+  all off unless you tick them, and each one can be unticked again:
+  - **Windows:** macOS-style buttons on the left, close button only, red circle on ✕, bigger buttons, centred titles,
+    no borders, no title bar when maximised, bigger or no shadows, open windows in the middle, rounded or square
+    corners and gaps (Hyprland).
+  - **See-through and blur:** transparent background windows, transparent while moving, menus and title bars,
+    blur and strong blur, see-through or solid dock.
+  - **Animations:** wobbly windows, magic lamp minimise, glide, fall apart, fade between workspaces, bouncy
+    (Hyprland), faster, slower or no animations, dim inactive windows, Mac-style sliding dialogs, show clicks.
+  - **Desktop:** four hot corners (all windows, show desktop, lock, app menu), four workspaces, dock at the edge,
+    auto-hiding or dodging dock, bigger dock, darker wallpaper.
+  - **Clock and notifications:** seconds, 12-hour clock, date, notification position and timeout, no sounds,
+    no badges.
+  - **Mouse:** single-click to open, bigger or huge cursor, shake to find it, hide while typing, focus follows
+    the mouse, natural scrolling, tap to click.
+  - **Terminal:** see-through, bigger text, blinking block cursor, more padding.
+  - **Easy on the eyes:** night light, warm colours all day, accent from the wallpaper, smaller or larger text,
+    bold titles, strong window outlines.
+  Each desktop only shows the tweaks that work on it (69 on KDE, 26 on Xfce, 31 on Hyprland).
 - **Accent colours** (Devium Tools > Look): Devium blue, Lavender, Mint, Sky, Peach, Rose, Lemon, Graphite or any
   colour you like. It changes the theme highlight, window borders, the Devium apps and the login screen.
 - **Reset desktop** (Devium Tools > Look): dock gone, panels in the wrong place or the theme broken? One button puts
