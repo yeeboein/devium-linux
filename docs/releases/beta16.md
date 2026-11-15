@@ -1,6 +1,6 @@
 # Devium beta16
 
-Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 testing, tiling for KDE, 125 Customise options and a Linux tools page.
+Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 testing, tiling for KDE, 126 Customise options and a Linux tools page.
 
 ## Fixed
 - **Devium Updater finds new versions again.** It said "No Devium releases published yet" because GitHub leaves
@@ -23,7 +23,7 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 tes
   - **Meta+Alt+Left/Right** swaps windows, **Meta+Alt+Return** makes a window the big one, or drag a window
     onto another to swap them
   - options for a "one big window and a stack" layout, and no gaps or big gaps
-- **Customise now has 125 options** (110 on KDE, 35 on Xfce, 39 on Hyprland). New ones include:
+- **Customise now has 126 options** (111 on KDE, 35 on Xfce, 39 on Hyprland). New ones include:
   - **Windows:** no title bars at all, smaller buttons, wide borders, Alt+Tab with big previews, cover switch
     or flip switch, Alt+Tab across all workspaces
   - **Dock and desktop:** dock on the left or at the top, a macOS-style top bar with the app's menus, dock shows
@@ -35,6 +35,9 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 tes
   - **Files:** split view, full path, show hidden files
   - **And more:** faster or left-handed mouse, week numbers, no pop-ups over full-screen apps, colour-blind
     friendly colours, invert colours, and Xfce options (no effects, snapping windows, roll-up title bars)
+- **Home screen pages, like an iPhone** (optional, KDE: Customise or Devium Tools > Look): pages of apps and
+  Devium widgets on your desktop that you swipe between with the touchpad or mouse, with page dots at the bottom.
+  Press and hold (or Edit) and the icons wiggle: ✕ removes, + adds apps, widgets and pages.
 - **Photo widget** (Devium widgets, all three desktops): a picture, or a slideshow from a folder (your Pictures
   folder unless you pick another), with rounded corners and a soft fade between photos. Settings for the folder or a
   single picture, seconds per picture, random order, fill or fit, and the picture's name. Double-click to open

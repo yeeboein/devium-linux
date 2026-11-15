@@ -171,7 +171,7 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] fastfetch: one full-size logo, info underneath in narrow windows, version line; no re-wrapping on resize
 - [x] Loading screen after login removed
 - [x] Konsole (see-through), Glass mode reworked, See-through all the time, your own emoji font
-- [x] Automatic tiling for KDE (like Hyprland); Customise grows to 125 options; Linux tools page (34 tools); Photo widget
+- [x] Automatic tiling for KDE (like Hyprland); Customise grows to 126 options; Linux tools page (34 tools); Photo widget; iPhone-style home screen pages (optional)
 
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command

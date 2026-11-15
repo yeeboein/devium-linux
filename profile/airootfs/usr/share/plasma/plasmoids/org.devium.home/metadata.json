@@ -1,0 +1,15 @@
+{
+  "KPlugin": {
+    "Id": "org.devium.home",
+    "Name": "Home screen pages (Devium)",
+    "Description": "iPhone-style home screen: pages of apps and widgets you swipe between",
+    "Icon": "view-grid",
+    "Category": "Windows and Tasks",
+    "Authors": [{ "Name": "Yeeboein" }],
+    "License": "GPL-2.0-or-later",
+    "Version": "1.0",
+    "Website": "https://github.com/yeeboein/devium-linux"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}
