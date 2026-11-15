@@ -264,7 +264,7 @@ case "${1:-}" in
             -cf - . | tar -C / --no-same-owner -xf -
         chmod 755 /usr/local/bin/devium-* /usr/local/bin/support /usr/local/bin/snip /usr/local/bin/fastfetch \
             /usr/lib/devium/devium-* /usr/lib/devium/support-* /usr/lib/devium/crash-catcher \
-            /usr/lib/devium/guest-reset /usr/lib/devium/git-hooks/* 2>/dev/null
+            /usr/lib/devium/guest-reset /usr/lib/devium/widget-data /usr/lib/devium/git-hooks/* 2>/dev/null
         package_setup
         [[ -n ${DEVIUM_REFRESH:-} ]] && { say "done"; exit 0; }
         finish_setup

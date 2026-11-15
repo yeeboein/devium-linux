@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""Data for the Devium widget pack (Plasma widgets call this; it prints JSON).
+  widget-data sys            CPU, memory, disk, temperature, battery, uptime
+  widget-data projects       Git repos in ~/Projects: branch, changes, ahead/behind
+  widget-data ports          dev servers listening on a port (your own programs)
+  widget-data name           your first name, for the clock's greeting
+  widget-data open PATH      open a project in your code editor
+  widget-data term PATH      open a terminal in a project
+  widget-data stop PID       stop one of your dev servers
+  widget-data launch CMD...  start a Devium app
+  widget-data focus work|break   notification when a focus timer ends
+"""
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+HOME = os.path.expanduser("~")
+PROJECTS = os.environ.get("PROJECTS_DIR", os.path.join(HOME, "Projects"))
+
+
+def read(p, d=""):
+    try:
+        with open(p) as f:
+            return f.read().strip()
+    except OSError:
+        return d
+
+
+def cpu_times():
+    f = [int(x) for x in read("/proc/stat").splitlines()[0].split()[1:]]
+    return sum(f), f[3] + (f[4] if len(f) > 4 else 0)
+
+
+def sysinfo():
+    t1, i1 = cpu_times()
+    time.sleep(0.4)
+    t2, i2 = cpu_times()
+    cpu = 0 if t2 == t1 else round(100 * (1 - (i2 - i1) / (t2 - t1)))
+    mem = {l.split(":")[0]: int(l.split()[1]) * 1024 for l in read("/proc/meminfo").splitlines() if ":" in l}
+    du = shutil.disk_usage("/")
+    temp = None
+    for hw in glob.glob("/sys/class/hwmon/hwmon*"):
+        if read(hw + "/name") in ("coretemp", "k10temp", "zenpower", "cpu_thermal", "acpitz"):
+            for t in glob.glob(hw + "/temp*_input"):
+                try:
+                    c = int(read(t)) / 1000
+                    temp = c if temp is None or c > temp else temp
+                except ValueError:
+                    pass
+    bat = sorted(glob.glob("/sys/class/power_supply/BAT*"))
+    up = float(read("/proc/uptime", "0").split()[0])
+    h, m = int(up // 3600), int(up % 3600 // 60)
+    return {"cpu": cpu, "ramUsed": mem["MemTotal"] - mem["MemAvailable"], "ramTotal": mem["MemTotal"],
+            "diskUsed": du.used, "diskTotal": du.total, "temp": temp,
+            "battery": int(read(bat[0] + "/capacity", "0")) if bat else None,
+            "charging": bool(bat) and read(bat[0] + "/status") in ("Charging", "Full"),
+            "uptime": (f"{h // 24}d {h % 24}h" if h >= 24 else f"{h}h {m}m")}
+
+
+def ago(ts):
+    s = time.time() - ts
+    for n, u in ((86400 * 30, "month"), (86400 * 7, "week"), (86400, "day"), (3600, "hour"), (60, "min")):
+        if s >= n:
+            k = int(s // n)
+            return "yesterday" if u == "day" and k == 1 else f"{k} {u}{'s' if k > 1 and u != 'min' else ''} ago"
+    return "just now"
+
+
+def git(path, *a):
+    try:
+        return subprocess.run(["git", "-C", path, *a], capture_output=True, text=True, timeout=5).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def projects():
+    repos = []
+    for g in glob.glob(os.path.join(PROJECTS, "*", ".git")) + glob.glob(os.path.join(PROJECTS, "*", "*", ".git")):
+        p = os.path.dirname(g)
+        st = git(p, "status", "--porcelain=v1", "-b")
+        lines = st.splitlines()
+        head = lines[0] if lines else ""
+        branch = re.sub(r"^## (No commits yet on )?", "", head).split("...")[0] or "?"
+        ahead = re.search(r"ahead (\d+)", head)
+        behind = re.search(r"behind (\d+)", head)
+        last = git(p, "log", "-1", "--format=%ct")
+        repos.append({"name": os.path.relpath(p, PROJECTS), "path": p, "branch": branch,
+                      "dirty": max(0, len(lines) - 1), "ahead": int(ahead.group(1)) if ahead else 0,
+                      "behind": int(behind.group(1)) if behind else 0,
+                      "ts": max(int(last or 0), int(os.path.getmtime(p))),
+                      })
+    repos.sort(key=lambda r: -r["ts"])
+    for r in repos:
+        r["when"] = ago(r.pop("ts"))
+    return repos
+
+
+def ports():
+    out = []
+    try:
+        lines = subprocess.run(["ss", "-ltnpH"], capture_output=True, text=True, timeout=5).stdout.splitlines()
+    except OSError:
+        lines = []
+    seen = set()
+    for line in lines:
+        m = re.search(r'\("([^"]+)",pid=(\d+)', line)
+        if not m:
+            continue   # not yours (system services)
+        port = int(line.split()[3].rsplit(":", 1)[1])
+        pid = int(m.group(2))
+        if (port, pid) in seen or port in (631, 5353):
+            continue
+        seen.add((port, pid))
+        cmd = read(f"/proc/{pid}/cmdline").replace("\0", " ").strip()
+        hint = next((w for w in ("vite", "next", "flask", "uvicorn", "django", "webpack", "jekyll", "hugo", "rails",
+                                 "http.server", "live-server", "astro", "nuxt") if w in cmd), "")
+        out.append({"port": port, "pid": pid, "name": m.group(1) + (f" ({hint})" if hint else "")})
+    return sorted(out, key=lambda x: x["port"])
+
+
+def spawn(cmd, cwd=None):
+    subprocess.Popen(cmd, cwd=cwd, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def main():
+    a = sys.argv[1:]
+    if not a:
+        print(__doc__)
+        return
+    k = a[0]
+    if k == "sys":
+        print(json.dumps(sysinfo()))
+    elif k == "projects":
+        print(json.dumps(projects()))
+    elif k == "ports":
+        print(json.dumps(ports()))
+    elif k == "name":
+        gecos = subprocess.run(["getent", "passwd", str(os.getuid())], capture_output=True, text=True).stdout.split(":")
+        full = gecos[4].split(",")[0].strip() if len(gecos) > 4 else ""
+        print(json.dumps((full.split()[0] if full else os.environ.get("USER", "")).capitalize()))
+    elif k == "open" and len(a) > 1 and os.path.isdir(a[1]):
+        for ed in ("code", "codium", "zed", "kate", "gnome-text-editor"):
+            if shutil.which(ed):
+                spawn([ed, a[1]])
+                return
+        spawn(["xdg-open", a[1]])
+    elif k == "term" and len(a) > 1 and os.path.isdir(a[1]):
+        for t, args in (("konsole", ["--workdir", a[1]]), ("kitty", ["--directory", a[1]]),
+                        ("xfce4-terminal", ["--working-directory", a[1]]), ("alacritty", ["--working-directory", a[1]])):
+            if shutil.which(t):
+                spawn([t] + args)
+                return
+    elif k == "stop" and len(a) > 1 and a[1].isdigit():
+        pid = int(a[1])
+        if os.stat(f"/proc/{pid}").st_uid == os.getuid():
+            os.kill(pid, 15)
+    elif k == "launch" and len(a) > 1:
+        allowed = ("devium-", "konsole", "kitty", "xfce4-terminal")
+        if a[1].startswith(allowed):
+            spawn(a[1:])
+    elif k == "focus":
+        brk = len(a) > 1 and a[1] == "break"
+        spawn(["notify-send", "--app-name=Devium", "--icon=" + ("appointment-soon" if brk else "chronometer"),
+               "Break's over" if brk else "Time for a break",
+               "Ready for another focus session?" if brk else "Nice work! Stand up, stretch, drink some water."])
+
+
+if __name__ == "__main__":
+    main()

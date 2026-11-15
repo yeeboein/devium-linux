@@ -160,6 +160,49 @@ def reset_desktop(parent):
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+DEVIUM_WIDGETS = [   # plugin id, name, what it shows
+    ("org.devium.clock", "Clock", "Big clock, date and a greeting"),
+    ("org.devium.weather", "Weather", "Now and the next 5 days"),
+    ("org.devium.sea", "Sea conditions", "Waves, swell, water temperature, wind and tide"),
+    ("org.devium.system", "System", "CPU, memory and disk rings, temperature, battery"),
+    ("org.devium.focus", "Focus timer", "25 minutes of focus, then a 5 minute break"),
+    ("org.devium.projects", "Git projects", "Your repos: branch, changes, ahead/behind"),
+    ("org.devium.servers", "Dev servers", "What's running on which port"),
+    ("org.devium.links", "Devium shortcuts", "Spotlight, Tools, Configure, Updates…"),
+]
+
+
+def add_widget(plugin):
+    """Put a widget on the desktop (Plasma finds a free spot for it)."""
+    js = f"var d = desktops(); if (d.length) {{ d[0].addWidget('{plugin}'); }}"
+    for q in ("qdbus6", "qdbus"):
+        if shutil.which(q):
+            return subprocess.run([q, "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell.evaluateScript", js],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+    return False
+
+
+def widgets_card(page):
+    grid = QGridLayout()
+    grid.setSpacing(6)
+    for i, (pid, name, desc) in enumerate(DEVIUM_WIDGETS):
+        b = QPushButton(f"+  {T(name)}")
+        b.setToolTip(T(desc))
+        b.setMinimumHeight(36)
+        b.clicked.connect(lambda _c=False, pid=pid, name=name:
+                          page.widget_note.setText(T("Added") + f" {T(name)}. " + T("Drag it where you like.")
+                                                   if add_widget(pid) else T("Couldn't add it. Is Plasma running?")))
+        grid.addWidget(b, i // 4, i % 4)
+    w = QWidget()
+    w.setLayout(grid)
+    page.widget_note = label("", "subtitle")
+    return card(label(T("Devium widgets"), "h2"),
+                label("Widgets for your desktop in the Devium style. Click one to add it, then drag it where you "
+                      "want. Right-click a widget to change its settings (like the place for weather and sea) or "
+                      "remove it. You also find them in right-click desktop > Add or Manage Widgets.", "subtitle"),
+                w, page.widget_note)
+
+
 def make_look_page(win):
     page = Page(T("Look"), T("Pick your accent colour, or put the desktop back to how Devium starts."))
     a, b = current_accent()
@@ -207,6 +250,8 @@ def make_look_page(win):
                   label("Dock in the wrong place, panels gone, or the theme looks broken? Put the desktop back "
                         "to Devium's defaults without reinstalling. Your files and apps stay.", "subtitle"),
                   row(button(T("Reset desktop"), lambda: reset_desktop(page), icon="edit-undo"))))
+    if KDE and os.path.isdir("/usr/share/plasma/plasmoids/org.devium.clock"):
+        page.add(widgets_card(page))
     if KDE:
         page.add(card(label(T("More looks"), "h2"),
                       label("Light or dark theme, icons, wallpaper and fonts are in System Settings.", "subtitle"),

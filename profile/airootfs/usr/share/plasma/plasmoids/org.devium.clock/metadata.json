@@ -1,0 +1,19 @@
+{
+  "KPlugin": {
+    "Id": "org.devium.clock",
+    "Name": "Clock (Devium)",
+    "Description": "A big Devium clock with the date and a greeting",
+    "Icon": "preferences-system-time",
+    "Category": "Date and Time",
+    "Authors": [
+      {
+        "Name": "Yeeboein"
+      }
+    ],
+    "License": "GPL-2.0-or-later",
+    "Version": "1.0",
+    "Website": "https://github.com/yeeboein/devium-linux"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}

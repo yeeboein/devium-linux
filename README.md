@@ -48,6 +48,8 @@ It's still in beta, so expect the odd bug. If you find one, tell me on
   - **Coding tools:** databases in one click, a secret guard that stops you committing passwords, `.env`
     checks, HTTPS on localhost, a public link for your local site, per-project language versions and snippets.
   - **Guest account:** let a friend use your laptop; it's wiped when they log out.
+- **Devium widgets** for the desktop: sea conditions (waves, swell, water temperature, tide), weather,
+  system rings, a big clock, a focus timer, your Git projects and your running dev servers.
 - **Spotlight** (Meta+Space). Search apps, settings and files, do quick maths and unit conversions,
   or type `> command` to run something.
 - **[ArchPill](https://github.com/yeeboein/archpill)** if you want it: a little pill at the top of the

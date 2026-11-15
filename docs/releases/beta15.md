@@ -27,6 +27,19 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
 - **fastfetch fits your window:** big DEVIUM logo in wide terminals, a smaller logo in medium ones, and just the
   info in narrow ones, so nothing wraps onto the next line.
 
+- **Devium widget pack** (KDE): eight desktop widgets in the Devium style. Add them from Devium Tools > Look,
+  or right-click the desktop > Add or Manage Widgets.
+  - **Sea conditions:** wave height and how rough it is, swell, water temperature, wind in knots, and a tide
+    curve with the next high and low water (from Open-Meteo, free).
+  - **Weather:** now, feels-like, wind, humidity, UV and the next 5 days.
+  - **System:** CPU, memory and disk rings, temperature, battery and uptime.
+  - **Clock:** a big clock with the date and a "Good morning" greeting.
+  - **Focus timer:** 25 minutes of focus, 5 minutes of break, with a notification and a count of today's sessions.
+  - **Git projects:** your repos with branch, changed files and commits to push or pull. Click to open one
+    in your editor, right-click for a terminal.
+  - **Dev servers:** what's running on which port, with Open and Stop.
+  - **Devium shortcuts:** Spotlight, Devium Tools, Configure, Updates, Clean up and more in one click.
+  Weather and sea find your town from your IP address, or you can type a place in the widget's settings.
 - **Emoji style** (Devium Configure): pick how emoji look everywhere: Android / Linux (Noto, the default),
   glossy and round (JoyPixels, the closest to the iPhone look), flat (Twemoji, like Discord) or hand-drawn
   (OpenMoji). Works in apps, websites (Firefox too) and the terminal.

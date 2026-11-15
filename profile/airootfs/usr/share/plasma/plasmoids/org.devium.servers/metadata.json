@@ -1,0 +1,19 @@
+{
+  "KPlugin": {
+    "Id": "org.devium.servers",
+    "Name": "Dev servers (Devium)",
+    "Description": "What's running on which port; open or stop it",
+    "Icon": "network-server",
+    "Category": "Utilities",
+    "Authors": [
+      {
+        "Name": "Yeeboein"
+      }
+    ],
+    "License": "GPL-2.0-or-later",
+    "Version": "1.0",
+    "Website": "https://github.com/yeeboein/devium-linux"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}

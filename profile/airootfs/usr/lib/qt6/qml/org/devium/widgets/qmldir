@@ -1,0 +1,19 @@
+module org.devium.widgets
+singleton Theme 1.0 Theme.qml
+Card 1.0 Card.qml
+Ring 1.0 Ring.qml
+Stat 1.0 Stat.qml
+Header 1.0 Header.qml
+Pill 1.0 Pill.qml
+Net 1.0 Net.js
+Sea 1.0 Sea.js
+Weather 1.0 Weather.js
+Spark 1.0 Spark.qml
+SeaView 1.0 SeaView.qml
+WeatherView 1.0 WeatherView.qml
+SystemView 1.0 SystemView.qml
+ClockView 1.0 ClockView.qml
+FocusView 1.0 FocusView.qml
+ProjectsView 1.0 ProjectsView.qml
+ServersView 1.0 ServersView.qml
+LinksView 1.0 LinksView.qml

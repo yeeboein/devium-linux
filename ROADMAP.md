@@ -157,6 +157,7 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] Coding tools page: dev doctor (support dev), one-click databases, secret guard, .env files, local HTTPS,
       share a local site, per-project language versions, snippets (snip), build notifications, offline docs
 - [x] Clean up page, Guest account, crash catcher
+- [x] Devium widget pack: sea conditions, weather, system, clock, focus timer, Git projects, dev servers, shortcuts
 - [x] Emoji style picker in Devium Configure (Noto, JoyPixels, Twemoji, OpenMoji)
 - [x] With ArchPill, brightness shows only in the pill
 - [x] fastfetch fits any window: big logo, small logo, or info only, picked from the terminal size

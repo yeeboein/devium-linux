@@ -1,0 +1,19 @@
+{
+  "KPlugin": {
+    "Id": "org.devium.links",
+    "Name": "Devium shortcuts (Devium)",
+    "Description": "Spotlight, Devium Tools, Configure, Updates and more in one click",
+    "Icon": "devium",
+    "Category": "Utilities",
+    "Authors": [
+      {
+        "Name": "Yeeboein"
+      }
+    ],
+    "License": "GPL-2.0-or-later",
+    "Version": "1.0",
+    "Website": "https://github.com/yeeboein/devium-linux"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}
