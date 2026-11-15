@@ -28,7 +28,6 @@ ESSENTIAL = re.compile(r"^(devium-firstrun|devium-setup-wizard|polkit|.*polkit.*
 # Friendlier words for common background apps
 NICE = {
     "devium-crash-catcher": ("Crash catcher", "Offers to send a report when an app crashes"),
-    "devium-loading": ("Loading screen", "Covers the desktop while it loads after you log in"),
     "devium-snap-assist": ("Snap Assist", "Pick a window for the other half when you snap one to the side"),
     "devium-desk-widgets": ("Devium widgets", "Widgets on the desktop (Xfce and Hyprland)"),
     "org.kde.discover.notifier": ("Update notifications (Discover)", "Pop-ups about app updates (Devium Updates does this too)"),

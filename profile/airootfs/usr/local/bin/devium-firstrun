@@ -126,6 +126,10 @@ if [[ ! -f $STATE/archpill-osd ]] && command -v plasmashell >/dev/null && \
     touch "$STATE/archpill-osd"
 fi
 
+# --- beta16: the loading screen is gone; take it out of Hyprland configs from beta15
+[[ -f ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf ]] && \
+    sed -i '/devium-loading/d' "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf"
+
 # --- beta15: secret guard on by default (stops commits containing passwords/keys); not if you set your own hooks
 if [[ ! -f $STATE/git-guard ]] && command -v git >/dev/null; then
     [[ -z $(git config --global core.hooksPath) ]] && git config --global core.hooksPath /usr/lib/devium/git-hooks

@@ -160,7 +160,7 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] Snap Assist and the widget pack on Xfce and Hyprland too
 - [x] Background and extras page: turn off startup apps and services, remove or add back extra apps
 - [x] Customise page: 80 optional look tweaks (macOS buttons, see-through windows, blur, wobbly, hot corners…)
-- [x] Login shows the account name (no typing, no desktop picker); loading screen after login; Devium folder icons
+- [x] Login shows the account name (no typing, no desktop picker); Devium folder icons (beta15 also had a loading screen after login, removed in beta16)
 - [x] Devium widget pack: sea conditions, weather, system, clock, focus timer, Git projects, dev servers, shortcuts
 - [x] Emoji style picker in Devium Configure (Noto, JoyPixels, Twemoji, OpenMoji)
 - [x] With ArchPill, brightness shows only in the pill

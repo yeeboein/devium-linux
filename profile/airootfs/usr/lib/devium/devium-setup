@@ -157,6 +157,8 @@ strip_live_repo() {
 }
 
 package_setup() {
+    # things earlier versions had that are gone now (an update copies new files but doesn't delete old ones)
+    rm -f /etc/xdg/autostart/devium-loading.desktop /usr/local/bin/devium-loading
     strip_live_repo
     apply_overrides
     write_os_release

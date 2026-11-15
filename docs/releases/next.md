@@ -7,11 +7,11 @@
 ## Already done
 - **Devium Updater finds new versions again:** it said "No Devium releases published yet" because GitHub hides
   beta releases from its "latest release". It now sees every release, betas included.
+- **No loading screen after login:** you go straight from the login screen to your desktop.
 - **fastfetch shows your Devium version:** a new line, e.g. `Ver  Devium Beta16`.
 
 ## Planned
-- **Safe mode at login:** hold Shift while logging in to skip Devium's extras (loading screen, widgets, look
-  tweaks), so you can always get back in and undo something.
+- **Safe mode at login:** hold Shift while logging in to skip Devium's extras (widgets, look tweaks), so you can always get back in and undo something.
 - **`support selftest`:** checks that every Devium app, widget and helper works, and gives you a list to share.
 - **Automatic tests for every ISO:** each build boots in a virtual machine and is checked before release.
 - **Lighter on old laptops:** Snap Assist on Xfce only wakes up when a window moves, and the crash catcher

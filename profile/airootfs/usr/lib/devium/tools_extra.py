@@ -299,21 +299,6 @@ def make_look_page(win):
                         "subtitle"),
                   row(button(T("Open Customise"), lambda: ui.launch("devium-setup-wizard", "--customise"), True,
                              "preferences-desktop-theme"))))
-    no_load = os.path.join(CONFIG, "no-loading-screen")
-    load_box = QCheckBox(T("Show a loading screen after logging in"))
-    load_box.setChecked(not os.path.exists(no_load))
-
-    def toggle_loading(on):
-        if on and os.path.exists(no_load):
-            os.remove(no_load)
-        elif not on:
-            os.makedirs(CONFIG, exist_ok=True)
-            open(no_load, "w").close()
-    load_box.toggled.connect(toggle_loading)
-    page.add(card(label(T("Loading screen"), "h2"),
-                  label("After you log in, a screen like the login screen covers the desktop until everything has "
-                        "loaded, then fades away smoothly. Click it to skip.", "subtitle"),
-                  row(load_box, button(T("Preview"), lambda: ui.launch("devium-loading", "--test"), icon="view-preview"))))
     page.add(card(label(T("Reset desktop"), "h2"),
                   label("Dock in the wrong place, panels gone, or the theme looks broken? Put the desktop back "
                         "to Devium's defaults without reinstalling. Your files and apps stay.", "subtitle"),
