@@ -34,6 +34,34 @@ def api_url(repo):
     return f"https://api.github.com/repos/{m.group(1) if m else 'yeeboein/devium-linux'}/releases/latest"
 
 
+def next_name(v):
+    """beta15 -> beta16, 2026.11.15 -> the next release (shown as "the next version")."""
+    m = re.match(r"^(.*?)(\d+)$", v or "")
+    return f"{m.group(1)}{int(m.group(2)) + 1}" if m and not re.match(r"^\d{4}\.", v) else "the next version"
+
+
+def raw_url(repo, path):
+    m = re.match(r"https://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$", repo)
+    return f"https://raw.githubusercontent.com/{m.group(1) if m else 'yeeboein/devium-linux'}/main/{path}"
+
+
+class FetchText(QThread):
+    """The "coming next" notes (docs/releases/next.md on GitHub), so they can change without a new ISO."""
+    done = pyqtSignal(str)
+
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
+
+    def run(self):
+        try:
+            req = urllib.request.Request(self.url, headers={"User-Agent": "devium-updater"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                self.done.emit(r.read().decode("utf-8", "replace"))
+        except Exception:
+            self.done.emit("")
+
+
 def version_key(v):
     return [int(x) for x in re.findall(r"\d+", v)]
 
@@ -75,6 +103,11 @@ class Updater(QWidget):
         self.status.setObjectName("h2")
         self.status.setWordWrap(True)
         lay.addWidget(self.status)
+        self.next_label = QLabel()
+        self.next_label.setTextFormat(Qt.TextFormat.RichText)
+        self.next_label.setStyleSheet(f"font-size: 13pt; padding: 6px 12px; border-radius: 10px; "
+                                      f"background: rgba(143,180,216,0.16); color: {ui.ACCENT};")
+        lay.addWidget(self.next_label)
 
         self.notes = QTextBrowser()
         self.notes.setOpenLinks(False)
@@ -115,9 +148,38 @@ class Updater(QWidget):
         self.fetch.done.connect(self.got)
         self.fetch.start()
 
+    def show_next(self, name, ready):
+        self.next_label.setText(f"<b>Next update: {name}</b>" + ("  ·  ready to install" if ready else "  ·  coming soon"))
+
+    def coming_next(self):
+        """No newer release yet: show what's planned for the next one."""
+        name = next_name(self.info["DEVIUM_VERSION"])
+        self.show_next(name, False)
+        self.notes.setMarkdown(f"## Coming in {name}\n\nLoading…")
+        self.next_fetch = FetchText(raw_url(self.info["DEVIUM_REPO"], "docs/releases/next.md"))
+
+        def got(text):
+            if not text.strip():
+                self.notes.setMarkdown(f"## Coming in {name}\n\nThe plan for {name} isn't online yet. "
+                                       "Check the Devium Discord for news.")
+                return
+            text = re.sub(r"<!--.*?-->", "", text, flags=re.S)   # notes for the Devium team aren't shown
+            lines = text.strip().splitlines()
+            if lines and lines[0].startswith("# "):
+                title = lines[0][2:].strip()
+                m = re.search(r"\b(beta\d+|\d+\.\d+(?:\.\d+)?)\b", title)
+                if m:
+                    self.show_next(m.group(1), False)
+                lines = lines[1:]
+            self.notes.setMarkdown(f"## Coming in {name}\n\n" + "\n".join(lines) +
+                                   "\n\n*This is the plan, so things may still change before it's released.*")
+        self.next_fetch.done.connect(got)
+        self.next_fetch.start()
+
     def got(self, rel, err):
         if not rel:
             self.status.setText(err)
+            self.coming_next()
             return
         self.release = rel
         tag = rel.get("tag_name", "")
@@ -127,10 +189,13 @@ class Updater(QWidget):
                                     for a in rel.get("assets", [])))
         if newer:
             self.status.setText(f"Devium {tag.lstrip('v')} is available! You have {self.info['DEVIUM_VERSION']}.")
+            self.show_next(tag.lstrip("v"), True)
+            self.notes.setMarkdown(f"## Everything new in {rel.get('name') or tag}\n\n{rel.get('body') or 'No release notes.'}")
             self.update_btn.setEnabled(not ui.is_live())
         else:
             self.status.setText(f"You have the latest Devium ({self.info['DEVIUM_VERSION']}).")
             self.update_btn.setEnabled(False)
+            self.coming_next()
 
     def download_iso(self):
         url = (self.release or {}).get("html_url") or self.info["DEVIUM_REPO"] + "/releases"

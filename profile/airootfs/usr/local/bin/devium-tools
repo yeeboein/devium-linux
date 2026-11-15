@@ -425,6 +425,13 @@ class UpdatesPage(Page):
                      button(T("Undo last update"), self.undo, icon="edit-undo"),
                      button("Make a restore point", lambda: root(self, "Restore point", "snapshot"),
                             icon="document-save")))
+        ver = ui.devium_version()
+        m = re.match(r"^(.*?)(\d+)$", ver or "")
+        nxt = f"{m.group(1)}{int(m.group(2)) + 1}" if m and not re.match(r"^\d{4}\.", ver) else "the next version"
+        self.add(card(label(f"Next Devium update: {nxt}", "h2"),
+                      label(f"You have Devium {ver}. See everything coming in {nxt}, or install it when it's out.",
+                            "subtitle"),
+                      row(button(f"See what's in {nxt}", lambda: ui.launch("devium-updater"), True, "devium"))))
         self.auto = QCheckBox(T("Automatic updates") + " (daily, on mains power, restore point first)")
         self.auto.setChecked(run(["systemctl", "is-enabled", "devium-autoupdate.timer"]).strip() == "enabled")
         self.auto.toggled.connect(self.toggle_auto)

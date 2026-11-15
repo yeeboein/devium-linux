@@ -46,6 +46,8 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
 - **Health check** (Devium Tools > Health check): disk health and wear, temperatures and battery wear on one page.
   Devium checks your disks every day and warns you at login if one is starting to fail.
 - **What's new:** after Devium Updater moves you to a new version, a window like this one shows what changed.
+- **Next update in Devium Updater:** it always shows the next version ("Next update: beta16") with everything
+  in it: the full release notes when it's ready to install, or what's planned while it's still being made.
 - **`support learn`:** a hands-on terminal tutorial. Ten short lessons (pwd, ls, cd, mkdir, files, cat, cp/mv, rm,
   grep and pipes) in a safe practice folder.
 - **Snap Assist on every desktop:** snap a window to one side, then pick the window for the other side.
