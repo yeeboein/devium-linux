@@ -1,6 +1,6 @@
 """Shapes drawn from scratch for the Devium icon theme, in the same style as the app icons: a rounded square
 in the Devium gradient with a white shape on it. Folders and files have their symbol cut into the shape.
-Used by tools/make-folder-icons.py (folders, files, trash) and tools/make-icons.py (Dolphin, file managers)."""
+Used by tools/make-folder-icons.py (folders, files, trash) and tools/make-icons.py (file managers)."""
 TOP, BOTTOM = "#8fb4d8", "#b4b8e0"
 CUT = "#9fb4dc"        # the symbol is "cut out" of the white shape in the tile's own colour
 
@@ -138,23 +138,6 @@ def trash_svg(full):
 
 
 # --- app icons drawn here (no outside glyph) --------------------------------------------------------------
-# A leaping dolphin, for Dolphin, so it doesn't look like a plain folder.
-DOLPHIN = ("M9 40C11 37 14 35.5 17 35C17.5 32 19.5 29.5 22.5 27.5C24.5 26 26.5 24.8 28.5 24"
-           "C29.5 20 31.5 16.5 35 14.5C34 17.5 34.2 20.5 35.5 23C41 24 46 28 49 34"
-           "C50 36 51 37.5 52 38.5C54 36.5 56.5 35.5 59 35.5C57 38 56 40.5 55.5 43"
-           "C56.5 45.5 57 48 56.5 50.5C54 48.5 52 46.5 50.5 44C48 41 45 37.5 41 35.5"
-           "C36 33.5 30 34 26 36.5C26.5 39.5 25.5 42.5 23 45C22 42.5 21.5 40.5 21.5 38.5"
-           "C18 39.5 14 40.3 9 40Z")
-
-
-def dolphin_svg():
-    return _tile('<g transform="translate(1.4 2.75) scale(0.9)">'
-                 f'<path d="{DOLPHIN}" fill="#2b323b" opacity="0.2" transform="translate(0 1.4)"/>'
-                 f'<path d="{DOLPHIN}" fill="#ffffff"/>'
-                 f'<circle cx="20.3" cy="32.6" r="1.3" fill="{CUT}"/>'
-                 f'<path d="M10.5 39.6Q14 38.9 17.2 37.6" stroke="{CUT}" stroke-width="1.1" stroke-linecap="round" fill="none"/></g>')
-
-
 def file_manager_svg():
     """Other file managers: a folder with a magnifying glass (an app, not a folder)."""
     f = "M14 21.5a3 3 0 0 1 3-3h8l3 3h15a3 3 0 0 1 3 3V41a3 3 0 0 1-3 3H17a3 3 0 0 1-3-3z"
@@ -164,4 +147,4 @@ def file_manager_svg():
                  '<path d="M46.2 46.2 51 51" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>')
 
 
-CUSTOM_APPS = {"dolphin": dolphin_svg, "filemanager": file_manager_svg}
+CUSTOM_APPS = {"filemanager": file_manager_svg}
