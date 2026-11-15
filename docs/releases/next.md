@@ -14,6 +14,9 @@
 
 - **Konsole (see-through):** a new choice on Devium Configure's Terminal page: Konsole with a frosted,
   see-through background, in any Devium theme.
+- **Glass mode done properly** (Customise > "Glass mode: see-through everything"): every window is slightly
+  see-through with frosted blur, the dock and terminal too, while videos, games, photo apps and full-screen
+  windows stay solid. Background windows are a little more see-through than the one you're using.
 - **Your own emoji font:** Devium Configure's Emoji style page also lists any colour emoji font you've installed
   yourself, and applies it everywhere like the others.
 

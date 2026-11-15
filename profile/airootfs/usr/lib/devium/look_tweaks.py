@@ -100,13 +100,27 @@ T("master-layout", "windows", "One big window plus a stack", "Hyprland's master 
 # ---------------------------------------------------------------------------- glass
 T("glass-inactive", "glass", "See-through windows in the background", "Windows you're not using are slightly transparent",
   kde=[("kwinrc", "Plugins", "translucencyEnabled", "true"), ("kwinrc", "Effect-translucency", "Inactive", "88")],
-  xfce=[("xfwm4", "/general/inactive_opacity", "int", "88", "100")], hypr=["decoration:inactive_opacity = 0.9"])
+  xfce=[("xfwm4", "/general/inactive_opacity", "int", "88", "100")], hypr=["decoration:inactive_opacity = 0.9"],
+  group="glass-level")
 T("glass-moving", "glass", "See-through while moving", "Windows become transparent while you drag them",
   kde=[("kwinrc", "Plugins", "translucencyEnabled", "true"), ("kwinrc", "Effect-translucency", "MoveResize", "75")],
   xfce=[("xfwm4", "/general/move_opacity", "int", "80", "100")])
-T("glass-all", "glass", "Slightly see-through windows everywhere", "Even the window you're using lets a little wallpaper through",
-  kde=[("kwinrc", "Plugins", "translucencyEnabled", "true"), ("kwinrc", "Effect-translucency", "ActiveWindows", "94")],
-  hypr=["decoration:active_opacity = 0.95"])
+T("glass-all", "glass", "Glass mode: see-through everything",
+  "Every window lets a little frosted wallpaper through, the dock and terminal too. Videos, games and "
+  "photo apps stay solid, so they still look right",
+  kde=[("kwinrc", "Plugins", "blurEnabled", "true")],
+  kde_js=("panels().forEach(function(p){ p.opacity = 'translucent'; });",
+          "panels().forEach(function(p){ p.opacity = 'adaptive'; });"),
+  xfce=[("xfwm4", "/general/inactive_opacity", "int", "86", "100"), ("xfwm4", "/general/frame_opacity", "int", "88", "100"),
+        ("xfwm4", "/general/popup_opacity", "int", "92", "100"), ("xfwm4", "/general/move_opacity", "int", "85", "100")],
+  hypr=["decoration:active_opacity = 0.93", "decoration:inactive_opacity = 0.86",
+        "decoration:blur:enabled = true", "decoration:blur:size = 7", "decoration:blur:passes = 3",
+        "decoration:blur:noise = 0.02", "decoration:blur:vibrancy = 0.2",
+        "windowrulev2 = opaque, fullscreen:1",
+        "windowrulev2 = opaque, class:^(mpv|vlc|celluloid|io.github.celluloid_player.Celluloid|steam|steam_app_.*|"
+        "gamescope|com.obsproject.Studio|obs|gimp|org.gimp.GIMP|krita|org.kde.krita|kdenlive|org.kde.kdenlive|"
+        "darktable|blender|org.kde.gwenview|loupe|org.gnome.Loupe)$"],
+  func="glass_all", group="glass-level")
 T("glass-menus", "glass", "See-through menus", "Menus and pop-ups let the window behind show through",
   kde=[("kwinrc", "Plugins", "translucencyEnabled", "true"), ("kwinrc", "Effect-translucency", "Menus", "88"),
        ("kwinrc", "Effect-translucency", "DropdownMenus", "88"), ("kwinrc", "Effect-translucency", "PopupMenus", "88")])
@@ -421,6 +435,43 @@ def kde_tap_click(on):
     kde_input("TapToClick", on)
 
 
+SOLID_APPS = ("mpv|vlc|celluloid|io.github.celluloid_player.Celluloid|steam|steam_app_.*|gamescope|obs|"
+              "com.obsproject.Studio|gimp|org.gimp.GIMP|krita|org.kde.krita|kdenlive|org.kde.kdenlive|darktable|"
+              "blender|gwenview|org.kde.gwenview|okular|org.kde.okular|spectacle|org.kde.spectacle")
+
+
+def glass_all(on):
+    """KDE: window rules. Videos, games and photo apps stay solid; every other window is 93% (85% in the background)."""
+    if KDE:
+        kset("kwinrc", "Effect-translucency", "ActiveWindows", None)   # beta15's glass mode used this; not any more
+        import configparser
+        path = os.path.join(CFG, "kwinrulesrc")
+        cp = configparser.ConfigParser(interpolation=None, strict=False)
+        cp.optionxform = str
+        cp.read(path)
+        if not cp.has_section("General"):
+            cp.add_section("General")
+        rules = [r for r in cp.get("General", "rules", fallback="").split(",") if r and r not in ("devium-solid", "devium-glass")]
+        for sec in ("devium-solid", "devium-glass"):
+            if cp.has_section(sec):
+                cp.remove_section(sec)
+        if on:
+            cp["devium-solid"] = {"Description": "Devium glass mode: keep videos, games and photo apps solid",
+                                  "wmclass": SOLID_APPS, "wmclassmatch": "3", "wmclasscomplete": "false",
+                                  "opacityactive": "100", "opacityactiverule": "2",
+                                  "opacityinactive": "100", "opacityinactiverule": "2"}
+            cp["devium-glass"] = {"Description": "Devium glass mode: every window slightly see-through",
+                                  "wmclass": ".*", "wmclassmatch": "3", "wmclasscomplete": "false", "types": "33",
+                                  "opacityactive": "93", "opacityactiverule": "2",
+                                  "opacityinactive": "85", "opacityinactiverule": "2"}
+            rules = ["devium-solid", "devium-glass"] + rules     # earlier rules win: solid apps first
+        cp.set("General", "rules", ",".join(rules))
+        cp.set("General", "count", str(len(rules)))
+        with open(path, "w") as f:
+            cp.write(f, space_around_delimiters=False)
+        konsole_glass(on)
+
+
 def waybar_reload(on):
     run(["pkill", "-SIGUSR2", "waybar"])
 
@@ -465,13 +516,13 @@ def dim_wallpaper(on):
 
 
 # ---------------------------------------------------------------------------- applying
-FUNC_DESKTOPS = {"konsole_glass": "kde", "konsole_font": "kde", "kde_natural_scroll": "kde", "kde_tap_click": "kde",
+FUNC_DESKTOPS = {"glass_all": "any", "konsole_glass": "kde", "konsole_font": "kde", "kde_natural_scroll": "kde", "kde_tap_click": "kde",
                  "dim_wallpaper": "kde", "waybar_reload": "hypr", "waybar_clock": "hypr"}
 
 
 def available(t):
     if KDE:
-        return bool(t["kde"] or t["kde_js"] or FUNC_DESKTOPS.get(t["func"]) == "kde")
+        return bool(t["kde"] or t["kde_js"] or FUNC_DESKTOPS.get(t["func"]) in ("kde", "any"))
     if XFCE:
         return bool(t["xfce"])
     if HYPR:
