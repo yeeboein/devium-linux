@@ -35,7 +35,8 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
   - **Hyprland:** windows tile side by side by themselves; **SUPER+S** picks a window (even from another
     workspace) to put next to the one you're using.
 - **fastfetch fits your window:** big DEVIUM logo in wide terminals, a smaller logo in medium ones, and just the
-  info in narrow ones, so nothing wraps onto the next line.
+  info in narrow ones, so nothing wraps onto the next line. **`fastfetchnorev`** does the same without your
+  user name, computer name or IP address, for screenshots you share.
 - **Devium widget pack** (all three desktops): eight desktop widgets in the Devium style. Add them from
   Devium Tools > Look (on KDE also right-click the desktop > Add or Manage Widgets). On Xfce and Hyprland
   they sit on the desktop behind your windows; drag one to move it.

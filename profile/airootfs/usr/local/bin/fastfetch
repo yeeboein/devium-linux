@@ -7,8 +7,12 @@
 real=/usr/bin/fastfetch
 [[ -x $real ]] || { echo "fastfetch is not installed"; exit 1; }
 
+# fastfetchnorev sets this: always use Devium's layouts without personal details (even with your own config)
+suffix=""
+[[ -n ${DEVIUM_FASTFETCH_NOREV:-} ]] && suffix="-norev"
+
 own="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/config.jsonc"
-if (( $# )) || [[ -f $own || -f ${own%c} ]] || [[ ! -t 1 ]]; then
+if [[ -z $suffix ]] && { (( $# )) || [[ -f $own || -f ${own%c} ]] || [[ ! -t 1 ]]; }; then
     exec "$real" "$@"
 fi
 
@@ -18,9 +22,9 @@ rows=${rows:-$(tput lines 2>/dev/null || echo 40)}
 
 dir=/etc/xdg/fastfetch
 if (( cols >= 100 && rows >= 22 )); then
-    exec "$real" -c "$dir/config.jsonc"
+    exec "$real" -c "$dir/config$suffix.jsonc" "$@"
 elif (( cols >= 66 && rows >= 16 )); then
-    exec "$real" -c "$dir/medium.jsonc"
+    exec "$real" -c "$dir/medium$suffix.jsonc" "$@"
 else
-    exec "$real" -c "$dir/compact.jsonc"
+    exec "$real" -c "$dir/compact$suffix.jsonc" "$@"
 fi

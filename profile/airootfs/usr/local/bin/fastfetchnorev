@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# fastfetchnorev - fastfetch without personal details, for screenshots you share:
+# no user name, no computer name, no IP address, no Wi-Fi name. Same sizes as fastfetch.
+DEVIUM_FASTFETCH_NOREV=1 exec /usr/local/bin/fastfetch "$@"

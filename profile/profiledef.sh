@@ -33,6 +33,7 @@ file_permissions=(
   ["/usr/local/bin/devium-tools"]="0:0:755"
   ["/usr/local/bin/devium-wifi"]="0:0:755"
   ["/usr/local/bin/fastfetch"]="0:0:755"
+  ["/usr/local/bin/fastfetchnorev"]="0:0:755"
   ["/usr/lib/devium/widget-data"]="0:0:755"
   ["/usr/local/bin/devium-snap-assist"]="0:0:755"
   ["/usr/local/bin/devium-loading"]="0:0:755"
