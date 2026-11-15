@@ -166,6 +166,12 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
 - [x] With ArchPill, brightness shows only in the pill
 - [x] fastfetch fits any window: big logo, small logo, or info only, picked from the terminal size
 
+## beta16
+- [x] Devium Updater sees beta releases (it said "no releases published")
+- [x] fastfetch: one full-size logo, info underneath in narrow windows, version line; no re-wrapping on resize
+- [x] Loading screen after login removed
+- [x] Konsole (see-through), Glass mode reworked, See-through all the time, your own emoji font
+
 ## Next
 - [ ] RAM trims: zram tuning, earlyoom, services off by default, devium-ram command
 - [ ] Real screenshots from a VM for the website

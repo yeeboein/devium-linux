@@ -1,26 +1,8 @@
-# beta16
+# beta17
 
-<!-- For Yeeboein: Devium Updater shows this list as "Coming in beta16". Edit this file on GitHub to change it:
-     Devium users see the new list straight away, no new ISO needed. When beta16 is released, its real release
+<!-- For Yeeboein: Devium Updater shows this list as "Coming in beta17". Edit this file on GitHub to change it:
+     Devium users see the new list straight away, no new ISO needed. When beta17 is released, its real release
      notes are shown instead. Comments like this one aren't shown. -->
-
-## Already done
-- **Devium Updater finds new versions again:** it said "No Devium releases published yet" because GitHub hides
-  beta releases from its "latest release". It now sees every release, betas included.
-- **No loading screen after login:** you go straight from the login screen to your desktop.
-- **fastfetch shows your Devium version:** a new line, e.g. `Ver  Devium Beta16`.
-- **fastfetch keeps one full-size logo:** in a wide window the info sits beside it; in a narrow window the
-  info goes underneath, so they never run into each other. Resizing afterwards doesn't jumble it either.
-
-- **Konsole (see-through):** a new choice on Devium Configure's Terminal page: Konsole with a frosted,
-  see-through background, in any Devium theme.
-- **Glass mode done properly** (Customise > "Glass mode: see-through everything"): every window is slightly
-  see-through with frosted blur, the dock and terminal too, while videos, games, photo apps and full-screen
-  windows stay solid. Background windows are a little more see-through than the one you're using.
-- **See-through all the time** (Customise): every window see-through, always, with no exceptions (videos,
-  games and full-screen too), with strong frosted blur. KDE and Hyprland.
-- **Your own emoji font:** Devium Configure's Emoji style page also lists any colour emoji font you've installed
-  yourself, and applies it everywhere like the others.
 
 ## Planned
 - **Safe mode at login:** hold Shift while logging in to skip Devium's extras (widgets, look tweaks), so you can always get back in and undo something.
@@ -28,7 +10,7 @@
 - **Automatic tests for every ISO:** each build boots in a virtual machine and is checked before release.
 - **Lighter on old laptops:** Snap Assist on Xfce only wakes up when a window moves, and the crash catcher
   switches off in Low-RAM mode.
-- **Fixes** for everything beta15 testers report on Discord.
+- **Fixes** for everything beta16 testers report on Discord.
 
 ## Ideas being considered
 - Screenshot editor (crop, arrows, blur private details)
