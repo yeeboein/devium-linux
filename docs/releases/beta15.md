@@ -26,7 +26,6 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
 - **Snap Assist (KDE):** snap a window to one side, then pick or open the window for the other side.
 - **fastfetch fits your window:** big DEVIUM logo in wide terminals, a smaller logo in medium ones, and just the
   info in narrow ones, so nothing wraps onto the next line.
-
 - **Devium widget pack** (KDE): eight desktop widgets in the Devium style. Add them from Devium Tools > Look,
   or right-click the desktop > Add or Manage Widgets.
   - **Sea conditions:** wave height and how rough it is, swell, water temperature, wind in knots, and a tide
