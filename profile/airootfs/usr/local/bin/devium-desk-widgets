@@ -19,7 +19,8 @@ import sys
 CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium", "desk-widgets.json")
 QS_SHELL = "/usr/share/devium/desk-widgets"
 TYPES = {"clock": "ClockWidget", "weather": "WeatherWidget", "sea": "SeaWidget", "system": "SystemWidget",
-         "focus": "FocusWidget", "projects": "ProjectsWidget", "servers": "ServersWidget", "links": "LinksWidget"}
+         "focus": "FocusWidget", "projects": "ProjectsWidget", "servers": "ServersWidget", "links": "LinksWidget",
+         "photo": "PhotoWidget"}
 
 
 def load():
@@ -127,8 +128,10 @@ def x11(cfg):
         ctx.setContextProperty("runner", runner)
         ctx.setContextProperty("deskPlace", cfg.get("place", ""))
         ctx.setContextProperty("deskImperial", bool(cfg.get("imperial", False)))
+        ctx.setContextProperty("deskPhotoFolder", cfg.get("photoFolder", ""))
+        extra = "  folder: deskPhotoFolder\n" if kind == "PhotoWidget" else ""
         qml = ("import QtQuick\nimport org.devium.widgets\n"
-               f"{kind} {{ runner: runner; place: deskPlace; imperial: deskImperial\n"
+               f"{kind} {{ runner: runner; place: deskPlace; imperial: deskImperial\n" + extra +
                "  MouseArea { anchors.fill: parent; z: -2; acceptedButtons: Qt.LeftButton\n"
                "    onPressed: (m) => { m.accepted = true; Window.window.startSystemMove() } } }\n")
         path = os.path.join(os.path.expanduser("~/.cache/devium"), f"desk-{kind}.qml")

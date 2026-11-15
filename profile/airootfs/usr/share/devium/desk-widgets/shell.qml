@@ -12,7 +12,8 @@ ShellRoot {
     property var cfg: ({ widgets: [] })
     property bool ignoreNext: false   // our own save shouldn't reload everything
     readonly property var types: ({ clock: clockC, weather: weatherC, sea: seaC, system: systemC,
-                                    focus: focusC, projects: projectsC, servers: serversC, links: linksC })
+                                    focus: focusC, projects: projectsC, servers: serversC, links: linksC,
+                                    photo: photoC })
 
     FileView {
         id: file
@@ -52,6 +53,7 @@ ShellRoot {
     Component { id: projectsC; ProjectsWidget {} }
     Component { id: serversC; ServersWidget {} }
     Component { id: linksC; LinksWidget {} }
+    Component { id: photoC; PhotoWidget {} }
 
     Variants {
         model: (root.cfg.widgets || []).map(function (w, i) { return i })
@@ -80,6 +82,7 @@ ShellRoot {
                     item.runner = runner
                     item.place = root.cfg.place || ""
                     item.imperial = !!root.cfg.imperial
+                    if (item.hasOwnProperty("folder")) item.folder = root.cfg.photoFolder || ""
                 }
             }
             // drag anywhere on the card to move it

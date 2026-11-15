@@ -35,6 +35,10 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 tes
   - **Files:** split view, full path, show hidden files
   - **And more:** faster or left-handed mouse, week numbers, no pop-ups over full-screen apps, colour-blind
     friendly colours, invert colours, and Xfce options (no effects, snapping windows, roll-up title bars)
+- **Photo widget** (Devium widgets, all three desktops): a picture, or a slideshow from a folder (your Pictures
+  folder unless you pick another), with rounded corners and a soft fade between photos. Settings for the folder or a
+  single picture, seconds per picture, random order, fill or fit, and the picture's name. Double-click to open
+  the picture. Add as many as you like on KDE.
 - **Linux tools** (new page in Devium Configure): 34 handy tools, all optional: GParted, Filelight, BleachBit,
   TestDisk/PhotoRec, ddrescue, Impression (USB writer), Pika Backup, Syncthing, rclone, KeePassXC, Mission Center,
   CPU-X, inxi, PowerTOP, s-tui, OpenRGB, Piper, Solaar, Flatseal, Warehouse, Distrobox, GNOME Boxes, Firejail,

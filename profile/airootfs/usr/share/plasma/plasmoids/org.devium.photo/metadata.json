@@ -1,0 +1,15 @@
+{
+  "KPlugin": {
+    "Id": "org.devium.photo",
+    "Name": "Photo (Devium)",
+    "Description": "A picture, or a slideshow from a folder, with rounded corners and a soft fade",
+    "Icon": "image-x-generic",
+    "Category": "Graphics",
+    "Authors": [{ "Name": "Yeeboein" }],
+    "License": "GPL-2.0-or-later",
+    "Version": "1.0",
+    "Website": "https://github.com/yeeboein/devium-linux"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}
