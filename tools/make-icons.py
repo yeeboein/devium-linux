@@ -10,7 +10,7 @@ Glyph sources (downloaded when you run this; only the finished icons are kept in
 
 Usage:  python3 tools/make-icons.py [--simple-icons DIR] [--breeze DIR]
 Writes: profile/airootfs/usr/share/icons/Devium/  and  .../Devium-Dark/
-Folder icons (scalable/places) come from tools/make-folder-icons.py and are kept.
+Folder and file icons (scalable/places, scalable/mimetypes) come from tools/make-folder-icons.py and are kept.
 """
 import argparse
 import base64
@@ -25,6 +25,9 @@ import tempfile
 import urllib.request
 import xml.etree.ElementTree as ET
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import devium_tiles  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "profile/airootfs/usr/share/icons")
@@ -33,7 +36,8 @@ LOGO = os.path.join(ROOT, "profile/airootfs/usr/share/devium/logo-white.png")
 # Devium gradient (same as the apps and the theme)
 TOP, BOTTOM = "#8fb4d8", "#b4b8e0"
 
-# glyph source -> icon names that use it.  si: = Simple Icons, bz: = Breeze, devium = Devium logo
+# glyph source -> icon names that use it.  si: = Simple Icons, bz: = Breeze, devium = Devium logo,
+# custom: = drawn in tools/devium_tiles.py
 ICONS = {
     "devium": ["devium", "devium-install", "devium-setup", "devium-tools",
                "devium-updater", "devium-about"],
@@ -46,9 +50,9 @@ ICONS = {
     "bz:actions/16/globe": ["chromium", "helium", "helium-browser", "internet-web-browser",
                             "web-browser"],
     # file managers
-    "bz:places/16/folder": ["system-file-manager", "org.kde.dolphin", "dolphin", "thunar",
-                            "org.xfce.thunar", "Thunar", "pcmanfm-qt", "pcmanfm", "nemo",
-                            "org.gnome.Nautilus", "yazi"],
+    "custom:dolphin": ["org.kde.dolphin", "dolphin"],
+    "custom:filemanager": ["system-file-manager", "thunar", "org.xfce.thunar", "Thunar", "pcmanfm-qt",
+                           "pcmanfm", "nemo", "org.gnome.Nautilus", "yazi"],
     # terminals
     "bz:apps/16/utilities-terminal": ["utilities-terminal", "org.kde.konsole", "konsole", "kitty",
                                       "foot", "footclient", "org.xfce.terminal",
@@ -210,7 +214,7 @@ Name={name}
 Comment=Devium app icons: the Devium gradient with each app's logo in white
 Inherits={inherits}
 Example=devium
-Directories=scalable/apps,scalable/places
+Directories=scalable/apps,scalable/places,scalable/mimetypes
 
 [scalable/apps]
 Size=64
@@ -225,6 +229,13 @@ MinSize=16
 MaxSize=512
 Type=Scalable
 Context=Places
+
+[scalable/mimetypes]
+Size=64
+MinSize=16
+MaxSize=512
+Type=Scalable
+Context=MimeTypes
 """
 
 
@@ -246,6 +257,8 @@ def main():
     for src, names in ICONS.items():
         if src == "devium":
             svg = icon_svg(None, 0, logo)
+        elif src.startswith("custom:"):
+            svg = devium_tiles.CUSTOM_APPS[src[7:]]()
         elif src.startswith("si:"):
             svg = icon_svg(*simple_glyph(os.path.join(si, src[3:] + ".svg")))
         else:

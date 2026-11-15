@@ -44,6 +44,9 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 tes
   Brave, Google, Startpage, Bing or Ecosia in Devium Tools > Look). Site shortcuts: `yt`, `g`, `wiki`, `gh`, `aur`,
   `arch`, `pkg`, `so`, `maps` and `r` followed by your words, e.g. `yt lofi beats`. Typing an address like
   `github.com` opens it.
+- **New folder and file icons:** folders and files now look like the app icons, a white folder or page on
+  the Devium tile with its symbol (Documents, Downloads, Pictures, PDF, photos, code, zips...). Dolphin's icon is
+  now a dolphin, and other file managers get a folder with a magnifier, so no app looks like a plain folder.
 - **Photo widget** (Devium widgets, all three desktops): a picture, or a slideshow from a folder (your Pictures
   folder unless you pick another), with rounded corners and a soft fade between photos. Settings for the folder or a
   single picture, seconds per picture, random order, fill or fit, and the picture's name. Double-click to open
