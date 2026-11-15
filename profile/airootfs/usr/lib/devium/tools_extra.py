@@ -294,6 +294,28 @@ def make_look_page(win):
                   label(f"Changes {what}, the Devium apps and the login screen to match.", "subtitle"),
                   w, row(button(T("Pick any colour…"), custom, icon="color-picker"), login), page.current,
                   page.done_note))
+    engines = [("duckduckgo", "DuckDuckGo"), ("brave", "Brave Search"), ("google", "Google"),
+               ("startpage", "Startpage"), ("bing", "Bing"), ("ecosia", "Ecosia")]
+    eng_file = os.path.join(CONFIG, "search-engine")
+    eng_box = QComboBox()
+    for key, name in engines:
+        eng_box.addItem(name, key)
+    try:
+        cur = open(eng_file).read().strip()
+    except OSError:
+        cur = "duckduckgo"
+    eng_box.setCurrentIndex(max(0, [k for k, _n in engines].index(cur) if cur in [k for k, _n in engines] else 0))
+
+    def set_engine(_i):
+        os.makedirs(CONFIG, exist_ok=True)
+        with open(eng_file, "w") as f:
+            f.write(eng_box.currentData() + "\n")
+    eng_box.currentIndexChanged.connect(set_engine)
+    page.add(card(label(T("Web search in Spotlight"), "h2"),
+                  label("Type anything in Spotlight (Meta+Space) and pick \"Search the web\". Shortcuts: yt (YouTube), "
+                        "g (Google), wiki, gh (GitHub), aur, arch (Arch Wiki), so (Stack Overflow), maps, r (Reddit), "
+                        "then your words. Typing an address like github.com opens it.", "subtitle"),
+                  row(QLabel(T("Search with:")), eng_box)))
     page.add(card(label(T("Customise"), "h2"),
                   label("Dozens of optional tweaks: macOS-style window buttons, see-through windows, blur, wobbly "
                         "windows, magic lamp, hot corners, clock with seconds, bigger cursor, night light and more.",

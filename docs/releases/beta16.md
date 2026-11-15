@@ -40,6 +40,10 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 tes
 - **Home screen pages, like an iPhone** (optional, KDE: Customise or Devium Tools > Look): pages of apps and
   Devium widgets on your desktop that you swipe between with the touchpad or mouse, with page dots at the bottom.
   Press and hold (or Edit) and the icons wiggle: ✕ removes, + adds apps, widgets and pages.
+- **Search the web from Spotlight** (Meta+Space): every search has "Search the web for…" (DuckDuckGo, or pick
+  Brave, Google, Startpage, Bing or Ecosia in Devium Tools > Look). Site shortcuts: `yt`, `g`, `wiki`, `gh`, `aur`,
+  `arch`, `pkg`, `so`, `maps` and `r` followed by your words, e.g. `yt lofi beats`. Typing an address like
+  `github.com` opens it.
 - **Photo widget** (Devium widgets, all three desktops): a picture, or a slideshow from a folder (your Pictures
   folder unless you pick another), with rounded corners and a soft fade between photos. Settings for the folder or a
   single picture, seconds per picture, random order, fill or fit, and the picture's name. Double-click to open

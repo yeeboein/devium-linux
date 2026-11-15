@@ -9,6 +9,8 @@ conversions and terminal commands.
   10 km in miles          unit conversions (length, weight, temperature, data, time)
   > htop                  run a command in the terminal
   snip docker             your snippets (Enter copies one)
+  anything                "Search the web for..." in your browser; yt / g / wiki / gh / aur / arch + words
+                          search those sites; github.com opens the address
   docs python:split       search the offline docs (Zeal) or DevDocs
 """
 import ast
@@ -77,6 +79,46 @@ SETTINGS = [
     ("date time clock timezone", "Date and time", ["systemsettings", "kcm_clock"]),
     ("notifications do not disturb", "Notifications", ["systemsettings", "kcm_notifications"]),
 ]
+
+# ---------------------------------------------------------------------------- web search
+from urllib.parse import quote_plus
+
+ENGINES = {   # Devium Tools > Look can change the default (~/.config/devium/search-engine)
+    "duckduckgo": ("DuckDuckGo", "https://duckduckgo.com/?q={}"),
+    "brave": ("Brave Search", "https://search.brave.com/search?q={}"),
+    "google": ("Google", "https://www.google.com/search?q={}"),
+    "startpage": ("Startpage", "https://www.startpage.com/do/search?q={}"),
+    "bing": ("Bing", "https://www.bing.com/search?q={}"),
+    "ecosia": ("Ecosia", "https://www.ecosia.org/search?q={}"),
+}
+SITES = {     # type "yt cats" to search YouTube for cats
+    "g": ("Google", "https://www.google.com/search?q={}", "google"),
+    "ddg": ("DuckDuckGo", "https://duckduckgo.com/?q={}", "internet-web-browser"),
+    "yt": ("YouTube", "https://www.youtube.com/results?search_query={}", "youtube"),
+    "wiki": ("Wikipedia", "https://en.wikipedia.org/w/index.php?search={}", "wikipedia"),
+    "gh": ("GitHub", "https://github.com/search?q={}", "github"),
+    "aur": ("the AUR", "https://aur.archlinux.org/packages?K={}", "archlinux"),
+    "arch": ("the Arch Wiki", "https://wiki.archlinux.org/index.php?search={}", "archlinux"),
+    "pkg": ("Arch packages", "https://archlinux.org/packages/?q={}", "archlinux"),
+    "so": ("Stack Overflow", "https://stackoverflow.com/search?q={}", "internet-web-browser"),
+    "maps": ("Maps", "https://www.openstreetmap.org/search?query={}", "map-flat"),
+    "r": ("Reddit", "https://www.reddit.com/search/?q={}", "internet-web-browser"),
+}
+
+
+def engine():
+    try:
+        name = open(os.path.join(HOME, ".config/devium/search-engine")).read().strip()
+    except OSError:
+        name = ""
+    return ENGINES.get(name, ENGINES["duckduckgo"])
+
+
+def looks_like_url(text):
+    t = text.strip()
+    return " " not in t and (t.startswith(("http://", "https://")) or
+                             re.fullmatch(r"(localhost|[\w-]+(\.[\w-]+)+)(:\d+)?(/\S*)?", t) is not None)
+
 
 # ---------------------------------------------------------------------------- safe maths
 OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
@@ -264,7 +306,7 @@ class Spotlight(QWidget):
         lay = QVBoxLayout(box)
         lay.setContentsMargins(10, 8, 10, 10)
         self.edit = QLineEdit()
-        self.edit.setPlaceholderText(T("Search apps, settings, files… or 2+2, 5 km in miles, > command, snip, docs"))
+        self.edit.setPlaceholderText(T("Search apps, files, the web… or 2+2, 5 km in miles, > command, yt cats"))
         self.edit.textChanged.connect(lambda: self.timer.start(90))
         self.edit.returnPressed.connect(self.activate)
         self.edit.installEventFilter(self)
@@ -305,6 +347,10 @@ class Spotlight(QWidget):
                              title + (f"\n{sub}" if sub else ""))
         it.setData(Qt.ItemDataRole.UserRole, action)
         self.list.addItem(it)
+
+    def insert(self, row, title, sub, icon, action):
+        self.add(title, sub, icon, action)
+        self.list.insertItem(row, self.list.takeItem(self.list.count() - 1))
 
     def search(self):
         self.list.clear()
@@ -352,8 +398,23 @@ class Spotlight(QWidget):
                 for f in find_files(q):
                     self.add(os.path.basename(f), f.replace(HOME, "~", 1),
                              "folder" if os.path.isdir(f) else "text-x-generic", ("open", f))
+                # the web: a site shortcut ("yt cats"), an address ("github.com"), or a normal web search
+                word, _, rest = raw.strip().partition(" ")
+                if word.lower() in SITES and rest.strip():
+                    name, url, icon = SITES[word.lower()]
+                    self.insert(0, f"Search {name} for \u201c{rest.strip()}\u201d", T("Opens in your browser"), icon,
+                                ("url", url.format(quote_plus(rest.strip()))))
+                elif looks_like_url(raw):
+                    addr = raw.strip() if raw.strip().startswith(("http://", "https://")) else "https://" + raw.strip()
+                    if addr.startswith("https://localhost"):
+                        addr = "http" + addr[5:]
+                    self.insert(0, f"Open {raw.strip()}", T("Opens in your browser"), "internet-web-browser", ("url", addr))
+                if len(q) >= 2:
+                    name, url = engine()
+                    self.add(f"Search the web for \u201c{raw.strip()}\u201d", name, "internet-web-browser",
+                             ("url", url.format(quote_plus(raw.strip()))))
                 first = raw.strip().split()[0]
-                if shutil.which(first) and not self.list.count():   # looks like a command, and nothing else matched
+                if shutil.which(first) and self.list.count() <= 1:   # looks like a command, and little else matched
                     self.add(f"Run in terminal: {raw.strip()}", T("Tip: start with > to run a command"),
                              "utilities-terminal", ("term", raw.strip()))
         self.list.setVisible(self.list.count() > 0)
@@ -382,6 +443,8 @@ class Spotlight(QWidget):
                 subprocess.Popen(["xdg-open", val], start_new_session=True)
         elif kind == "cmd":
             ui.launch(*val)
+        elif kind == "url":
+            subprocess.Popen(["xdg-open", val], start_new_session=True)
         elif kind == "open":
             subprocess.Popen(["xdg-open", val], start_new_session=True)
         elif kind == "term":
