@@ -15,6 +15,7 @@
     "title",
     "separator",
     { "type": "os", "key": "OS", "format": "{pretty-name}" },
+    { "type": "command", "key": "Ver", "text": "sed -n 's/^DEVIUM_VERSION=//p' /etc/devium-release | sed 's/^beta/Beta/; s/^/Devium /'" },
     { "type": "kernel", "key": "Kernel", "format": "{release}" },
     { "type": "uptime", "key": "Uptime" },
     { "type": "packages", "key": "Apps" },
