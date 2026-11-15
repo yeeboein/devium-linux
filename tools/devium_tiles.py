@@ -138,20 +138,18 @@ def trash_svg(full):
 
 
 # --- app icons drawn here (no outside glyph) --------------------------------------------------------------
-# Dolphin: a white dolphin leaping up to the right (drawn here), so it doesn't look like a plain folder
-DOLPHIN = ("M55 29C54 26.5 51.5 25.6 49 25.8C47.5 21.5 43.5 18.5 38.5 18.3C35 18.2 31.5 19 29 20.5C27.8 17.5 25 "
-           "15 21.5 14C23.2 16.8 23.8 19.6 23.5 22.5C20 25.5 17.8 30 17.5 35C17.3 38.5 17.5 41 17.5 43C15 44.5 1"
-           "1.5 46.2 8.5 47.8C12 48.5 15.5 48.3 18.6 47.4C20.5 49.5 22.2 51.8 23.5 54.5C23.8 50.5 23 46 21 41.5C"
-           "23.5 37 27.5 34.5 32 33.8C33.5 37 35.5 40.5 38.8 43C39.5 39.5 39.2 36 38 33.6C42.5 33 46.5 31.5 50 3"
-           "0.8C51.8 30.6 53.5 30.4 55 29Z")
+# Dolphin: a plain white dolphin leaping up to the right (drawn here), so it doesn't look like a plain folder
+DOLPHIN = ("M56 29.3C55.2 26.9 53.2 26 50.6 26.1C49.3 20.6 44 16.5 37.5 16.3C34 16.2 31 17 28.5 18.6C27.3 15.8 2"
+           "4.5 13.5 21 12.6C22.7 15.4 23.2 18.2 22.6 21.2C18.8 24.8 16.3 29.8 16.2 35C16.1 38.5 16.4 41 16.8 43"
+           "C14.4 44.5 11 46.2 8 47.8C11.5 48.5 15 48.3 18.3 47.4C20.2 49.5 21.9 51.8 23.2 54.5C23.6 50.5 23.2 4"
+           "6 21.8 41.5C24.6 38.3 28.3 36.6 32.2 36.2C33.6 39.4 35.6 42.6 38.8 45C39.6 41.6 39.4 38.4 38.4 36C43"
+           " 35.3 47.2 33.5 50.5 32.2C52.5 31.5 54.3 30.8 55.5 29.5Z")
 
 
 def dolphin_svg():
-    return _tile('<g transform="translate(1.6 -0.6) scale(0.95)">'
+    return _tile('<g transform="translate(1.8 -0.4) scale(0.95)">'
                  f'<path d="{DOLPHIN}" fill="#2b323b" opacity="0.2" transform="translate(0 1.4)"/>'
-                 f'<path d="{DOLPHIN}" fill="#ffffff"/>'
-                 f'<circle cx="45.3" cy="25" r="1.3" fill="{CUT}"/>'
-                 f'<path d="M54.3 29.3Q51.2 29.7 48.6 28.7" stroke="{CUT}" stroke-width="1.1" stroke-linecap="round" fill="none"/></g>')
+                 f'<path d="{DOLPHIN}" fill="#ffffff"/></g>')
 
 
 def file_manager_svg():
