@@ -31,7 +31,8 @@ def release_info():
 
 def api_url(repo):
     m = re.match(r"https://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$", repo)
-    return f"https://api.github.com/repos/{m.group(1) if m else 'yeeboein/devium-linux'}/releases/latest"
+    # every release, not /releases/latest: GitHub leaves pre-releases (all Devium betas) out of "latest"
+    return f"https://api.github.com/repos/{m.group(1) if m else 'yeeboein/devium-linux'}/releases?per_page=30"
 
 
 def next_name(v):
@@ -78,7 +79,14 @@ class Fetch(QThread):
             req = urllib.request.Request(self.url, headers={"Accept": "application/vnd.github+json",
                                                             "User-Agent": "devium-updater"})
             with urllib.request.urlopen(req, timeout=15) as r:
-                self.done.emit(json.load(r), "")
+                data = json.load(r)
+            if isinstance(data, list):   # pick the newest published release, betas included
+                data = [rel for rel in data if not rel.get("draft") and rel.get("tag_name")]
+                data = max(data, key=lambda rel: version_key(rel["tag_name"])) if data else None
+                if data is None:
+                    self.done.emit(None, "No Devium releases published yet.")
+                    return
+            self.done.emit(data, "")
         except urllib.error.HTTPError as e:
             self.done.emit(None, "No Devium releases published yet." if e.code == 404 else str(e))
         except Exception as e:  # offline etc.
