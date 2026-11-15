@@ -75,6 +75,10 @@ if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-snap ]]; then   # b
     xfconf-query -c xfce4-keyboard-shortcuts -p "/xfwm4/custom/<Super>Up" -n -t string -s maximize_window_key
     touch "$STATE/xfce-snap"
 fi
+if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-norewrap ]]; then   # beta16: keep old terminal output as is on resize
+    xfconf-query -c xfce4-terminal -p /misc-rewrap-on-resize -n -t bool -s false
+    touch "$STATE/xfce-norewrap"
+fi
 if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-spotlight ]]; then   # beta15
     xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/<Super>space" -n -t string -s devium-spotlight
     touch "$STATE/xfce-spotlight"

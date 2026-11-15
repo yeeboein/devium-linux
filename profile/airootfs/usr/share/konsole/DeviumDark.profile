@@ -10,3 +10,5 @@ TerminalRows=32
 
 [Scrolling]
 HistorySize=10000
+# keep old output as it was when the window is resized (so the fastfetch logo never gets jumbled)
+ReflowLines=false
