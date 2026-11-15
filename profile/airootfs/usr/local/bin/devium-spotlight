@@ -69,6 +69,8 @@ SETTINGS = [
     ("database postgres mysql redis mongo https env secret snippets share mise coding", "Coding tools (Devium Tools)",
      ["devium-tools", "coding"]),
     ("clean space disk free storage junk", "Clean up (Devium Tools)", ["devium-tools", "clean"]),
+    ("background startup autostart services bloat extras remove", "Background and extras (Devium Tools)",
+     ["devium-tools", "background"]),
     ("guest account friend", "Guest account (Devium Tools > Privacy)", ["devium-tools", "privacy"]),
     ("help support fix problem", "Get help (Devium Tools)", ["devium-tools", "help"]),
     ("date time clock timezone", "Date and time", ["systemsettings", "kcm_clock"]),

@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QFormL
 import devium_ui as ui
 import tools_extra as extra
 import tools_dev as dev
+import tools_background as background
 from devium_i18n import LANGUAGES, T, current as current_language, set_language
 
 HELPER = "/usr/lib/devium/devium-helper"
@@ -256,6 +257,8 @@ class HomePage(Page):
             (T("Phone link"), "Files, notifications and clipboard with your phone", "smartphone",
              lambda: win.go("phone")),
             (T("Clean up"), "Find what takes space and free it", "edit-clear", lambda: win.go("clean")),
+            (T("Background and extras"), "Turn off background apps, remove extra apps", "preferences-system-startup",
+             lambda: win.go("background")),
             (T("Coding tools"), "Databases, secret guard, HTTPS, sharing, versions", "code-block",
              lambda: win.go("coding")),
             (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
@@ -1177,6 +1180,7 @@ PAGES = [
     ("health", T("Health check"), "heart", extra.make_health_page),
     ("phone", T("Phone link"), "smartphone", extra.make_phone_page),
     ("clean", T("Clean up"), "edit-clear", dev.make_clean_page),
+    ("background", T("Background and extras"), "preferences-system-startup", background.make_page),
     ("speed", T("Speed and memory"), "speedometer", SpeedPage),
     ("battery", T("Battery"), "battery", BatteryPage),
     ("privacy", T("Privacy"), "security-high", lambda win: dev.add_guest_card(PrivacyPage(win))),

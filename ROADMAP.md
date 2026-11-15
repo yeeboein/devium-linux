@@ -158,6 +158,7 @@ shell, ArchPill, dock), Summary (sizes + free space), Installing, Done.
       share a local site, per-project language versions, snippets (snip), build notifications, offline docs
 - [x] Clean up page, Guest account, crash catcher
 - [x] Snap Assist and the widget pack on Xfce and Hyprland too
+- [x] Background and extras page: turn off startup apps and services, remove or add back extra apps
 - [x] Customise page: 80 optional look tweaks (macOS buttons, see-through windows, blur, wobbly, hot corners…)
 - [x] Login shows the account name (no typing, no desktop picker); loading screen after login; Devium folder icons
 - [x] Devium widget pack: sea conditions, weather, system, clock, focus timer, Git projects, dev servers, shortcuts

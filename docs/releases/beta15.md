@@ -78,6 +78,10 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
 - **Clean up** (Devium Tools > Clean up): finds app caches, the bin, old `node_modules` / Rust `target` /
   `.venv` folders in projects you haven't touched for a month, old installers and duplicate files in Downloads,
   big forgotten files, unused Docker images and old system packages and logs. Nothing goes until you tick it.
+- **Background and extras** (Devium Tools): every app that starts when you log in, with how much memory it's
+  using, and a tick box to stop it; switches for system services you may not use (Bluetooth, printing, network
+  discovery, mobile modems, SSH, Docker, automatic updates, disk check); and the extra apps Devium comes with
+  (Kate, Okular, Gwenview, Discover, Timeshift and so on) to remove, or add back later.
 - **Guest account** (Devium Tools > Privacy): a friend presses **Guest** on the login screen, no password. They
   can't see your files or change the system, and everything they do is wiped when they log out.
 - **Crash catcher:** when an app crashes, a notification offers to send a report. It opens Report a problem,
