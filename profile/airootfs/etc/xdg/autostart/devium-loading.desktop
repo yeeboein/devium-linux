@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Devium loading screen
+Comment=Covers the desktop while it loads after you log in, then fades away
+Exec=devium-loading
+Icon=devium
+NoDisplay=true
+OnlyShowIn=KDE;XFCE;
+X-KDE-autostart-phase=0
+X-GNOME-Autostart-Phase=Initialization

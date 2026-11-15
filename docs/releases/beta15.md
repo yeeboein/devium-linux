@@ -6,6 +6,12 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
 - **Devium Spotlight (Meta+Space):** one search box for apps, settings and files. It also does quick maths
   (`12*7`, `15% * 80`, `sqrt(2)`), unit conversions (`10 km in miles`, `100 f to c`, `5 GB in MiB`),
   and `> command` runs a command in the terminal.
+- **Simpler login screen:** it shows your account name instead of a box to type it in, and the desktop picker
+  is gone (Devium always starts its own desktop). With more than one account, small arrows switch between them.
+- **Loading screen after login:** the mountains, the Devium logo and "Welcome, *name*" cover the desktop while
+  it and your startup apps load, then fade away smoothly. Click to skip; turn it off in Devium Tools > Look.
+- **Devium folder icons:** folders in the Devium gradient with a white symbol for Documents, Downloads, Music,
+  Pictures, Videos, Desktop, Home, Projects (code), Git, Cloud, Games and more, plus a matching bin.
 - **Accent colours** (Devium Tools > Look): Devium blue, Lavender, Mint, Sky, Peach, Rose, Lemon, Graphite or any
   colour you like. It changes the theme highlight, window borders, the Devium apps and the login screen.
 - **Reset desktop** (Devium Tools > Look): dock gone, panels in the wrong place or the theme broken? One button puts

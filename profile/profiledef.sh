@@ -35,6 +35,7 @@ file_permissions=(
   ["/usr/local/bin/fastfetch"]="0:0:755"
   ["/usr/lib/devium/widget-data"]="0:0:755"
   ["/usr/local/bin/devium-snap-assist"]="0:0:755"
+  ["/usr/local/bin/devium-loading"]="0:0:755"
   ["/usr/local/bin/devium-desk-widgets"]="0:0:755"
   ["/usr/local/bin/snip"]="0:0:755"
   ["/usr/lib/devium/support-dev"]="0:0:755"

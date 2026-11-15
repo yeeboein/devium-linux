@@ -10,6 +10,7 @@ Glyph sources (downloaded when you run this; only the finished icons are kept in
 
 Usage:  python3 tools/make-icons.py [--simple-icons DIR] [--breeze DIR]
 Writes: profile/airootfs/usr/share/icons/Devium/  and  .../Devium-Dark/
+Folder icons (scalable/places) come from tools/make-folder-icons.py and are kept.
 """
 import argparse
 import base64
@@ -209,7 +210,7 @@ Name={name}
 Comment=Devium app icons: the Devium gradient with each app's logo in white
 Inherits={inherits}
 Example=devium
-Directories=scalable/apps
+Directories=scalable/apps,scalable/places
 
 [scalable/apps]
 Size=64
@@ -217,6 +218,13 @@ MinSize=16
 MaxSize=512
 Type=Scalable
 Context=Applications
+
+[scalable/places]
+Size=64
+MinSize=16
+MaxSize=512
+Type=Scalable
+Context=Places
 """
 
 

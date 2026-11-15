@@ -14,25 +14,31 @@ Rectangle {
     readonly property color ink: "#eef2f7"
     readonly property color soft: "#c4ccd6"
     property int sessionIndex: (sessionModel && sessionModel.lastIndex >= 0) ? sessionModel.lastIndex : 0
-    // the user's own profile picture (set in Devium Tools or KDE's Users settings), if they have one
-    property string avatar: ""
     readonly property string avatarUrl: avatar === "" ? "" : (avatar.indexOf("/") === 0 ? "file://" + avatar : avatar)
 
-    // look up the picture of whoever is typed in the user name box
+    // The accounts on this computer (Guest gets its own button). The login card shows one account's name;
+    // with several accounts, small arrows switch between them. Nobody types a user name.
+    property var accounts: []          // [{ name, realName, icon }]
+    property bool hasGuest: false
+    property int current: 0
+    readonly property var account: accounts.length ? accounts[Math.min(current, accounts.length - 1)] : ({ name: "", realName: "", icon: "" })
+    readonly property string currentUser: account.name
+    readonly property string displayName: account.realName && account.realName.length ? account.realName : account.name
+    readonly property string avatar: customIcon(account.icon)
     Repeater {
         model: userModel
         delegate: Item {
             visible: false
-            property bool match: model.name === userField.text
-            onMatchChanged: if (match) root.avatar = root.customIcon(model.icon)
-            Component.onCompleted: if (match) root.avatar = root.customIcon(model.icon)
+            Component.onCompleted: {
+                if (model.name === "guest") { root.hasGuest = true; return }
+                var list = root.accounts.slice()
+                list.push({ name: model.name, realName: model.realName || "", icon: model.icon ? String(model.icon) : "" })
+                list.sort(function (a, b) { return a.name < b.name ? -1 : 1 })
+                root.accounts = list
+                for (var i = 0; i < list.length; i++)       // start on whoever logged in last
+                    if (list[i].name === userModel.lastUser) root.current = i
+            }
         }
-    }
-    // Guest account (Devium Tools > Privacy > Guest account): shows a Guest button
-    property bool hasGuest: false
-    Repeater {
-        model: userModel
-        delegate: Item { visible: false; Component.onCompleted: if (model.name === "guest") root.hasGuest = true }
     }
     function customIcon(icon) {
         // SDDM falls back to its own generic face; treat that as "no picture" and show the Devium logo
@@ -170,20 +176,36 @@ Rectangle {
                 }
             }
 
-            TextField {
-                id: userField
+            // the account name: shown, not typed
+            Item {
                 width: parent.width
-                height: 50
-                text: userModel.lastUser
-                placeholderText: "User name"
-                color: root.ink
-                placeholderTextColor: "#8a96a4"
-                font.family: "Noto Sans"; font.pixelSize: 18
-                horizontalAlignment: TextInput.AlignHCenter
-                leftPadding: 16; rightPadding: 16
-                background: Rectangle { radius: 14; color: "#33ffffff"; border.color: userField.activeFocus ? root.accent : "#22ffffff"; border.width: 1 }
-                KeyNavigation.tab: passwordField
-                onAccepted: passwordField.forceActiveFocus()
+                height: 40
+                Text {
+                    anchors.centerIn: parent
+                    text: root.displayName
+                    color: root.ink
+                    font.family: "Noto Sans"; font.pixelSize: 22; font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                    width: Math.min(implicitWidth, parent.width - 90)
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                Repeater {   // ‹ › only when there's more than one account
+                    model: root.accounts.length > 1 ? [-1, 1] : []
+                    delegate: Rectangle {
+                        width: 32; height: 32; radius: 16
+                        y: 4
+                        x: modelData < 0 ? 0 : parent.width - width
+                        color: arrowArea.containsMouse ? "#33ffffff" : "#1affffff"
+                        Text { anchors.centerIn: parent; text: modelData < 0 ? "‹" : "›"; color: root.ink; font.pixelSize: 22 }
+                        MouseArea {
+                            id: arrowArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.current = (root.current + modelData + root.accounts.length) % root.accounts.length
+                                message.text = ""; passwordField.text = ""; passwordField.forceActiveFocus()
+                            }
+                        }
+                    }
+                }
             }
 
             Item {
@@ -202,7 +224,6 @@ Rectangle {
                     background: Rectangle { radius: 14; color: "#33ffffff"; border.color: passwordField.activeFocus ? root.accent : "#22ffffff"; border.width: 1 }
                     focus: true
                     onAccepted: root.doLogin()
-                    KeyNavigation.backtab: userField
                 }
                 Rectangle {
                     id: goButton
@@ -220,7 +241,7 @@ Rectangle {
 
             Rectangle {
                 id: guestButton
-                visible: root.hasGuest && userField.text !== "guest"
+                visible: root.hasGuest
                 width: parent.width; height: 40; radius: 14
                 color: guestArea.containsMouse ? "#33ffffff" : "#1affffff"
                 border.color: "#22ffffff"; border.width: 1
@@ -247,31 +268,7 @@ Rectangle {
         }
     }
 
-    // ---- bottom bar: session on the left, restart / shut down on the right
-    Row {
-        anchors { left: parent.left; bottom: parent.bottom; margins: 30 }
-        spacing: 10
-        Text { text: "Desktop:"; color: root.soft; font.family: "Noto Sans"; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
-        ComboBox {
-            id: sessionBox
-            width: 240; height: 40
-            model: sessionModel
-            textRole: "name"
-            currentIndex: root.sessionIndex
-            onActivated: root.sessionIndex = currentIndex
-            font.family: "Noto Sans"; font.pixelSize: 15
-            contentItem: Text {
-                leftPadding: 14
-                text: sessionBox.displayText
-                color: root.ink
-                font: sessionBox.font
-                verticalAlignment: Text.AlignVCenter
-                elide: Text.ElideRight
-            }
-            background: Rectangle { radius: 12; color: "#66242a32"; border.color: "#33ffffff"; border.width: 1 }
-        }
-    }
-
+    // ---- bottom right: restart / shut down (no desktop picker: Devium always starts its own desktop)
     Row {
         anchors { right: parent.right; bottom: parent.bottom; margins: 30 }
         spacing: 12
@@ -297,7 +294,7 @@ Rectangle {
     // ---- logging in
     function doLogin() {
         message.text = ""
-        sddm.login(userField.text, passwordField.text, root.sessionIndex)
+        sddm.login(root.currentUser, passwordField.text, root.sessionIndex)
     }
 
     Connections {
@@ -318,10 +315,5 @@ Rectangle {
         NumberAnimation { target: card; property: "anchors.horizontalCenterOffset"; to: 0; duration: 50 }
     }
 
-    Component.onCompleted: {
-        if (userField.text.length === 0)
-            userField.forceActiveFocus()
-        else
-            passwordField.forceActiveFocus()
-    }
+    Component.onCompleted: passwordField.forceActiveFocus()
 }
