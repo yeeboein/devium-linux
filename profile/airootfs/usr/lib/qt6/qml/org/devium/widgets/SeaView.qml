@@ -51,5 +51,4 @@ Card {
         }
         Item { Layout.fillHeight: true; visible: v.info.ok }
     }
-    MouseArea { anchors.fill: parent; z: -1; onDoubleClicked: v.refresh() }
 }

@@ -28,6 +28,5 @@ PlasmoidItem {
         Layout.minimumWidth: 330; Layout.minimumHeight: 190
         Layout.preferredWidth: 330; Layout.preferredHeight: 190
         info: root.info
-        MouseArea { anchors.fill: parent; z: -1; onDoubleClicked: exec.connectSource("/usr/lib/devium/widget-data launch devium-tools health") }
     }
 }

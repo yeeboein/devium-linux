@@ -161,6 +161,9 @@ def main():
             os.kill(pid, 15)
     elif k == "launch" and len(a) > 1:
         allowed = ("devium-", "konsole", "kitty", "xfce4-terminal")
+        if a[1] == "konsole" and not shutil.which("konsole"):   # the Terminal shortcut on Xfce / Hyprland
+            a[1] = next((t for t in ("kitty", "xfce4-terminal", "alacritty", "foot") if shutil.which(t)), "konsole")
+            allowed += ("alacritty", "foot")
         if a[1].startswith(allowed):
             spawn(a[1:])
     elif k == "focus":

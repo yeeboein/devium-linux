@@ -23,11 +23,16 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
 - **What's new:** after Devium Updater moves you to a new version, a window like this one shows what changed.
 - **`support learn`:** a hands-on terminal tutorial. Ten short lessons (pwd, ls, cd, mkdir, files, cat, cp/mv, rm,
   grep and pipes) in a safe practice folder.
-- **Snap Assist (KDE):** snap a window to one side, then pick or open the window for the other side.
+- **Snap Assist on every desktop:** snap a window to one side, then pick the window for the other side.
+  - **KDE:** drag to the edge or Meta+Left/Right, then pick from KDE's window overview.
+  - **Xfce:** drag to the edge or Super+Left/Right, then pick from a Devium list of your open windows.
+  - **Hyprland:** windows tile side by side by themselves; **SUPER+S** picks a window (even from another
+    workspace) to put next to the one you're using.
 - **fastfetch fits your window:** big DEVIUM logo in wide terminals, a smaller logo in medium ones, and just the
   info in narrow ones, so nothing wraps onto the next line.
-- **Devium widget pack** (KDE): eight desktop widgets in the Devium style. Add them from Devium Tools > Look,
-  or right-click the desktop > Add or Manage Widgets.
+- **Devium widget pack** (all three desktops): eight desktop widgets in the Devium style. Add them from
+  Devium Tools > Look (on KDE also right-click the desktop > Add or Manage Widgets). On Xfce and Hyprland
+  they sit on the desktop behind your windows; drag one to move it.
   - **Sea conditions:** wave height and how rough it is, swell, water temperature, wind in knots, and a tide
     curve with the next high and low water (from Open-Meteo, free).
   - **Weather:** now, feels-like, wind, humidity, UV and the next 5 days.
@@ -40,7 +45,7 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**.
   - **Devium shortcuts:** Spotlight, Devium Tools, Configure, Updates, Clean up and more in one click.
   Weather and sea find your town from your IP address, or you can type a place in the widget's settings.
 - **Emoji style** (Devium Configure): pick how emoji look everywhere: Android / Linux (Noto, the default),
-  glossy and round (JoyPixels, the closest to the iPhone look), flat (Twemoji, like Discord) or hand-drawn
+  iPhone-style (JoyPixels, glossy and rounded, the closest legal match to Apple's), flat (Twemoji, like Discord) or hand-drawn
   (OpenMoji). Works in apps, websites (Firefox too) and the terminal.
 - **Brightness only in ArchPill:** with ArchPill on, Plasma's own brightness popup is switched off, so the
   brightness keys only show the pill's popup. (On Hyprland the keys now show it in the pill too.)

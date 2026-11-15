@@ -36,6 +36,7 @@ HELPER = "/usr/lib/devium/devium-helper"
 WEBHOOK_FILE = "/etc/devium/report-webhook"
 REPO = "https://github.com/yeeboein/devium-linux"
 KDE = shutil.which("plasmashell") is not None
+SNAP_OFF = os.path.expanduser("~/.config/devium/snap-assist-off")
 
 
 # ---------------------------------------------------------------------------- small helpers
@@ -903,6 +904,9 @@ class AccessibilityPage(Page):
             self.make("Snap Assist", "Snap a window to one side (drag it to the edge, or Meta + arrow), then pick "
                       "or open the window for the other side.",
                       kread("kwinrc", "Plugins", "devium-snap-assistEnabled", "true") != "false", self.snap)
+        elif shutil.which("xfwm4"):
+            self.make("Snap Assist", "Snap a window to one side (drag it to the edge, or Super + Left/Right), then "
+                      "pick the window for the other side.", not os.path.exists(SNAP_OFF), self.snap)
         self.finish()
 
     def make(self, name, desc, state, fn):
@@ -938,6 +942,13 @@ class AccessibilityPage(Page):
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def snap(self, on):
+        if not KDE:   # Xfce: the watcher checks this file
+            if on and os.path.exists(SNAP_OFF):
+                os.remove(SNAP_OFF)
+            elif not on:
+                os.makedirs(os.path.dirname(SNAP_OFF), exist_ok=True)
+                open(SNAP_OFF, "w").close()
+            return
         kwrite("kwinrc", "Plugins", "devium-snap-assistEnabled", "true" if on else "false")
         kwin_reconfigure()
 

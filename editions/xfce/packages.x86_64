@@ -39,3 +39,5 @@ blueman #install
 system-config-printer #install
 lightdm-gtk-greeter-settings #install
 gnome-disk-utility #install
+wmctrl
+xorg-xprop

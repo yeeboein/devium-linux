@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+"""Devium Snap Assist for Xfce and Hyprland (KDE has its own, built into KWin).
+
+  devium-snap-assist --watch   Xfce: when you snap a window to the left or right half (drag it to the
+                               screen edge, or Super+Left / Super+Right), pick the window for the other half
+  devium-snap-assist --pick    Hyprland (SUPER+S): pick a window to tile next to the one you're using
+Turn it off in Devium Tools > Accessibility.
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+sys.path.insert(0, "/usr/lib/devium")
+
+OFF = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium", "snap-assist-off")
+SKIP_CLASSES = ("xfce4-panel", "xfdesktop", "plank", "devium-desk-widgets", "devium-snap-assist", "wrapper-2.0",
+                "xfce4-notifyd", "devium-spotlight", "conky")
+
+
+def sh(cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=3).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+# ---------------------------------------------------------------------------- X11 (Xfce) helpers
+def workarea():
+    out = sh(["xprop", "-root", "_NET_WORKAREA"]).split("=")[-1].replace(",", " ").split()
+    try:
+        x, y, w, h = (int(v) for v in out[:4])
+        return x, y, w, h
+    except ValueError:
+        return None
+
+
+def active_id():
+    out = sh(["xprop", "-root", "_NET_ACTIVE_WINDOW"]).split()
+    try:
+        return int(out[-1], 16)
+    except (IndexError, ValueError):
+        return 0
+
+
+def current_desktop():
+    try:
+        return int(sh(["xprop", "-root", "_NET_CURRENT_DESKTOP"]).split()[-1])
+    except (IndexError, ValueError):
+        return 0
+
+
+def windows():
+    """[{id, desk, x, y, w, h, cls, title}] for normal windows (wmctrl)."""
+    out = []
+    for line in sh(["wmctrl", "-lGx"]).splitlines():
+        p = line.split(None, 8)
+        if len(p) < 8:
+            continue
+        cls = p[6].split(".")[0].lower()
+        if p[1] == "-1" or any(s in p[6].lower() for s in SKIP_CLASSES):
+            continue
+        out.append({"id": int(p[0], 16), "desk": int(p[1]), "x": int(p[2]), "y": int(p[3]), "w": int(p[4]),
+                    "h": int(p[5]), "cls": cls, "title": p[8] if len(p) > 8 else cls})
+    return out
+
+
+def side_of(win, area):
+    """'left' / 'right' when the window fills that half of the screen (with some slack for frames)."""
+    ax, ay, aw, ah = area
+    half = aw // 2
+    if abs(win["w"] - half) > 70 or win["h"] < ah * 0.85:
+        return None
+    if abs(win["x"] - ax) < 70:
+        return "left"
+    if abs(win["x"] - (ax + half)) < 70:
+        return "right"
+    return None
+
+
+def tile(wid, side, area):
+    ax, ay, aw, ah = area
+    half = aw // 2
+    x = ax if side == "left" else ax + half
+    w = half if side == "left" else aw - half
+    h = hex(wid)
+    subprocess.run(["wmctrl", "-i", "-r", h, "-b", "remove,maximized_vert,maximized_horz"])
+    # frame sizes, so the whole window (title bar included) fits the half
+    ext = sh(["xprop", "-id", h, "_NET_FRAME_EXTENTS"]).split("=")[-1].replace(",", " ").split()
+    try:
+        l, r, t, b = (int(v) for v in ext[:4])
+    except ValueError:
+        l = r = t = b = 0
+    subprocess.run(["wmctrl", "-i", "-r", h, "-e", f"0,{x},{ay},{w - l - r},{ah - t - b}"])
+    subprocess.run(["wmctrl", "-i", "-a", h])
+
+
+# ---------------------------------------------------------------------------- the picker window
+def picker(items, title, geometry=None):
+    """Show a list of windows; returns the chosen item or None. items: [{title, cls, ...}]"""
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QGuiApplication, QIcon
+    from PyQt6.QtWidgets import QApplication, QLabel, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+    import devium_ui as ui
+
+    app = QApplication.instance() or QApplication(sys.argv)
+    ui.style_app(app)
+    chosen = {"item": None}
+    w = QWidget()
+    w.setWindowTitle("Devium Snap Assist")
+    w.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Dialog)
+    w.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+    box = QWidget(w)
+    box.setObjectName("snapbox")
+    box.setStyleSheet(f"""QWidget#snapbox {{ background: palette(window); border: 1px solid {ui.ACCENT}; border-radius: 18px; }}
+        QListWidget {{ border: none; background: transparent; font-size: 11pt; }}
+        QListWidget::item {{ padding: 9px; border-radius: 10px; }}
+        QListWidget::item:selected {{ background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 {ui.ACCENT}, stop:1 {ui.ACCENT2}); color: #1b2026; }}""")
+    outer = QVBoxLayout(w)
+    outer.setContentsMargins(0, 0, 0, 0)
+    outer.addWidget(box)
+    lay = QVBoxLayout(box)
+    lay.setContentsMargins(14, 12, 14, 12)
+    head = QLabel(title)
+    head.setObjectName("h2")
+    lay.addWidget(head)
+    lst = QListWidget()
+    lst.setIconSize(lst.iconSize() * 2)
+    for it in items:
+        li = QListWidgetItem(QIcon.fromTheme(it["cls"], QIcon.fromTheme("application-x-executable")), it["title"][:70])
+        li.setData(Qt.ItemDataRole.UserRole, it)
+        lst.addItem(li)
+    lst.setCurrentRow(0)
+    lay.addWidget(lst)
+    hint = QLabel("Enter or click to pick · Esc to skip")
+    hint.setObjectName("subtitle")
+    lay.addWidget(hint)
+
+    def pick(li=None):
+        li = li or lst.currentItem()
+        if li:
+            chosen["item"] = li.data(Qt.ItemDataRole.UserRole)
+        w.close()
+
+    lst.itemActivated.connect(pick)
+    lst.itemClicked.connect(pick)
+
+    def key(ev):
+        if ev.key() == Qt.Key.Key_Escape:
+            w.close()
+        elif ev.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            pick()
+        else:
+            QListWidget.keyPressEvent(lst, ev)
+    lst.keyPressEvent = key
+    rows = min(len(items), 7)
+    w.resize(440, 110 + rows * 52)
+    if geometry:   # centre it on the empty half
+        gx, gy, gw, gh = geometry
+        w.move(gx + (gw - w.width()) // 2, gy + (gh - w.height()) // 2)
+    else:
+        s = QGuiApplication.primaryScreen().availableGeometry()
+        w.move(s.x() + (s.width() - w.width()) // 2, s.y() + (s.height() - w.height()) // 3)
+    w.show()
+    w.activateWindow()
+    lst.setFocus()
+    from PyQt6.QtCore import QEventLoop
+    loop = QEventLoop()
+    w.destroyed.connect(loop.quit)
+    w.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+    loop.exec()
+    return chosen["item"]
+
+
+# ---------------------------------------------------------------------------- Xfce: watch for snapped windows
+def watch():
+    if not shutil.which("wmctrl") or not shutil.which("xprop"):
+        print("Snap Assist needs wmctrl and xprop.")
+        return 1
+    from PyQt6.QtCore import QTimer
+    from PyQt6.QtWidgets import QApplication
+    app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
+    state = {"last": None, "busy": False}
+
+    def tick():
+        if state["busy"] or os.path.exists(OFF):
+            return
+        area = workarea()
+        aid = active_id()
+        if not area or not aid:
+            return
+        wins = windows()
+        me = next((x for x in wins if x["id"] == aid), None)
+        side = side_of(me, area) if me else None
+        key = (aid, side)
+        if side and key != state["last"]:
+            state["last"] = key
+            desk = current_desktop()
+            others = [x for x in wins if x["id"] != aid and x["desk"] == desk]
+            if not others:
+                return
+            ax, ay, aw, ah = area
+            empty = (ax + aw // 2, ay, aw - aw // 2, ah) if side == "left" else (ax, ay, aw // 2, ah)
+            state["busy"] = True
+            try:
+                pick = picker(others, "Pick a window for the other side", empty)
+            finally:
+                state["busy"] = False
+            if pick:
+                tile(pick["id"], "right" if side == "left" else "left", area)
+        elif not side and state["last"] and state["last"][0] == aid:
+            state["last"] = None
+
+    t = QTimer()
+    t.timeout.connect(tick)
+    t.start(450)
+    return app.exec()
+
+
+# ---------------------------------------------------------------------------- Hyprland: SUPER+S
+def hypr_pick():
+    try:
+        clients = json.loads(sh(["hyprctl", "clients", "-j"]) or "[]")
+        ws = json.loads(sh(["hyprctl", "activeworkspace", "-j"]) or "{}").get("id")
+        active = json.loads(sh(["hyprctl", "activewindow", "-j"]) or "{}").get("address")
+    except ValueError:
+        return 1
+    items = [{"title": f"{c.get('title') or c.get('class')}   (workspace {c['workspace']['id']})" if c["workspace"]["id"] != ws
+              else c.get("title") or c.get("class"), "cls": (c.get("class") or "").lower(), "address": c["address"],
+              "ws": c["workspace"]["id"], "floating": c.get("floating")}
+             for c in clients if c.get("address") != active and c.get("mapped", True) and c["workspace"]["id"] > 0
+             and (c.get("class") or "") not in ("devium-snap-assist", "devium-spotlight")]
+    if not items:
+        subprocess.run(["notify-send", "--app-name=Devium", "Snap Assist", "No other windows open. Open an app and it "
+                        "tiles next to this one by itself."])
+        return 0
+    pick = picker(items, "Put a window next to this one")
+    if not pick:
+        return 0
+    if pick["ws"] != ws:
+        subprocess.run(["hyprctl", "dispatch", "movetoworkspace", f"{ws},address:{pick['address']}"])
+    if pick.get("floating"):
+        subprocess.run(["hyprctl", "dispatch", "settiled", f"address:{pick['address']}"])
+    subprocess.run(["hyprctl", "dispatch", "focuswindow", f"address:{pick['address']}"])
+    return 0
+
+
+if __name__ == "__main__":
+    if "--watch" in sys.argv:
+        sys.exit(watch())
+    if "--pick" in sys.argv:
+        sys.exit(hypr_pick())
+    print(__doc__)

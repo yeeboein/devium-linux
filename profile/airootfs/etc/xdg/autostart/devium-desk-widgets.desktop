@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Devium widgets
+Comment=Devium widgets on the desktop (Xfce)
+Exec=devium-desk-widgets
+Icon=devium
+NoDisplay=true
+OnlyShowIn=XFCE;

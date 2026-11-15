@@ -68,6 +68,13 @@ if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-done ]]; then
     sc "<Primary><Alt>t" "exo-open --launch TerminalEmulator"
     touch "$STATE/xfce-done"
 fi
+if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-snap ]]; then   # beta15: Snap Assist keys
+    xfconf-query -c xfwm4 -p /general/tile_on_move -n -t bool -s true
+    xfconf-query -c xfce4-keyboard-shortcuts -p "/xfwm4/custom/<Super>Left" -n -t string -s tile_left_key
+    xfconf-query -c xfce4-keyboard-shortcuts -p "/xfwm4/custom/<Super>Right" -n -t string -s tile_right_key
+    xfconf-query -c xfce4-keyboard-shortcuts -p "/xfwm4/custom/<Super>Up" -n -t string -s maximize_window_key
+    touch "$STATE/xfce-snap"
+fi
 if command -v xfconf-query >/dev/null && [[ ! -f $STATE/xfce-spotlight ]]; then   # beta15
     xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/<Super>space" -n -t string -s devium-spotlight
     touch "$STATE/xfce-spotlight"

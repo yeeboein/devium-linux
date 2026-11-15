@@ -203,6 +203,53 @@ def widgets_card(page):
                 w, page.widget_note)
 
 
+DESK_CFG = os.path.join(CONFIG, "desk-widgets.json")
+
+
+def desk_widgets_card(page):
+    """Xfce and Hyprland: the same widgets, drawn by devium-desk-widgets."""
+    try:
+        cfg = json.load(open(DESK_CFG))
+    except (OSError, ValueError):
+        cfg = {"widgets": []}
+    on = {w.get("id") for w in cfg.get("widgets", [])}
+    grid = QGridLayout()
+    boxes = []
+    for i, (pid, name, desc) in enumerate(DEVIUM_WIDGETS):
+        wid = pid.split(".")[-1]
+        b = QCheckBox(T(name))
+        b.setToolTip(T(desc))
+        b.setChecked(wid in on)
+        boxes.append((wid, b))
+        grid.addWidget(b, i // 4, i % 4)
+    holder = QWidget()
+    holder.setLayout(grid)
+    place = QLineEdit(cfg.get("place", ""))
+    place.setPlaceholderText(T("Place for weather and sea (empty = from your IP address)"))
+    imperial = QCheckBox(T("Use °F, mph and feet"))
+    imperial.setChecked(bool(cfg.get("imperial")))
+    note = label("", "subtitle")
+
+    def apply():
+        keep = {w.get("id"): w for w in cfg.get("widgets", [])}      # keep where you dragged them
+        cfg["widgets"] = [keep.get(wid, {"id": wid}) for wid, b in boxes if b.isChecked()]
+        cfg["place"] = place.text().strip()
+        cfg["imperial"] = imperial.isChecked()
+        os.makedirs(CONFIG, exist_ok=True)
+        with open(DESK_CFG, "w") as f:
+            json.dump(cfg, f, indent=1)
+        if HYPR and not shutil.which("qs"):
+            root(page, T("Devium widgets"), "archpill-deps")      # installs Quickshell
+        subprocess.Popen(["devium-desk-widgets"], start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        note.setText(T("Done. Drag a widget to move it.") if cfg["widgets"] else T("Widgets turned off."))
+
+    return card(label(T("Devium widgets"), "h2"),
+                label("Widgets on your desktop in the Devium style, behind your windows. Tick the ones you want and "
+                      "press Apply, then drag them where you like.", "subtitle"),
+                holder, place, imperial, row(button(T("Apply"), apply, True, "dialog-ok")), note)
+
+
 def make_look_page(win):
     page = Page(T("Look"), T("Pick your accent colour, or put the desktop back to how Devium starts."))
     a, b = current_accent()
@@ -252,6 +299,8 @@ def make_look_page(win):
                   row(button(T("Reset desktop"), lambda: reset_desktop(page), icon="edit-undo"))))
     if KDE and os.path.isdir("/usr/share/plasma/plasmoids/org.devium.clock"):
         page.add(widgets_card(page))
+    elif (XFCE or HYPR) and shutil.which("devium-desk-widgets"):
+        page.add(desk_widgets_card(page))
     if KDE:
         page.add(card(label(T("More looks"), "h2"),
                       label("Light or dark theme, icons, wallpaper and fonts are in System Settings.", "subtitle"),

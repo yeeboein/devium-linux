@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Devium widgets on desktops without Plasma (Xfce and Hyprland).
+
+The same widgets as the KDE widget pack (clock, weather, sea, system, focus timer, Git projects,
+dev servers, Devium shortcuts), drawn on the desktop behind your windows. Pick them in
+Devium Tools > Look > Devium widgets. Drag a widget to move it.
+
+  devium-desk-widgets            start (does nothing if no widgets are picked)
+  devium-desk-widgets --restart  restart after changing the settings
+Settings: ~/.config/devium/desk-widgets.json
+"""
+import json
+import os
+import shutil
+import signal
+import subprocess
+import sys
+
+CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium", "desk-widgets.json")
+QS_SHELL = "/usr/share/devium/desk-widgets"
+TYPES = {"clock": "ClockWidget", "weather": "WeatherWidget", "sea": "SeaWidget", "system": "SystemWidget",
+         "focus": "FocusWidget", "projects": "ProjectsWidget", "servers": "ServersWidget", "links": "LinksWidget"}
+
+
+def load():
+    try:
+        with open(CONFIG) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"widgets": []}
+
+
+def save(cfg):
+    os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
+    tmp = CONFIG + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(cfg, f, indent=1)
+    os.replace(tmp, CONFIG)
+
+
+def split_args(args):
+    """'open /path with spaces' -> ['open', '/path with spaces']; 'launch devium-tools health' -> 3 words."""
+    head, _, rest = args.partition(" ")
+    return [head, rest] if head in ("open", "term") and rest else args.split()
+
+
+PIDFILE = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), f"devium-desk-widgets-{os.getuid()}.pid")
+
+
+def stop_running():
+    """Stop the copy that's already running (its PID is in a file; works for the Quickshell one too)."""
+    try:
+        pid = int(open(PIDFILE).read().strip())
+        cmd = open(f"/proc/{pid}/cmdline", "rb").read().replace(b"\0", b" ").decode(errors="replace")
+        if pid != os.getpid() and ("devium-desk-widgets" in cmd or QS_SHELL in cmd):
+            os.kill(pid, signal.SIGTERM)
+    except (OSError, ValueError):
+        pass
+    try:
+        os.remove(PIDFILE)
+    except OSError:
+        pass
+
+
+def main():
+    if "-h" in sys.argv or "--help" in sys.argv:
+        print(__doc__)
+        return 0
+    stop_running()
+    if "--stop" in sys.argv:
+        return 0
+    cfg = load()
+    if not cfg.get("widgets"):
+        return 0
+    with open(PIDFILE, "w") as f:      # exec keeps the PID, so this also finds Quickshell
+        f.write(str(os.getpid()))
+    # Hyprland (Wayland): Quickshell puts the widgets on the desktop layer, behind every window
+    if os.environ.get("WAYLAND_DISPLAY") and shutil.which("qs"):
+        os.execvp("qs", ["qs", "-p", QS_SHELL, "-n"])
+    if os.environ.get("WAYLAND_DISPLAY"):
+        print("Devium widgets on Wayland need Quickshell (sudo pacman -S quickshell).")
+        return 1
+    return x11(cfg)
+
+
+# ---------------------------------------------------------------------------- X11 (Xfce)
+def x11(cfg):
+    from PyQt6.QtCore import QObject, QProcess, Qt, QTimer, QUrl, pyqtSignal, pyqtSlot
+    from PyQt6.QtGui import QColor, QGuiApplication
+    from PyQt6.QtQuick import QQuickView
+
+    class Runner(QObject):
+        done = pyqtSignal(str, str, arguments=["args", "out"])
+
+        @pyqtSlot(str)
+        def run(self, args):
+            p = QProcess(self)
+            p.finished.connect(lambda *_: (self.done.emit(args, bytes(p.readAllStandardOutput()).decode(errors="replace")),
+                                           p.deleteLater()))
+            p.start("/usr/lib/devium/widget-data", split_args(args))
+
+    app = QGuiApplication(sys.argv)
+    app.setApplicationName("Devium widgets")
+    app.setDesktopFileName("devium-desk-widgets")
+    runner = Runner()
+    views = []
+    save_timer = QTimer()
+    save_timer.setSingleShot(True)
+    save_timer.setInterval(800)
+
+    def remember():
+        for v, w in views:
+            w["x"], w["y"] = v.x(), v.y()
+        save(cfg)
+    save_timer.timeout.connect(remember)
+
+    scr = QGuiApplication.primaryScreen().availableGeometry()
+    for i, w in enumerate(cfg["widgets"]):
+        kind = TYPES.get(w.get("id"))
+        if not kind:
+            continue
+        v = QQuickView()
+        v.setFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnBottomHint)
+        v.setColor(QColor(0, 0, 0, 0))
+        v.engine().addImportPath("/usr/lib/qt6/qml")
+        ctx = v.rootContext()
+        ctx.setContextProperty("runner", runner)
+        ctx.setContextProperty("deskPlace", cfg.get("place", ""))
+        ctx.setContextProperty("deskImperial", bool(cfg.get("imperial", False)))
+        qml = ("import QtQuick\nimport org.devium.widgets\n"
+               f"{kind} {{ runner: runner; place: deskPlace; imperial: deskImperial\n"
+               "  MouseArea { anchors.fill: parent; z: -2; acceptedButtons: Qt.LeftButton\n"
+               "    onPressed: (m) => { m.accepted = true; Window.window.startSystemMove() } } }\n")
+        path = os.path.join(os.path.expanduser("~/.cache/devium"), f"desk-{kind}.qml")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            f.write(qml)
+        v.setResizeMode(QQuickView.ResizeMode.SizeViewToRootObject)
+        v.setSource(QUrl.fromLocalFile(path))
+        for e in v.errors():
+            print(e.toString(), file=sys.stderr)
+        x = w.get("x", scr.x() + scr.width() - 380)
+        y = w.get("y", scr.y() + 40 + i * 260)
+        v.setPosition(int(x), int(y))
+        v.xChanged.connect(lambda *_: save_timer.start())
+        v.yChanged.connect(lambda *_: save_timer.start())
+        v.show()
+        views.append((v, w))
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

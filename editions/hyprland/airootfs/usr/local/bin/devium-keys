@@ -3,6 +3,7 @@
 fuzzel --dmenu --prompt "Shortcuts  " --width 60 --lines 22 >/dev/null <<'KEYS'
 SUPER + Space        Devium Spotlight: apps, settings, files, maths
 SUPER + D            App list (or click the Devium logo)
+SUPER + S            Snap Assist: put another window next to this one
 SUPER + Return       Terminal
 SUPER + E            Files
 SUPER + T            Devium Tools
