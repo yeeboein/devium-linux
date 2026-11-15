@@ -44,6 +44,11 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 tes
   Brave, Google, Startpage, Bing or Ecosia in Devium Tools > Look). Site shortcuts: `yt`, `g`, `wiki`, `gh`, `aur`,
   `arch`, `pkg`, `so`, `maps` and `r` followed by your words, e.g. `yt lofi beats`. Typing an address like
   `github.com` opens it.
+- **Devium Doctor** (type `devium-doctor` in the terminal, or `support fix`): a full check-up of your system:
+  disk space, old downloads and logs, damaged or missing packages, kernel and boot files, a full /boot, a stuck
+  package manager, failed services, the clock, Wi-Fi and internet, expired package keys, memory, temperature and
+  battery health. Then it fixes what it can after one password. `--check` only looks, and `--report` saves the
+  results (no IP addresses) to share on the Discord.
 - **Magic lamp for closing too** (Customise > Motion > "Magic lamp: minimise and close", KDE): windows pour
   into their dock icon like a genie when you minimise *and* when you close them, with a soft fade-in when apps
   open. On Hyprland, windows shrink away quickly when closed. Xfce's window manager has no animations.

@@ -20,26 +20,8 @@ if [[ $FILTER == learn || $FILTER == learn\ * ]]; then
     exec /usr/lib/devium/support-learn ${FILTER#learn}
 fi
 
-# support fix: check and repair the most common problems
-if [[ $FILTER == fix ]]; then
-    ok()   { printf "  ${C}OK${N}    %s\n" "$1"; }
-    bad()  { printf "  ${W}FIX${N}   %s\n" "$1"; }
-    printf "${B}${T}Devium support fix${N}  ${D}- checking the usual suspects${N}\n\n"
-    free=$(df -BG --output=avail / | tail -1 | tr -dc 0-9)
-    (( free >= 2 )) && ok "Disk space: ${free} GB free" || bad "Disk almost full (${free} GB). Try: devium-update-manager > Clean up, or Devium Tools > App Manager"
-    if ping -c1 -W3 archlinux.org >/dev/null 2>&1; then ok "Internet works"
-    else bad "No internet. Restarting the network..."; sudo systemctl restart NetworkManager; fi
-    failed=$(systemctl --failed --no-legend --plain 2>/dev/null | awk '{print $1}' | tr '\n' ' ')
-    [[ -z $failed ]] && ok "No failed system services" || bad "Failed services: $failed (see: journalctl -b -u <name>)"
-    echo
-    printf "  ${D}Repairs that need your password (package lock, keys, Flatpak):${N}\n"
-    pkexec /usr/lib/devium/devium-helper fix
-    if pgrep -x plasmashell >/dev/null && [[ ${2:-} == --desktop ]]; then
-        bad "Restarting the desktop panel"; (kquitapp6 plasmashell; setsid kstart plasmashell) >/dev/null 2>&1
-    fi
-    printf "\n  ${D}Still stuck? Devium Tools > Get help > Report a problem.${N}\n\n"
-    exit 0
-fi
+# support fix: Devium Doctor (full check-up and repairs)
+[[ $FILTER == fix ]] && exec devium-doctor
 
 # A word that isn't a topic searches every command and description instead
 SEARCH=""
@@ -66,7 +48,9 @@ printf "${D}Topics: devium, updates, apps, files, system, network, git, python, 
 section "Devium"
 cmd "support"                         "Show this list"
 cmd "support <word>"                  "Search the list (e.g. support zip)"
-cmd "support fix"                     "Check and repair common problems"
+cmd "support fix"                     "Check and repair common problems (same as devium-doctor)"
+cmd "devium-doctor"                   "Full check-up: disk, packages, boot, services, network; fixes what it can"
+cmd "devium-doctor --check"           "Only check, change nothing (--report saves a file to share)"
 cmd "support learn"                   "Learn the terminal: 10 short hands-on lessons"
 cmd "support dev"                     "Check your coding setup (Git, SSH, GitHub, languages, Docker)"
 cmd "snip / snip <name>"              "Your saved code snippets (snip add <name> to save one)"

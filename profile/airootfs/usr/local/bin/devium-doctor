@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+# devium-doctor - a full check-up of your Devium system, and one-step repairs for what it finds.
+#
+#   devium-doctor           check everything, then offer to fix what it can (asks your password once)
+#   devium-doctor --check   only check, change nothing
+#   devium-doctor --fix     check and fix without asking
+#   devium-doctor --report  also save the results to ~/devium-doctor.txt (no IP addresses) to share on Discord
+set -uo pipefail
+export LC_ALL=C.UTF-8
+
+B=$'\e[1m'; D=$'\e[2m'; N=$'\e[0m'
+T=$'\e[38;2;180;184;224m'    # lavender: titles
+G=$'\e[38;2;150;200;160m'    # green: fine
+Y=$'\e[38;2;232;205;150m'    # yellow: worth a look
+R=$'\e[38;2;230;140;140m'    # red: problem
+C=$'\e[38;2;150;178;208m'    # blue-grey: commands
+[[ -t 1 ]] || { B=; D=; N=; T=; G=; Y=; R=; C=; }
+
+MODE=ask REPORT=0
+for a in "$@"; do
+    case $a in
+        --check|-c) MODE=check ;;
+        --fix|-y|--yes) MODE=fix ;;
+        --report|-r) REPORT=1 ;;
+        -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) echo "devium-doctor: unknown option $a (try --help)"; exit 1 ;;
+    esac
+done
+
+ROOT_FIXES=()   # repairs that need the password (devium-helper doctor-fix IDs)
+USER_FIXES=()   # repairs done as you (shell snippets from this file only)
+FIXABLE=0 PROBLEMS=0 NOTES=0
+LOG=""
+
+out() { printf '%s\n' "$1"; LOG+="$(printf '%s' "$1" | sed 's/\x1b\[[0-9;]*m//g')"$'\n'; }
+ok()   { out "  ${G}✔${N}  $(printf '%-18s' "$1") ${D}$2${N}"; }
+note() { out "  ${Y}•${N}  $(printf '%-18s' "$1") $2"; NOTES=$((NOTES + 1)); }
+# bad NAME TEXT [root-fix-id...]  (no id = nothing Doctor can do by itself; the text says what to do)
+bad() {
+    local name=$1 text=$2; shift 2
+    if (( $# )); then
+        out "  ${R}✖${N}  $(printf '%-18s' "$name") $text ${D}[can fix]${N}"
+        ROOT_FIXES+=("$@"); FIXABLE=$((FIXABLE + 1))
+    else
+        out "  ${R}✖${N}  $(printf '%-18s' "$name") $text"
+    fi
+    PROBLEMS=$((PROBLEMS + 1))
+}
+section() { out ""; out "${B}${T}$1${N}"; }
+human() { numfmt --to=iec --suffix=B "$1" 2>/dev/null || echo "${1}B"; }
+dir_bytes() { du -sb "$1" 2>/dev/null | cut -f1; }
+
+ver=$(sed -n 's/^DEVIUM_VERSION=//p' /etc/devium-release 2>/dev/null)
+out "${B}${T}Devium Doctor${N}  ${D}- a full check-up${ver:+ of Devium $ver}. Nothing is changed until you say yes.${N}"
+
+# ---------------------------------------------------------------- storage
+section "Storage"
+for mp in / /home /boot; do
+    mountpoint -q "$mp" 2>/dev/null || [[ $mp == / ]] || continue
+    read -r size avail pcent < <(df -B1 --output=size,avail,pcent "$mp" 2>/dev/null | tail -1)
+    [[ -n ${size:-} ]] || continue
+    used=${pcent%\%}
+    if [[ $mp == /boot ]]; then
+        if (( avail < 40 * 1024 * 1024 )); then
+            bad "Space on /boot" "only $(human "$avail") free - the next kernel update could fail" boot-space
+        else ok "Space on /boot" "$(human "$avail") free"; fi
+    elif (( avail < 3 * 1024 * 1024 * 1024 || used >= 92 )); then
+        bad "Space on $mp" "only $(human "$avail") free (${used}% used) - see the clean-ups below"
+    else ok "Space on $mp" "$(human "$avail") free of $(human "$size")"; fi
+done
+cache=$(dir_bytes /var/cache/pacman/pkg); cache=${cache:-0}
+if (( cache > 2 * 1024 * 1024 * 1024 )); then bad "Package downloads" "$(human "$cache") of old downloaded updates" cache
+else ok "Package downloads" "$(human "$cache")"; fi
+journal=$(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGT]' | head -1)
+jbytes=$(numfmt --from=iec "${journal:-0}" 2>/dev/null || echo 0)
+if (( jbytes > 500 * 1024 * 1024 )); then bad "System log" "$journal of old logs" journal
+else ok "System log" "${journal:-small}"; fi
+cores=$(dir_bytes /var/lib/systemd/coredump); cores=${cores:-0}
+if (( cores > 200 * 1024 * 1024 )); then bad "Crash dumps" "$(human "$cores") of old crash reports" coredumps
+else ok "Crash dumps" "$(human "$cores")"; fi
+thumbs=$(dir_bytes "$HOME/.cache/thumbnails"); thumbs=${thumbs:-0}
+if (( thumbs > 500 * 1024 * 1024 )); then
+    out "  ${R}✖${N}  $(printf '%-18s' "Picture previews") $(human "$thumbs") of old thumbnails ${D}[can fix]${N}"
+    USER_FIXES+=('rm -rf "$HOME/.cache/thumbnails" && echo "  OK    Old picture previews removed"')
+    FIXABLE=$((FIXABLE + 1)); PROBLEMS=$((PROBLEMS + 1))
+else ok "Picture previews" "$(human "$thumbs")"; fi
+
+# ---------------------------------------------------------------- packages
+section "Packages and updates"
+command -v pacman >/dev/null || { echo "devium-doctor: pacman not found - this isn't an Arch/Devium system"; exit 1; }
+if [[ -e /var/lib/pacman/db.lck ]] && ! pgrep -x pacman >/dev/null; then
+    bad "Package manager" "locked by an install that was interrupted" unlock
+else ok "Package manager" "free to use"; fi
+[[ -t 1 ]] && printf '  %s\r' "${D}checking every installed file (a few seconds)...${N}"
+damaged=$(pacman -Qk 2>&1 | grep 'No such file or directory' | sed -n 's/^warning: \([^:]*\):.*/\1/p' | sort -u)
+[[ -t 1 ]] && printf '  %-60s\r' ""
+if [[ -n $damaged ]]; then
+    n=$(wc -l <<<"$damaged")
+    ids=(); while read -r p; do ids+=("reinstall:$p"); done <<<"$damaged"
+    bad "Installed files" "$n package(s) have missing files: $(head -5 <<<"$damaged" | tr '\n' ' ')" "${ids[@]}"
+else ok "Installed files" "every package is complete"; fi
+if ! deps=$(pacman -Dk 2>&1); then
+    bad "Dependencies" "some packages are missing what they need - run ${C}devium-updater${N} (full update)"
+    out "      ${D}$(head -2 <<<"$deps" | tr '\n' ' ')${N}"
+else ok "Dependencies" "all there"; fi
+for k in /usr/lib/modules/*/pkgbase; do
+    [[ -e $k ]] || continue
+    base=$(<"$k")
+    if [[ ! -e /boot/vmlinuz-$base ]]; then
+        bad "Kernel ($base)" "missing from /boot - reinstalling it fixes this" "reinstall:$base"
+    elif [[ ! -e /boot/initramfs-$base.img ]]; then
+        bad "Boot image ($base)" "missing - your PC may not start" initramfs
+    else ok "Kernel ($base)" "ready to boot"; fi
+done
+if [[ ! -d /usr/lib/modules/$(uname -r) ]]; then
+    note "Restart needed" "the kernel was updated - restart so Wi-Fi, USB and sound keep working"
+fi
+orph=$(pacman -Qtdq 2>/dev/null | wc -l)
+(( orph > 0 )) && note "Unused packages" "$orph left over from removed apps (remove: ${C}sudo pacman -Rns \$(pacman -Qtdq)${N})"
+pacnew=$(find /etc -name '*.pacnew' 2>/dev/null | wc -l)
+(( pacnew > 0 )) && note "Config updates" "$pacnew new default config file(s) to look at (${C}sudo pacdiff${N})"
+mirror_age=$(( ( $(date +%s) - $(stat -c %Y /etc/pacman.d/mirrorlist 2>/dev/null || date +%s) ) / 86400 ))
+if (( mirror_age > 90 )) && command -v reflector >/dev/null; then
+    bad "Download mirrors" "list is $mirror_age days old - updates may be slow" mirrors
+fi
+if command -v flatpak >/dev/null; then
+    unused=$(flatpak uninstall --unused --system --noninteractive --assumeno 2>/dev/null | grep -cE '^ *[0-9]+\.')
+    if (( unused > 0 )); then bad "Flatpak" "$unused unused runtime(s) taking space" flatpak
+    else ok "Flatpak" "no unused runtimes"; fi
+fi
+
+# ---------------------------------------------------------------- system
+section "System"
+failed=$(systemctl --failed --no-legend --plain 2>/dev/null | awk '{print $1}' | grep -E '^[A-Za-z0-9@._:-]+\.[a-z]+$')
+if [[ -n $failed ]]; then
+    ids=(); while read -r s; do ids+=("service:$s"); done <<<"$failed"
+    bad "System services" "$(wc -l <<<"$failed") failed: $(tr '\n' ' ' <<<"$failed")" "${ids[@]}"
+else ok "System services" "all running fine"; fi
+ufailed=$(systemctl --user --failed --no-legend --plain 2>/dev/null | awk '{print $1}' | grep -E '^[A-Za-z0-9@._:-]+\.[a-z]+$')
+if [[ -n $ufailed ]]; then
+    out "  ${R}✖${N}  $(printf '%-18s' "Your services") failed: $(tr '\n' ' ' <<<"$ufailed")${D}[can fix]${N}"
+    while read -r s; do
+        [[ $s =~ ^[A-Za-z0-9@._:-]+$ ]] && USER_FIXES+=("systemctl --user reset-failed '$s'; systemctl --user restart '$s' && echo '  OK    $s restarted' || echo '  FAIL  $s still fails (journalctl --user -u $s)'")
+    done <<<"$ufailed"
+    FIXABLE=$((FIXABLE + 1)); PROBLEMS=$((PROBLEMS + 1))
+else ok "Your services" "all running fine"; fi
+if [[ -d /run/systemd/system ]]; then
+    if [[ $(timedatectl show -p NTPSynchronized --value 2>/dev/null) == yes ]]; then ok "Clock" "in sync"
+    else bad "Clock" "not synced with the internet - this breaks downloads and websites" time; fi
+fi
+mem=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
+swap=$(swapon --noheadings --show=SIZE 2>/dev/null | wc -l)
+if (( swap == 0 && mem < 6000 )); then
+    note "Memory" "${mem} MB and no swap - turn on Low-RAM mode in Devium Tools so apps don't freeze"
+else ok "Memory" "${avail} MB free of ${mem} MB$( ((swap)) && echo ', swap on')"; fi
+temp=$(sort -rn /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -1)
+if [[ -n $temp ]]; then
+    temp=$((temp / 1000))
+    if (( temp >= 90 )); then note "Temperature" "${temp}°C - very hot; check the fan and air vents"
+    else ok "Temperature" "${temp}°C"; fi
+fi
+if [[ -d /sys/class/power_supply/BAT0 ]]; then
+    full=$(cat /sys/class/power_supply/BAT0/energy_full 2>/dev/null || cat /sys/class/power_supply/BAT0/charge_full 2>/dev/null)
+    design=$(cat /sys/class/power_supply/BAT0/energy_full_design 2>/dev/null || cat /sys/class/power_supply/BAT0/charge_full_design 2>/dev/null)
+    if [[ -n $full && -n $design && $design -gt 0 ]]; then
+        health=$((full * 100 / design))
+        if (( health < 60 )); then note "Battery" "${health}% of its original capacity - it's worn"
+        else ok "Battery" "${health}% health"; fi
+    fi
+fi
+
+# ---------------------------------------------------------------- network
+section "Network"
+if command -v nmcli >/dev/null && ! nmcli -t -f STATE general 2>/dev/null | grep -q '^connected'; then
+    bad "Connection" "not connected to Wi-Fi or a cable" network
+elif ! getent hosts archlinux.org >/dev/null 2>&1; then
+    bad "Internet names" "connected, but websites can't be looked up (DNS)" network
+elif ! curl -fsS -m 8 -o /dev/null https://archlinux.org 2>/dev/null; then
+    bad "Internet" "connected, but websites don't load" network
+else ok "Internet" "working"; fi
+if pacman-key --list-keys 2>/dev/null | grep -q 'expired:'; then
+    bad "Package keys" "some have expired - updates may be refused" keyring
+fi
+
+# ---------------------------------------------------------------- summary
+out ""
+if (( PROBLEMS == 0 )); then
+    out "${G}${B}All good!${N} No problems found.$( ((NOTES)) && echo " $NOTES thing(s) above are worth a look.")"
+else
+    out "${B}Found $PROBLEMS problem(s)${N}, $FIXABLE of them Doctor can fix.$( ((NOTES)) && echo " Plus $NOTES note(s).")"
+fi
+
+if (( REPORT )); then
+    {
+        echo "Devium Doctor report - $(date '+%Y-%m-%d %H:%M')"
+        echo "Devium ${ver:-?} | kernel $(uname -r) | $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ //') | ${mem} MB RAM"
+        printf '%s' "$LOG" | sed -E 's/([0-9]{1,3}\.){3}[0-9]{1,3}/x.x.x.x/g'
+    } > "$HOME/devium-doctor.txt"
+    echo "${D}Saved to ~/devium-doctor.txt (IP addresses removed) - share it on the Discord.${N}"
+fi
+
+(( FIXABLE )) || exit $(( PROBLEMS > 0 ))
+[[ $MODE == check ]] && { echo "${D}Run ${N}${C}devium-doctor${N}${D} without --check to fix them.${N}"; exit 1; }
+if [[ $MODE == ask ]]; then
+    [[ -t 0 ]] || exit 1
+    read -rp "Fix them now? [Y/n] " yn
+    [[ ${yn,,} == n* ]] && exit 1
+fi
+
+echo
+for f in "${USER_FIXES[@]}"; do bash -c "$f"; done
+if (( ${#ROOT_FIXES[@]} )); then
+    echo "${D}Some repairs need your password:${N}"
+    if [[ -n ${DISPLAY:-}${WAYLAND_DISPLAY:-} ]] && command -v pkexec >/dev/null; then
+        pkexec /usr/lib/devium/devium-helper doctor-fix "${ROOT_FIXES[@]}"
+    else
+        sudo /usr/lib/devium/devium-helper doctor-fix "${ROOT_FIXES[@]}"
+    fi
+fi
+echo
+echo "${B}Done.${N} ${D}Run ${N}${C}devium-doctor --check${N}${D} again to make sure. Still stuck? Devium Tools > Get help.${N}"
