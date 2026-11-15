@@ -62,6 +62,7 @@ SETTINGS = [
     ("health disk temperature smart", "Health check (Devium Tools)", ["devium-tools", "health"]),
     ("phone android iphone kde connect", "Phone link (Devium Tools)", ["devium-tools", "phone"]),
     ("reset desktop dock panel default", "Reset desktop (Devium Tools)", ["devium-tools", "look"]),
+    ("tiling tile hyprland split windows", "Automatic tiling (Devium Configure > Customise)", ["devium-setup-wizard", "--customise"]),
     ("customise customize tweaks transparent see-through blur wobbly mac buttons hot corners", "Customise the look (Devium Configure)",
      ["devium-setup-wizard", "--customise"]),
     ("widgets desktop weather sea clock focus pomodoro", "Devium widgets (Devium Tools > Look)", ["devium-tools", "look"]),

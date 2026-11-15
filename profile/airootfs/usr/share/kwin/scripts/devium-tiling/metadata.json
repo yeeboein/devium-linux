@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Id": "devium-tiling",
+        "Name": "Devium Tiling",
+        "Description": "Automatic tiling like Hyprland: new windows split the screen, with gaps. Meta+Shift+Space floats a window.",
+        "Authors": [ { "Name": "Devium" } ],
+        "License": "GPL-3.0-or-later",
+        "Version": "1.0",
+        "Website": "https://github.com/yeeboein/devium-linux",
+        "EnabledByDefault": false
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPackageStructure": "KWin/Script"
+}

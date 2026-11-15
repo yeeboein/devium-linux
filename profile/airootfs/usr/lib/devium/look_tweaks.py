@@ -27,12 +27,16 @@ XFCE = shutil.which("xfwm4") is not None and not KDE
 HYPR = (shutil.which("Hyprland") is not None or shutil.which("hyprctl") is not None) and not KDE and not XFCE
 
 CATEGORIES = [
+    ("tiling", "Tiling", "Windows arrange themselves, like Hyprland"),
     ("windows", "Windows", "Title bars, buttons and how windows behave"),
     ("glass", "See-through and blur", "Transparent windows, blur and glass"),
     ("motion", "Animations and effects", "How things move, open and close"),
     ("desktop", "Desktop and screen edges", "Hot corners, workspaces, the dock"),
     ("clock", "Clock and notifications", "The clock, notifications and sounds"),
     ("mouse", "Mouse, keyboard and clicking", "Cursor, clicking and focus"),
+    ("keyboard", "Keyboard and sound", "Typing, special keys and volume"),
+    ("power", "Power and lock screen", "Sleep, the screen and locking"),
+    ("files", "Files", "The file manager"),
     ("terminal", "Terminal", "How the terminal looks"),
     ("comfort", "Easy on the eyes", "Night light, text size and contrast"),
 ]
@@ -297,6 +301,136 @@ T("bold-titles", "comfort", "Bold window titles", "Titles stand out more",
 T("high-contrast-borders", "comfort", "Easy-to-see window outlines", "A strong outline around every window",
   kde=[("breezerc", "Common", "OutlineIntensity", "OutlineHigh")], hypr=["general:col.inactive_border = rgb(8a96a4)"])
 
+
+# ---------------------------------------------------------------------------- tiling (beta16)
+T("tiling", "tiling", "Automatic tiling (like Hyprland)",
+  "New windows split the screen by themselves, with gaps. Meta+Shift+Space floats a window, Meta+Shift+T turns "
+  "tiling off for a moment, Meta+Alt+arrows swap windows, drag one onto another to swap them",
+  kde=[("kwinrc", "Plugins", "devium-tilingEnabled", "true", "false"),
+       ("kwinrc", "Plugins", "devium-snap-assistEnabled", "false", "true")])
+T("tiling-master", "tiling", "Tiling: one big window and a stack", "The first window takes the left side, the rest stack on the right",
+  kde=[("kwinrc", "Script-devium-tiling", "layout", "master")])
+T("tiling-no-gaps", "tiling", "Tiling: no gaps", "Windows touch each other, for the most space",
+  kde=[("kwinrc", "Script-devium-tiling", "gap", "0")], group="tile-gaps")
+T("tiling-big-gaps", "tiling", "Tiling: big gaps", "Lots of wallpaper between windows",
+  kde=[("kwinrc", "Script-devium-tiling", "gap", "22")], group="tile-gaps")
+
+# ---------------------------------------------------------------------------- more windows
+T("no-titlebars", "windows", "No title bars at all", "Clean, borderless windows. Close them with Alt+F4 or the dock",
+  func="no_titlebars")
+T("small-buttons", "windows", "Smaller title bar buttons", "Slimmer title bars",
+  kde=[("breezerc", "Windeco", "ButtonSize", "ButtonSmall")], group="button-size")
+T("big-borders", "windows", "Wide window borders", "Easier to grab a window's edge to resize it",
+  kde=[("kwinrc", DECO, "BorderSize", "Large"), ("kwinrc", DECO, "BorderSizeAuto", "false")], group="borders")
+T("switcher-grid", "windows", "Alt+Tab shows big previews", "A grid of window thumbnails when you press Alt+Tab",
+  kde=[("kwinrc", "TabBox", "LayoutName", "thumbnail_grid")], group="tabbox")
+T("switcher-cover", "windows", "Alt+Tab: cover switch", "Windows flip past in 3D, like album covers",
+  kde=[("kwinrc", "TabBox", "LayoutName", "coverswitch")], group="tabbox")
+T("switcher-flip", "windows", "Alt+Tab: flip switch", "Windows stacked in 3D that you flip through",
+  kde=[("kwinrc", "TabBox", "LayoutName", "flipswitch")], group="tabbox")
+T("switcher-all", "windows", "Alt+Tab shows every workspace", "Switch to windows on other workspaces too",
+  kde=[("kwinrc", "TabBox", "DesktopMode", "0")])
+
+# ---------------------------------------------------------------------------- dock and desktop
+T("dock-left", "desktop", "Dock on the left", "The dock stands on the left side of the screen",
+  kde_js=("panels().forEach(function(p){ if (p.location=='bottom' || p.location=='top') p.location='left'; });",
+          "panels().forEach(function(p){ if (p.location=='left') p.location='bottom'; });"), group="dock-pos")
+T("dock-top", "desktop", "Dock at the top", "The dock sits along the top of the screen",
+  kde_js=("panels().forEach(function(p){ if (p.location=='bottom' || p.location=='left') p.location='top'; });",
+          "panels().forEach(function(p){ if (p.location=='top' && p.widgets('org.kde.plasma.appmenu').length==0) p.location='bottom'; });"),
+  group="dock-pos")
+T("mac-top-bar", "desktop", "macOS-style top bar", "A thin bar at the top with the app's menus, the clock and the tray",
+  kde_js=("var have=false; panels().forEach(function(p){ if (p.widgets('org.kde.plasma.appmenu').length) have=true; });"
+          "if (!have) { var p = new Panel; p.location='top'; p.height=Math.round(gridUnit*1.6);"
+          "p.addWidget('org.kde.plasma.kickoff'); p.addWidget('org.kde.plasma.appmenu');"
+          "p.addWidget('org.kde.plasma.panelspacer'); p.addWidget('org.kde.plasma.systemtray');"
+          "p.addWidget('org.kde.plasma.digitalclock'); }",
+          "panels().forEach(function(p){ if (p.location=='top' && p.widgets('org.kde.plasma.appmenu').length) p.remove(); });"))
+T("dock-this-desktop", "desktop", "Dock shows only this workspace's windows", "Windows on other workspaces don't appear in the dock",
+  kde_js=("panels().forEach(function(p){ p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General']; w.writeConfig('showOnlyCurrentDesktop', true); }); });",
+          "panels().forEach(function(p){ p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General']; w.writeConfig('showOnlyCurrentDesktop', false); }); });"))
+T("dock-no-grouping", "desktop", "Don't group windows in the dock", "Every window gets its own dock icon",
+  kde_js=("panels().forEach(function(p){ p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General']; w.writeConfig('groupingStrategy', 0); }); });",
+          "panels().forEach(function(p){ p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General']; w.writeConfig('groupingStrategy', 1); }); });"))
+T("empty-session", "desktop", "Start with a clean desktop", "Don't reopen the apps you had open last time",
+  kde=[("ksmserverrc", "General", "loginMode", "emptySession")])
+T("no-logout-confirm", "desktop", "Log out and shut down without asking", "No \"are you sure?\" screen",
+  kde=[("ksmserverrc", "General", "confirmLogout", "false")])
+
+# ---------------------------------------------------------------------------- clock, sound, notifications
+T("week-numbers", "clock", "Week numbers in the calendar", "",
+  kde_js=("panels().forEach(function(p){ p.widgets('org.kde.plasma.digitalclock').forEach(function(w){ w.currentConfigGroup=['Appearance']; w.writeConfig('showWeekNumbers', true); }); });",
+          "panels().forEach(function(p){ p.widgets('org.kde.plasma.digitalclock').forEach(function(w){ w.currentConfigGroup=['Appearance']; w.writeConfig('showWeekNumbers', false); }); });"))
+T("quiet-fullscreen", "clock", "No pop-ups over full-screen apps", "Notifications wait while you watch a video or play a game",
+  kde=[("plasmanotifyrc", "DoNotDisturb", "WhenFullscreen", "true")])
+T("louder", "keyboard", "Allow volume up to 150%", "For quiet laptop speakers",
+  kde=[("plasmaparc", "General", "RaiseMaximumVolume", "true")])
+T("silent-volume-keys", "keyboard", "No click when changing the volume", "Silence the little sound the volume keys make",
+  kde=[("plasmaparc", "General", "AudioFeedback", "false")])
+
+# ---------------------------------------------------------------------------- keyboard
+T("numlock", "keyboard", "Num Lock on when you log in", "The number pad works straight away",
+  kde=[("kcminputrc", "Keyboard", "NumLock", "0")], xfce=[("keyboards", "/Default/Numlock", "bool", "true")],
+  hypr=["input:numlock_by_default = true"])
+T("fast-repeat", "keyboard", "Faster key repeat", "Holding a key repeats it sooner and faster",
+  kde=[("kcminputrc", "Keyboard", "RepeatDelay", "250"), ("kcminputrc", "Keyboard", "RepeatRate", "40")],
+  xfce=[("keyboards", "/Default/KeyRepeat/Delay", "int", "250"), ("keyboards", "/Default/KeyRepeat/Rate", "int", "40")],
+  hypr=["input:repeat_delay = 250", "input:repeat_rate = 40"])
+T("caps-escape", "keyboard", "Caps Lock works as Escape", "Popular with Vim users",
+  kde=[("kxkbrc", "Layout", "Options", "caps:escape"), ("kxkbrc", "Layout", "ResetOldOptions", "true")],
+  hypr=["input:kb_options = caps:escape"], group="xkb")
+T("caps-ctrl", "keyboard", "Swap Caps Lock and Ctrl", "Ctrl where Caps Lock is, easier on your hands",
+  kde=[("kxkbrc", "Layout", "Options", "ctrl:swapcaps"), ("kxkbrc", "Layout", "ResetOldOptions", "true")],
+  hypr=["input:kb_options = ctrl:swapcaps"], group="xkb")
+T("compose-key", "keyboard", "Right Alt is a compose key", "Type é, ñ, ü and more: Right Alt, then ' and e",
+  kde=[("kxkbrc", "Layout", "Options", "compose:ralt"), ("kxkbrc", "Layout", "ResetOldOptions", "true")],
+  hypr=["input:kb_options = compose:ralt"], group="xkb")
+
+# ---------------------------------------------------------------------------- mouse
+T("fast-pointer", "mouse", "Faster mouse pointer", "The pointer moves further for the same hand movement",
+  hypr=["input:sensitivity = 0.45"], func="kde_fast_pointer")
+T("left-handed", "mouse", "Left-handed mouse", "Swap the left and right buttons",
+  xfce=[("pointers", "/Default/RightHanded", "bool", "false")], hypr=["input:left_handed = true"], func="kde_left_handed")
+
+# ---------------------------------------------------------------------------- power and lock screen
+T("lock-5min", "power", "Lock the screen after 5 minutes", "When you step away",
+  kde=[("kscreenlockerrc", "Daemon", "Autolock", "true"), ("kscreenlockerrc", "Daemon", "Timeout", "5")], group="lock")
+T("lock-never", "power", "Never lock the screen by itself", "Only when you lock it (Meta+L)",
+  kde=[("kscreenlockerrc", "Daemon", "Autolock", "false")], group="lock")
+T("lock-no-resume", "power", "Don't lock after sleep", "Opening the lid takes you straight back in",
+  kde=[("kscreenlockerrc", "Daemon", "LockOnResume", "false")])
+T("screen-off-10", "power", "Turn the screen off after 10 minutes", "Saves power when you're away",
+  kde=[("powerdevilrc", "AC|Display", "TurnOffDisplayIdleTimeoutSec", "600"),
+       ("powerdevilrc", "Battery|Display", "TurnOffDisplayIdleTimeoutSec", "600")])
+T("no-sleep-ac", "power", "Never sleep when plugged in", "Good for downloads and long builds",
+  kde=[("powerdevilrc", "AC|SuspendAndShutdown", "AutoSuspendAction", "0")])
+T("lid-ac-nothing", "power", "Closing the lid does nothing when plugged in", "Use the laptop with an external screen",
+  kde=[("powerdevilrc", "AC|SuspendAndShutdown", "LidAction", "0")])
+
+# ---------------------------------------------------------------------------- files
+T("dolphin-split", "files", "File manager opens in split view", "Two folders side by side, handy for copying",
+  kde=[("dolphinrc", "General", "SplitView", "true")])
+T("dolphin-path", "files", "Show the full folder path", "The location bar shows the whole path as text",
+  kde=[("dolphinrc", "General", "ShowFullPath", "true")])
+T("hidden-files", "files", "Show hidden files", "Files starting with a dot (like .config) are shown",
+  xfce=[("thunar", "/last-show-hidden", "bool", "true")], func="dolphin_hidden")
+T("thunar-path", "files", "Full path in the window title", "Thunar shows where you are in the title",
+  xfce=[("thunar", "/misc-full-path-in-window-title", "bool", "true")])
+
+# ---------------------------------------------------------------------------- comfort
+T("colourblind", "comfort", "Colour-blind friendly colours", "Adjusts colours so red and green are easier to tell apart",
+  kde=[("kwinrc", "Plugins", "colorblindnesscorrectionEnabled", "true")])
+T("invert", "comfort", "Invert colours with Meta+Ctrl+I", "Turns the screen negative, for very bright light or low vision",
+  kde=[("kwinrc", "Plugins", "invertEnabled", "true")])
+
+# ---------------------------------------------------------------------------- Xfce
+T("xfce-no-compositor", "glass", "Turn off visual effects (Xfce)", "No shadows or transparency: fastest on old laptops",
+  xfce=[("xfwm4", "/general/use_compositing", "bool", "false", "true")])
+T("xfce-snap-windows", "windows", "Windows snap to each other", "Dragged windows line up with nearby windows",
+  xfce=[("xfwm4", "/general/snap_to_windows", "bool", "true")])
+T("xfce-shade", "windows", "Double-click a title bar to roll it up", "The window shrinks to just its title bar",
+  xfce=[("xfwm4", "/general/double_click_action", "string", "shade")])
+
 # ---------------------------------------------------------------------------- helpers
 def run(cmd, **kw):
     try:
@@ -306,11 +440,13 @@ def run(cmd, **kw):
 
 
 def kset(file, group, key, value):
+    """Write (or with value None, delete) a KDE setting. Nested groups are written "AC|Display"."""
     tool = shutil.which("kwriteconfig6") or "kwriteconfig6"
-    if value is None:
-        run([tool, "--notify", "--file", file, "--group", group, "--key", key, "--delete"])
-    else:
-        run([tool, "--notify", "--file", file, "--group", group, "--key", key, value])
+    cmd = [tool, "--notify", "--file", file]
+    for g in group.split("|"):
+        cmd += ["--group", g]
+    cmd += ["--key", key]
+    run(cmd + (["--delete"] if value is None else [value]))
 
 
 def xset(channel, prop, typ, value):
@@ -420,8 +556,8 @@ def konsole_font(on):
         kset(prof, "Appearance", "Font", "JetBrains Mono,13,-1,5,400,0,0,0,0,0,0,0,0,0,0,1" if on else None)
 
 
-def kde_input(key, on):
-    """Natural scrolling / tap to click for every touchpad and mouse KDE knows about."""
+def kde_input(key, on, value=None):
+    """Natural scrolling / tap to click / pointer speed... for every touchpad and mouse KDE knows about."""
     if not KDE:
         return
     path = os.path.join(CFG, "kcminputrc")
@@ -434,11 +570,59 @@ def kde_input(key, on):
         cmd = [shutil.which("kwriteconfig6") or "kwriteconfig6", "--file", "kcminputrc"]
         for p in parts:
             cmd += ["--group", p]
-        run(cmd + ["--key", key, "true" if on else "false"])
+        if value is not None:
+            run(cmd + ["--key", key] + ([value] if on else ["--delete"]))
+        else:
+            run(cmd + ["--key", key, "true" if on else "false"])
 
 
 def kde_natural_scroll(on):
     kde_input("NaturalScroll", on)
+
+
+def kde_fast_pointer(on):
+    kde_input("PointerAcceleration", on, "0.45")
+
+
+def kde_left_handed(on):
+    kde_input("LeftHanded", on)
+
+
+def kwin_rule(rule_id, props):
+    """Add (props = dict) or remove (props = None) one KWin window rule, keeping everyone else's rules."""
+    if not KDE:
+        return
+    import configparser
+    path = os.path.join(CFG, "kwinrulesrc")
+    cp = configparser.ConfigParser(interpolation=None, strict=False)
+    cp.optionxform = str
+    cp.read(path)
+    if not cp.has_section("General"):
+        cp.add_section("General")
+    rules = [r for r in cp.get("General", "rules", fallback="").split(",") if r and r != rule_id]
+    if cp.has_section(rule_id):
+        cp.remove_section(rule_id)
+    if props:
+        cp[rule_id] = props
+        rules.append(rule_id)
+    cp.set("General", "rules", ",".join(rules))
+    cp.set("General", "count", str(len(rules)))
+    with open(path, "w") as f:
+        cp.write(f, space_around_delimiters=False)
+
+
+def no_titlebars(on):
+    kwin_rule("devium-noborder", {"Description": "Devium: no title bars (close windows with Alt+F4)", "wmclass": ".*",
+                                  "wmclassmatch": "3", "wmclasscomplete": "false", "types": "1",
+                                  "noborder": "true", "noborderrule": "2"} if on else None)
+
+
+def dolphin_hidden(on):
+    if KDE:
+        kset("dolphinrc", "General", "GlobalViewProps", "true" if on else None)
+        path = os.path.join(HOME, ".local/share/dolphin/view_properties/global/.directory")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        kset(path, "Settings", "HiddenFilesShown", "true" if on else None)
 
 
 def kde_tap_click(on):
@@ -536,7 +720,8 @@ def dim_wallpaper(on):
 
 
 # ---------------------------------------------------------------------------- applying
-FUNC_DESKTOPS = {"glass_all": "any", "glass_always": "kde", "konsole_glass": "kde", "konsole_font": "kde", "kde_natural_scroll": "kde", "kde_tap_click": "kde",
+FUNC_DESKTOPS = {"glass_all": "any", "glass_always": "kde", "kde_fast_pointer": "kde", "kde_left_handed": "kde",
+                 "no_titlebars": "kde", "dolphin_hidden": "kde", "konsole_glass": "kde", "konsole_font": "kde", "kde_natural_scroll": "kde", "kde_tap_click": "kde",
                  "dim_wallpaper": "kde", "waybar_reload": "hypr", "waybar_clock": "hypr"}
 
 
@@ -577,7 +762,10 @@ def finish():
     if KDE:
         for q in ("qdbus6", "qdbus"):
             if shutil.which(q):
+                # restart the tiling script so new gaps / layout apply now (KWin reads script settings at start)
+                run([q, "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.unloadScript", "devium-tiling"])
                 run([q, "org.kde.KWin", "/KWin", "reconfigure"])
+                run([q, "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.start"])
                 break
     if HYPR:
         run(["hyprctl", "reload"])

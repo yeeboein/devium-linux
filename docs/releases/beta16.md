@@ -1,6 +1,6 @@
 # Devium beta16
 
-Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. A smaller release with fixes from beta15 testing.
+Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 testing, tiling for KDE, 125 Customise options and a Linux tools page.
 
 ## Fixed
 - **Devium Updater finds new versions again.** It said "No Devium releases published yet" because GitHub leaves
@@ -17,6 +17,28 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. A smaller release wit
 - **fastfetch shows your Devium version:** a new line, `Ver  Devium Beta16`.
 
 ## New
+- **Automatic tiling for KDE, like Hyprland** (Customise > Tiling): new windows split the screen by themselves,
+  side by side and then top and bottom, with gaps. Dialogs and full-screen apps are left alone.
+  - **Meta+Shift+Space** floats or tiles a window, **Meta+Shift+T** turns tiling off for a moment
+  - **Meta+Alt+Left/Right** swaps windows, **Meta+Alt+Return** makes a window the big one, or drag a window
+    onto another to swap them
+  - options for a "one big window and a stack" layout, and no gaps or big gaps
+- **Customise now has 125 options** (110 on KDE, 35 on Xfce, 39 on Hyprland). New ones include:
+  - **Windows:** no title bars at all, smaller buttons, wide borders, Alt+Tab with big previews, cover switch
+    or flip switch, Alt+Tab across all workspaces
+  - **Dock and desktop:** dock on the left or at the top, a macOS-style top bar with the app's menus, dock shows
+    only this workspace, don't group windows, start with a clean desktop, log out without asking
+  - **Keyboard and sound:** Num Lock on at login, faster key repeat, Caps Lock as Escape, swap Caps Lock and Ctrl,
+    a compose key, volume up to 150%, silent volume keys
+  - **Power and lock screen:** lock after 5 minutes or never, don't lock after sleep, screen off after 10 minutes,
+    never sleep when plugged in, closing the lid does nothing when plugged in
+  - **Files:** split view, full path, show hidden files
+  - **And more:** faster or left-handed mouse, week numbers, no pop-ups over full-screen apps, colour-blind
+    friendly colours, invert colours, and Xfce options (no effects, snapping windows, roll-up title bars)
+- **Linux tools** (new page in Devium Configure): 34 handy tools, all optional: GParted, Filelight, BleachBit,
+  TestDisk/PhotoRec, ddrescue, Impression (USB writer), Pika Backup, Syncthing, rclone, KeePassXC, Mission Center,
+  CPU-X, inxi, PowerTOP, s-tui, OpenRGB, Piper, Solaar, Flatseal, Warehouse, Distrobox, GNOME Boxes, Firejail,
+  scrcpy, yt-dlp, ImageMagick, Pandoc, 7-Zip and RAR, Nmap, Wireshark, ClamAV and more.
 - **Konsole (see-through):** a new choice on Devium Configure's Terminal page: Konsole with a frosted,
   see-through background, in any Devium theme.
 - **Glass mode, done properly** (Customise > "Glass mode: see-through everything"): every window is slightly
