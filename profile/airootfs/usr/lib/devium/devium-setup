@@ -160,6 +160,8 @@ package_setup() {
     # things earlier versions had that are gone now (an update copies new files but doesn't delete old ones)
     rm -f /etc/xdg/autostart/devium-loading.desktop /usr/local/bin/devium-loading
     rm -f /etc/xdg/fastfetch/{medium,compact}{,-norev}.jsonc /usr/share/devium/fastfetch-logo-small.txt
+    # About Devium is for the live USB only (an update used to copy it onto installed systems)
+    [[ -d /run/archiso ]] || rm -f /usr/share/applications/devium-about.desktop
     strip_live_repo
     apply_overrides
     write_os_release
@@ -264,6 +266,7 @@ case "${1:-}" in
             --exclude=./etc/pacman.d/hooks/uncomment-mirrors.hook \
             --exclude=./usr/share/applications/devium-install.desktop \
             --exclude=./usr/share/applications/devium-about-live.desktop \
+            --exclude=./usr/share/applications/devium-about.desktop \
             -cf - . | tar -C / --no-same-owner -xf -
         chmod 755 /usr/local/bin/devium-* /usr/local/bin/support /usr/local/bin/snip /usr/local/bin/fastfetch \
             /usr/lib/devium/devium-* /usr/lib/devium/support-* /usr/lib/devium/crash-catcher \

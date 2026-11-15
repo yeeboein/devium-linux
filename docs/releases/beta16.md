@@ -13,6 +13,8 @@ Three editions: **KDE Plasma**, **Xfce** and **Hyprland**. Fixes from beta15 tes
     (Konsole and the Xfce terminal)
 
 ## Changed
+- **About Devium only on the live USB:** updating no longer adds it to installed systems, and updating to
+  beta16 removes it if an earlier update put it there.
 - **No loading screen after login:** you go straight from the login screen to your desktop.
 - **fastfetch shows your Devium version:** a new line, `Ver  Devium Beta16`.
 
