@@ -217,7 +217,7 @@ pkgver="$(sed -n 's/^DEVIUM_VERSION=//p' "$STAGE/airootfs/etc/devium-release" | 
     echo "pkgdesc=\"Devium's apps, look and settings\""
     echo "arch=(any)"
     echo "url=\"https://github.com/yeeboein/devium-linux\""
-    echo "license=(MIT)"
+    echo "license=(GPL-3.0-or-later)"
     echo "depends=(bash python python-pyqt6)"
     echo "install=devium.install"
     echo "options=(!strip !debug)"

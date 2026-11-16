@@ -4,10 +4,25 @@
      Devium users see the new list straight away, no new ISO needed. When beta17 is released, its real release
      notes are shown instead. Comments like this one aren't shown. -->
 
-## Planned
-- **Safe mode at login:** hold Shift while logging in to skip Devium's extras (widgets, look tweaks), so you can always get back in and undo something.
+The last beta before **Devium 1.0**: getting everything ready for a full release.
+
+## Ready for 1.0
+- **Safe mode:** pick "Devium (safe mode)" in the boot menu to start with Devium's extras paused (widgets, tiling,
+  gestures, Snap Assist). A window lets you turn off every Customise tweak, undo the last update or run Devium
+  Doctor, then restart normally.
+- **Stable and beta updates:** Devium Updater gives you stable versions from 1.0 on. Testers can tick "Get beta
+  versions too" for the newest features.
+- **Signed downloads:** releases get a signed list of checksums, so you can check an ISO really comes from Devium
+  (see docs/VERIFY.md).
+- **Devium is free software (GPL-3.0),** with credits for the artwork and icons it uses, and a clear note that it's
+  based on Arch Linux but not an official Arch product.
+- **Bug, hardware and idea forms** on GitHub, a security policy, and a guide for helping out.
+- **Secure Boot guide:** how to turn it off on each laptop brand (it has to be off to start Devium).
+
+## Also planned
 - **`support selftest`:** checks that every Devium app, widget and helper works, and gives you a list to share.
-- **Automatic tests for every ISO:** each build boots in a virtual machine and is checked before release.
+- **Automatic tests for every ISO:** each build boots in a virtual machine and is checked before release, and the
+  code is checked on every change.
 - **Lighter on old laptops:** Snap Assist on Xfce only wakes up when a window moves, and the crash catcher
   switches off in Low-RAM mode.
 - **fastfetch side by side more often:** the logo and your info sit next to each other whenever they fit, like

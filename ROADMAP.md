@@ -1,5 +1,26 @@
 # Devium roadmap
 
+## Devium 1.0 checklist
+Must have before 1.0 (see the beta17 notes for what's done):
+- [x] Licence (GPL-3.0), CREDITS.md, "based on Arch, not official" notice (README, About)
+- [x] Issue forms (bug, hardware, idea), SECURITY.md, CONTRIBUTING.md
+- [x] Code checks on every push (`tools/check-code.sh`)
+- [x] Boot test: every ISO boots in a VM and must reach the desktop (`tools/boot-test.sh`, Boot test workflow)
+- [x] Signed checksums (`SHA256SUMS.asc`) once the signing key is set up (`tools/make-signing-key.sh`)
+- [x] Stable and beta update channels; v1.0 ranks above every beta
+- [x] Safe mode boot entry with reset / undo update / Doctor
+- [x] Secure Boot guide (docs/SECURE-BOOT.md)
+- [ ] Signing key created and saved as the `DEVIUM_SIGNING_KEY` secret (Yeeboein, on the laptop)
+- [ ] Wallpaper source and licence written in CREDITS.md
+- [ ] Devium's files from an online, signed pacman repo (devium-desktop already exists on the ISO; publish it per
+      edition so normal system updates update Devium too, and the Updater switches to it)
+- [ ] Upgrade test: beta15 / beta16 / beta17 to 1.0 in a VM, files kept
+- [ ] Automatic install test (Calamares in a VM, then boot the installed system)
+- [ ] Btrfs by default with automatic snapshots before updates (after the install test exists)
+- [ ] Hardware reports from testers: NVIDIA, AMD, Broadcom Wi-Fi, HiDPI, touchscreens
+- [ ] Mirror or torrent for the ISOs (SourceForge), and the website on deviumlinux.org
+- [ ] Built-in Secure Boot setup (sbctl) - can come after 1.0
+
 Status of the "next update" (v2). Tick items as they land.
 
 ## Look and feel
