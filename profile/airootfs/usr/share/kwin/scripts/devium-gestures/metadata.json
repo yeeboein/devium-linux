@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Id": "devium-gestures",
+        "Name": "Devium Gestures",
+        "Description": "Three-finger touchpad gestures like GNOME: up for the overview, down for the desktop, left and right to change workspace.",
+        "Authors": [ { "Name": "Devium" } ],
+        "License": "GPL-3.0-or-later",
+        "Version": "1.0",
+        "Website": "https://github.com/yeeboein/devium-linux",
+        "EnabledByDefault": false
+    },
+    "X-Plasma-API": "declarativescript",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "KPackageStructure": "KWin/Script"
+}

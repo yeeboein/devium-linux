@@ -20,6 +20,9 @@
   feel page (KDE), off unless you tick it. It's the same switch as in Customise and Devium Tools > Look.
 - **Closing windows looks smooth again:** the magic-lamp close animation from beta16 is gone. Minimising keeps
   KDE's real Magic Lamp genie, and closing uses KDE's own smooth fade.
+- **Touchpad gestures like GNOME** (optional, Customise > Touchpad gestures): swipe up with three fingers for
+  the overview, down for the desktop, and left or right to change workspace, with a new workspace appearing past
+  the last one like GNOME. KDE, plus left/right on Hyprland. KDE's four-finger gestures keep working.
 - **Fixes** for everything beta16 testers report on Discord.
 
 ## Ideas being considered

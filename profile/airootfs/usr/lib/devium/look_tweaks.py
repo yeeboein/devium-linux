@@ -28,6 +28,7 @@ HYPR = (shutil.which("Hyprland") is not None or shutil.which("hyprctl") is not N
 
 CATEGORIES = [
     ("tiling", "Tiling", "Windows arrange themselves, like Hyprland"),
+    ("gestures", "Touchpad gestures", "Swipe with three fingers, like GNOME"),
     ("windows", "Windows", "Title bars, buttons and how windows behave"),
     ("glass", "See-through and blur", "Transparent windows, blur and glass"),
     ("motion", "Animations and effects", "How things move, open and close"),
@@ -301,6 +302,14 @@ T("bold-titles", "comfort", "Bold window titles", "Titles stand out more",
   xfce=[("xfwm4", "/general/title_font", "string", "Noto Sans Bold 10")])
 T("high-contrast-borders", "comfort", "Easy-to-see window outlines", "A strong outline around every window",
   kde=[("breezerc", "Common", "OutlineIntensity", "OutlineHigh")], hypr=["general:col.inactive_border = rgb(8a96a4)"])
+
+
+# ---------------------------------------------------------------------------- touchpad gestures (beta17)
+T("gnome-gestures", "gestures", "Three-finger gestures like GNOME",
+  "Swipe up with three fingers for the overview, down for the desktop, left and right to change workspace "
+  "(a new one appears past the last, like GNOME). KDE's four-finger gestures keep working",
+  kde=[("kwinrc", "Plugins", "devium-gesturesEnabled", "true", "false")],
+  hypr=["gesture = 3, horizontal, workspace"])
 
 
 # ---------------------------------------------------------------------------- tiling (beta16)
@@ -771,7 +780,8 @@ def finish():
         for q in ("qdbus6", "qdbus"):
             if shutil.which(q):
                 # restart the tiling script so new gaps / layout apply now (KWin reads script settings at start)
-                run([q, "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.unloadScript", "devium-tiling"])
+                for script in ("devium-tiling", "devium-gestures"):
+                    run([q, "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.unloadScript", script])
                 run([q, "org.kde.KWin", "/KWin", "reconfigure"])
                 run([q, "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.start"])
                 break
