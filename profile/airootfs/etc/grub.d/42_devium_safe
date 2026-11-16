@@ -1,0 +1,32 @@
+#!/bin/sh
+# "Devium (safe mode)" in the boot menu: the normal system, with Devium's extras (widgets, tweaks, tiling,
+# gestures, Snap Assist) paused for that session, plus a window to undo the last update or reset the look.
+set -e
+. /usr/share/grub/grub-mkconfig_lib
+kernel=""
+for k in /boot/vmlinuz-linux /boot/vmlinuz-linux-lts /boot/vmlinuz-linux-zen; do
+    [ -f "$k" ] && { kernel=$k; break; }
+done
+[ -n "$kernel" ] || exit 0
+version=${kernel#/boot/vmlinuz-}
+[ -f "/boot/initramfs-$version.img" ] || exit 0
+rel=$(make_system_path_relative_to_its_root /boot)
+device=$(${grub_probe} --target=device /boot)
+cmdline="${GRUB_CMDLINE_LINUX} ${GRUB_CMDLINE_LINUX_DEFAULT}"   # keeps disk encryption options
+if [ "$(${grub_probe} --target=fs / 2>/dev/null)" = btrfs ]; then
+    sub=$(make_system_path_relative_to_its_root /)
+    sub=${sub#/}
+    [ -n "$sub" ] && cmdline="rootflags=subvol=${sub} ${cmdline}"
+fi
+root="root=UUID=${GRUB_DEVICE_UUID}"
+[ -n "${GRUB_DEVICE_UUID}" ] || root="root=${GRUB_DEVICE}"
+ucode=""
+for u in intel-ucode.img amd-ucode.img; do
+    [ -f "/boot/$u" ] && ucode="$ucode ${rel}/$u"
+done
+echo "menuentry 'Devium (safe mode)' --class devium --class gnu-linux {"
+prepare_grub_to_access_device "$device" | sed 's/^/\t/'
+printf '\techo "Starting Devium in safe mode..."\n'
+printf '\tlinux %s/vmlinuz-%s %s rw %s devium.safe=1\n' "$rel" "$version" "$root" "$cmdline"
+printf '\tinitrd%s %s/initramfs-%s.img\n' "$ucode" "$rel" "$version"
+echo "}"

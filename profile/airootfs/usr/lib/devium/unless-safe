@@ -1,0 +1,4 @@
+#!/bin/sh
+# Run a Devium extra at login, except in safe mode (the "Devium (safe mode)" boot menu entry adds devium.safe=1).
+grep -qw 'devium.safe=1' /proc/cmdline 2>/dev/null && exit 0
+exec "$@"

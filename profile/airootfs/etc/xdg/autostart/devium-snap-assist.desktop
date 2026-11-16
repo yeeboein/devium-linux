@@ -2,7 +2,7 @@
 Type=Application
 Name=Devium Snap Assist
 Comment=Snap a window to one side, then pick the window for the other side
-Exec=devium-snap-assist --watch
+Exec=/usr/lib/devium/unless-safe devium-snap-assist --watch
 Icon=devium
 NoDisplay=true
 OnlyShowIn=XFCE;

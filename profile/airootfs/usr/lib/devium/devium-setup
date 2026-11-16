@@ -57,6 +57,14 @@ brand_bootloader() {
     if [[ -f /etc/default/grub ]] && ! grep -q 'GRUB_CMDLINE_LINUX_DEFAULT=.*splash' /etc/default/grub; then
         sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 splash"/' /etc/default/grub
     fi
+    # Safe mode for systemd-boot installs (GRUB gets it from /etc/grub.d/42_devium_safe)
+    for f in /boot/loader/entries/*.conf /efi/loader/entries/*.conf; do
+        [[ -f $f && $f != *fallback* && $f != *devium-safe* ]] || continue
+        safe="$(dirname "$f")/devium-safe.conf"
+        [[ -f $safe ]] || { sed -e 's/^title .*/title Devium (safe mode)/' -e '/^options/ s/$/ devium.safe=1/' \
+                                -e '/^sort-key/d' "$f" > "$safe"; }
+        break
+    done
     command -v plymouth >/dev/null && mkinitcpio -P >/dev/null 2>&1
     [[ -f /boot/grub/grub.cfg ]] && grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1
 }

@@ -11,6 +11,20 @@ LOG="$STATE/firstrun.log"
 exec >>"$LOG" 2>&1
 echo "=== devium-firstrun $(date)"
 
+# --- Safe mode ("Devium (safe mode)" in the boot menu): pause Devium's KWin extras for this session only
+# (the config isn't changed) and show the safe mode window instead of doing anything else.
+if grep -qw 'devium.safe=1' /proc/cmdline 2>/dev/null; then
+    for q in qdbus6 qdbus; do
+        command -v $q >/dev/null || continue
+        for s in devium-tiling devium-gestures devium-snap-assist; do
+            $q org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "$s" >/dev/null 2>&1
+        done
+        break
+    done
+    (sleep 3; devium-safe-mode) &
+    exit 0
+fi
+
 # --- Dock safety net: if the dock's pinned apps went missing (e.g. after a hard reboot), restore them
 if [[ ! -d /run/archiso && -s $STATE/dock-launchers ]] && command -v qdbus6 >/dev/null; then
     (

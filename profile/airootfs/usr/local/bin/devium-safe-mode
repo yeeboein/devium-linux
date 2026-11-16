@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+"""Shown after logging in with "Devium (safe mode)" from the boot menu.
+
+Devium's extras (desktop widgets, Snap Assist, tiling, gestures, the crash catcher, Devium Configure) are paused
+for this session only, so you can get back in and undo whatever broke. Nothing is changed unless you press a button.
+"""
+import os
+import subprocess
+import sys
+
+sys.path.insert(0, "/usr/lib/devium")
+import devium_ui as ui  # noqa: E402
+from PyQt6.QtCore import QProcess  # noqa: E402
+from PyQt6.QtWidgets import (QApplication, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout,  # noqa: E402
+                             QWidget)
+
+
+class SafeMode(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Devium safe mode")
+        self.setWindowIcon(ui.app_icon())
+        self.resize(620, 560)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(22, 18, 22, 18)
+        lay.addWidget(ui.header("Safe mode", "Devium's extras are paused for this session: desktop widgets, "
+                                "tiling, gestures and Snap Assist. Your files and apps are all here."))
+        info = QLabel("If something broke after a change or an update, fix it here, then restart normally.")
+        info.setWordWrap(True)
+        lay.addWidget(info)
+        buttons = [
+            ("Turn off all Customise tweaks",
+             "Puts the look back to normal Devium (see-through windows, animations, tiling and so on).",
+             self.reset_tweaks),
+            ("Undo the last update",
+             "Puts back the package versions from before the last update (asks for your password).",
+             self.undo_update),
+            ("Check my system (Devium Doctor)",
+             "A full check-up in the terminal; it fixes what it can.",
+             lambda: ui.launch("konsole", "--hold", "-e", "devium-doctor") or
+             ui.launch("kitty", "--hold", "devium-doctor") or
+             ui.launch("xfce4-terminal", "--hold", "-x", "devium-doctor")),
+            ("Get help on Discord", "Ask the Devium community.", lambda: ui.open_link(ui.DISCORD, self)),
+        ]
+        for title, tip, fn in buttons:
+            b = QPushButton(title)
+            b.setToolTip(tip)
+            b.clicked.connect(fn)
+            lay.addWidget(b)
+            hint = QLabel(tip)
+            hint.setObjectName("subtitle")
+            hint.setWordWrap(True)
+            lay.addWidget(hint)
+        self.log = QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setVisible(False)
+        lay.addWidget(self.log, 1)
+        restart = QPushButton("Restart normally")
+        restart.setObjectName("primary")
+        restart.clicked.connect(lambda: subprocess.Popen(["systemctl", "reboot"]))
+        lay.addStretch(1)
+        lay.addWidget(restart)
+
+    def run(self, cmd, done_text):
+        self.log.setVisible(True)
+        self.log.appendPlainText("$ " + " ".join(cmd))
+        p = QProcess(self)
+        p.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        p.readyReadStandardOutput.connect(
+            lambda: self.log.appendPlainText(bytes(p.readAllStandardOutput()).decode(errors="replace").rstrip()))
+        p.finished.connect(lambda code, _s: self.log.appendPlainText(done_text if code == 0 else
+                                                                     f"That didn't work (code {code})."))
+        p.start(cmd[0], cmd[1:])
+
+    def reset_tweaks(self):
+        self.run(["python3", "/usr/lib/devium/look_tweaks.py", "reset"],
+                 "Done: every Customise tweak is off. Restart normally to see it.")
+
+    def undo_update(self):
+        self.run(ui.HELPER + ["undo-update"], "Done: the last update was undone. Restart normally.")
+
+
+def main():
+    app = QApplication(sys.argv)
+    ui.style_app(app)
+    w = SafeMode()
+    w.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
