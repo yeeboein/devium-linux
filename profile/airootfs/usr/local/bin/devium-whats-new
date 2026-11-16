@@ -32,13 +32,16 @@ def notes(ver):
             return text
     except OSError:
         pass
-    try:   # older installs: ask GitHub for the release notes
-        req = urllib.request.Request(f"https://api.github.com/repos/yeeboein/devium-linux/releases/tags/{ver}",
-                                     headers={"User-Agent": "devium-whats-new"})
-        with urllib.request.urlopen(req, timeout=8) as r:
-            return json.load(r).get("body") or ""
-    except Exception:
-        return ""
+    # older installs: ask GitHub. Release tags are "beta16" or "v1.0" (the version file says "1.0"), so try both
+    for tag in ((ver, "v" + ver) if not ver.startswith(("v", "beta")) else (ver,)):
+        try:
+            req = urllib.request.Request(f"https://api.github.com/repos/yeeboein/devium-linux/releases/tags/{tag}",
+                                         headers={"User-Agent": "devium-whats-new"})
+            with urllib.request.urlopen(req, timeout=8) as r:
+                return json.load(r).get("body") or ""
+        except Exception:
+            continue
+    return ""
 
 
 def main():
