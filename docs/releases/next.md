@@ -16,6 +16,8 @@
 - **Spotlight searches with your browser:** "Search the web" now opens your default browser with the search
   engine you picked in that browser (Firefox, Brave, Chrome, Vivaldi and others). You can still pick a fixed engine
   in Devium Tools > Look.
+- **Home screen pages in Devium Configure:** a clear "Home screen pages, like an iPhone" choice on the Look and
+  feel page (KDE), off unless you tick it. It's the same switch as in Customise and Devium Tools > Look.
 - **Fixes** for everything beta16 testers report on Discord.
 
 ## Ideas being considered

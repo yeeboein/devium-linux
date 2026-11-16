@@ -297,6 +297,7 @@ class Wizard(QWidget):
                           self.choice_page(page), page)
         self.add_page("Look and feel", self.look_page())
         self.add_page("Customise", self.custom_page())
+        self.link_home_pages()
         self.add_page("Summary", self.summary_page())
         self.add_page("Installing", self.install_page())
         self.add_page("Done", self.done_page())
@@ -521,6 +522,11 @@ class Wizard(QWidget):
         # Ticking Linux Magnify also ticks ArchPill (they go well together); ArchPill can still be unticked
         mag.toggled.connect(lambda on: on and ap.isVisibleTo(inner) and ap.setChecked(True))
         self.inputs["magnify"] = mag
+        # Home screen pages: the same switch as Customise > Desktop, shown here so it's easy to find
+        home = QCheckBox("Home screen pages, like an iPhone   —   swipe between pages of apps and widgets")
+        home.setToolTip("Pages of apps and Devium widgets on your desktop that you swipe between with the touchpad "
+                        "or mouse wheel. Press and hold (or Edit) to add apps, widgets and pages.")
+        self.home_pages_box = home
         dock = QCheckBox("Hide the dock when a window covers it")
         dock.setChecked(True)
         self.inputs["dock-hide"] = dock
@@ -541,11 +547,17 @@ class Wizard(QWidget):
             mag.setChecked(False)
         if KDE:
             shown.append(dock)
+            shown.append(home)
         for b in shown:
             b.setStyleSheet("padding: 5px;")
             l.addWidget(b)
             if b is qsbox:
                 hint = label("Needed for ArchPill (ticked automatically when ArchPill is on)", "subtitle")
+                hint.setContentsMargins(30, 0, 0, 4)
+                l.addWidget(hint)
+            if b is home:
+                hint = label("Optional. Press and hold (or Edit) to add apps, widgets and pages; "
+                             "you can turn it off again in Devium Tools > Look.", "subtitle")
                 hint.setContentsMargins(30, 0, 0, 4)
                 l.addWidget(hint)
             if b is mag:
@@ -654,6 +666,19 @@ class Wizard(QWidget):
     def update_tweak_count(self):
         n = sum(b.isChecked() for b in self.tweak_boxes.values())
         self.tweak_count.setText(f"{n} of {len(self.tweak_boxes)} on")
+
+    def link_home_pages(self):
+        """Keep the Look page's Home screen pages box and the Customise one the same."""
+        box = getattr(self, "home_pages_box", None)
+        tweak = self.tweak_boxes.get("home-pages")
+        if box is None:
+            return
+        if tweak is None:              # not available on this desktop
+            box.setVisible(False)
+            return
+        box.setChecked(tweak.isChecked())
+        box.toggled.connect(lambda on: tweak.isChecked() != on and tweak.setChecked(on))
+        tweak.toggled.connect(lambda on: box.isChecked() != on and box.setChecked(on))
 
     def tweak_changes(self):
         """{id: on/off} to apply: everything that's on (re-applied after the theme), plus what was turned off."""
