@@ -162,6 +162,8 @@ package_setup() {
     rm -f /etc/xdg/fastfetch/{medium,compact}{,-norev}.jsonc /usr/share/devium/fastfetch-logo-small.txt
     # About Devium is for the live USB only (an update used to copy it onto installed systems)
     [[ -d /run/archiso ]] || rm -f /usr/share/applications/devium-about.desktop
+    # beta17: the magic-lamp close effect is gone (minimise keeps KWin's own Magic Lamp)
+    rm -rf /usr/share/kwin/effects/devium-lamp
     strip_live_repo
     apply_overrides
     write_os_release

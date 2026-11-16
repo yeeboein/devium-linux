@@ -160,13 +160,8 @@ T("glass-bar", "glass", "See-through top bar", "Waybar lets the wallpaper show t
 # ---------------------------------------------------------------------------- motion
 T("wobbly", "motion", "Wobbly windows", "Windows wobble like jelly when you move them",
   kde=[("kwinrc", "Plugins", "wobblywindowsEnabled", "true")])
-T("magic-lamp", "motion", "Magic lamp: minimise and close",
-  "Windows pour into their dock icon like a genie when you minimise or close them, like a Mac",
-  kde=[("kwinrc", "Plugins", "magiclampEnabled", "true"), ("kwinrc", "Plugins", "squashEnabled", "false"),
-       ("kwinrc", "Plugins", "devium-lampEnabled", "true"), ("kwinrc", "Plugins", "scaleEnabled", "false"),
-       ("kwinrc", "Plugins", "fadeEnabled", "false")],
-  hypr=["bezier = deviumLamp, 0.55, 0, 0.9, 0.4", "animation = windowsOut, 1, 4, deviumLamp, popin 5%"],
-  group="close-anim")
+T("magic-lamp", "motion", "Magic lamp minimise", "Windows pour into the dock like a genie when you minimise, like a Mac",
+  kde=[("kwinrc", "Plugins", "magiclampEnabled", "true"), ("kwinrc", "Plugins", "squashEnabled", "false")])
 T("glide", "motion", "Windows glide in and out", "A smooth 3D glide when windows open and close",
   kde=[("kwinrc", "Plugins", "glideEnabled", "true"), ("kwinrc", "Plugins", "scaleEnabled", "false")],
   group="close-anim")
