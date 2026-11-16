@@ -10,6 +10,9 @@
 - **Automatic tests for every ISO:** each build boots in a virtual machine and is checked before release.
 - **Lighter on old laptops:** Snap Assist on Xfce only wakes up when a window moves, and the crash catcher
   switches off in Low-RAM mode.
+- **fastfetch side by side more often:** the logo and your info sit next to each other whenever they fit, like
+  full screen (about 92 columns on a typical laptop, instead of needing 110). Only a really narrow window puts the
+  info under the logo.
 - **Fixes** for everything beta16 testers report on Discord.
 
 ## Ideas being considered

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Devium's fastfetch: picks a layout that fits the terminal window, so nothing wraps.
-#   wide window    DEVIUM logo on the left, full info beside it
-#   narrow window  the same logo on top, short info underneath
+#   info fits beside the logo  DEVIUM logo on the left, full info beside it (like full screen)
+#   really narrow window       the same logo on top, short info underneath
 # Your own ~/.config/fastfetch/config.jsonc, or any options you pass, are used as they are.
 real=/usr/bin/fastfetch
 [[ -x $real ]] || { echo "fastfetch is not installed"; exit 1; }
@@ -20,9 +20,21 @@ cols=${cols:-$(tput cols 2>/dev/null || echo 120)}
 rows=${rows:-$(tput lines 2>/dev/null || echo 40)}
 
 dir=/etc/xdg/fastfetch
-# One logo, never shrunk. Wide window: logo on the left, info beside it.
-# Narrow window: the same logo on top and the info underneath, so they can't run into each other.
-if (( cols >= 110 )); then
+logo=/usr/share/devium/fastfetch-logo.txt
+# One logo, never shrunk. Logo on the left with the info beside it whenever both fit side by side
+# (like a full-screen window); only a really narrow window puts the logo on top and the info underneath.
+logo_w=$(sed 's/\$[0-9]//g' "$logo" 2>/dev/null | awk '{ if (length > m) m = length } END { print m + 2 }')
+logo_w=${logo_w:-40}
+side=0
+if (( cols >= logo_w + 70 )); then
+    side=1                                   # plenty of room, no need to measure
+elif (( cols >= logo_w + 30 )); then
+    # in between: measure the real info lines on this PC (CPU and GPU names differ) and check they fit
+    info_w=$("$real" -c "$dir/config$suffix.jsonc" --logo none --pipe true 2>/dev/null \
+        | awk '{ if (length > m) m = length } END { print m + 0 }')
+    (( info_w > 0 && logo_w + info_w + 1 <= cols )) && side=1
+fi
+if (( side )); then
     exec "$real" -c "$dir/config$suffix.jsonc" "$@"
 else
     exec "$real" -c "$dir/stacked$suffix.jsonc" "$@"
