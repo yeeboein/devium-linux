@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Devium Discord
+    url: https://discord.gg/YTMattgyG3
+    about: Questions, help and chat with other Devium users
+  - name: Report a security problem privately
+    url: https://github.com/yeeboein/devium-linux/security/advisories/new
+    about: Please don't post security problems in public issues
