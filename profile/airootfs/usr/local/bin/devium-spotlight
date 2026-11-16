@@ -106,12 +106,99 @@ SITES = {     # type "yt cats" to search YouTube for cats
 }
 
 
-def engine():
+# Default: search with your default browser and the search engine you picked in that browser.
+FIREFOX_LIKE = ("firefox", "librewolf", "floorp", "zen", "waterfox", "mullvad")
+CHROMIUM_LIKE = {   # desktop file word -> (name, profile folders under ~/.config or the Flatpak's config, built-in engine)
+    "brave": ("Brave", ["BraveSoftware/Brave-Browser"], "https://search.brave.com/search?q={}"),
+    "chrome": ("Chrome", ["google-chrome"], "https://www.google.com/search?q={}"),
+    "chromium": ("Chromium", ["chromium"], "https://www.google.com/search?q={}"),
+    "vivaldi": ("Vivaldi", ["vivaldi"], "https://www.bing.com/search?q={}"),
+    "edge": ("Edge", ["microsoft-edge"], "https://www.bing.com/search?q={}"),
+    "helium": ("Helium", ["net.imput.helium"], "https://duckduckgo.com/?q={}"),
+}
+_browser = None
+
+
+def desktop_file(name):
+    for d in (os.path.join(HOME, ".local/share/applications"), os.path.join(HOME, ".local/share/flatpak/exports/share/applications"),
+              "/var/lib/flatpak/exports/share/applications", "/usr/share/applications"):
+        p = os.path.join(d, name)
+        if os.path.isfile(p):
+            return p
+    return None
+
+
+def browser_info():
+    """(kind, name, data): kind "firefox" -> data is the command to run; "chromium" -> data is a URL template."""
+    global _browser
+    if _browser is not None:
+        return _browser
+    _browser = ("", "", None)
     try:
-        name = open(os.path.join(HOME, ".config/devium/search-engine")).read().strip()
+        did = subprocess.run(["xdg-settings", "get", "default-web-browser"], capture_output=True, text=True,
+                             timeout=2).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        did = ""
+    if not did:
+        try:
+            did = subprocess.run(["xdg-mime", "query", "default", "x-scheme-handler/https"], capture_output=True,
+                                 text=True, timeout=2).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            did = ""
+    low = did.lower()
+    if any(w in low for w in FIREFOX_LIKE):
+        path = desktop_file(did)
+        cmd = None
+        if path:
+            for line in open(path, errors="ignore"):
+                if line.startswith("Exec="):
+                    cmd = [a for a in shlex.split(line[5:].strip())
+                           if not (len(a) == 2 and a.startswith("%")) and a not in ("@@", "@@u", "@@U")]
+                    break
+        if cmd:
+            name = next((w for w in FIREFOX_LIKE if w in low), "browser").capitalize()
+            _browser = ("firefox", name, cmd)
+        return _browser
+    for word, (name, folders, builtin) in CHROMIUM_LIKE.items():
+        if word in low:
+            url, engine_name = builtin, ""
+            app = did[:-8] if did.endswith(".desktop") else did
+            roots = [os.path.join(HOME, ".config")] + [os.path.join(HOME, ".var/app", app, "config")]
+            for root in roots:
+                for folder in folders:
+                    prefs = os.path.join(root, folder, "Default", "Preferences")
+                    try:
+                        data = json.load(open(prefs)).get("default_search_provider_data", {}).get("template_url_data", {})
+                    except (OSError, ValueError):
+                        continue
+                    tpl = data.get("url", "")
+                    if "{searchTerms}" in tpl and not tpl.startswith("{google:"):
+                        url = re.sub(r"\{[^}]*\}", "", tpl.replace("{searchTerms}", "\x00")).replace("\x00", "{}")
+                        engine_name = data.get("short_name", "")
+                    elif "{searchTerms}" in tpl:
+                        url = "https://www.google.com/search?q={}"
+                        engine_name = "Google"
+            _browser = ("chromium", f"{name} · {engine_name}" if engine_name else name, url)
+            return _browser
+    return _browser
+
+
+def web_search(query):
+    """(subtitle, action) for "Search the web": the engine picked in Devium Tools, or your browser's own."""
+    try:
+        choice = open(os.path.join(HOME, ".config/devium/search-engine")).read().strip()
     except OSError:
-        name = ""
-    return ENGINES.get(name, ENGINES["duckduckgo"])
+        choice = "browser"
+    if choice in ENGINES:
+        name, url = ENGINES[choice]
+        return name, ("url", url.format(quote_plus(query)))
+    kind, name, data = browser_info()
+    if kind == "firefox":
+        return f"{name} · your search engine", ("run", data + ["--search", query])
+    if kind == "chromium":
+        return name, ("url", data.format(quote_plus(query)))
+    name, url = ENGINES["duckduckgo"]
+    return name, ("url", url.format(quote_plus(query)))
 
 
 def looks_like_url(text):
@@ -410,9 +497,8 @@ class Spotlight(QWidget):
                         addr = "http" + addr[5:]
                     self.insert(0, f"Open {raw.strip()}", T("Opens in your browser"), "internet-web-browser", ("url", addr))
                 if len(q) >= 2:
-                    name, url = engine()
-                    self.add(f"Search the web for \u201c{raw.strip()}\u201d", name, "internet-web-browser",
-                             ("url", url.format(quote_plus(raw.strip()))))
+                    name, action = web_search(raw.strip())
+                    self.add(f"Search the web for \u201c{raw.strip()}\u201d", name, "internet-web-browser", action)
                 first = raw.strip().split()[0]
                 if shutil.which(first) and self.list.count() <= 1:   # looks like a command, and little else matched
                     self.add(f"Run in terminal: {raw.strip()}", T("Tip: start with > to run a command"),
@@ -445,6 +531,8 @@ class Spotlight(QWidget):
             ui.launch(*val)
         elif kind == "url":
             subprocess.Popen(["xdg-open", val], start_new_session=True)
+        elif kind == "run":
+            subprocess.Popen(val, start_new_session=True)
         elif kind == "open":
             subprocess.Popen(["xdg-open", val], start_new_session=True)
         elif kind == "term":

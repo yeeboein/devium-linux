@@ -13,6 +13,9 @@
 - **fastfetch side by side more often:** the logo and your info sit next to each other whenever they fit, like
   full screen (about 92 columns on a typical laptop, instead of needing 110). Only a really narrow window puts the
   info under the logo.
+- **Spotlight searches with your browser:** "Search the web" now opens your default browser with the search
+  engine you picked in that browser (Firefox, Brave, Chrome, Vivaldi and others). You can still pick a fixed engine
+  in Devium Tools > Look.
 - **Fixes** for everything beta16 testers report on Discord.
 
 ## Ideas being considered
