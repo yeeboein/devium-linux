@@ -13,7 +13,7 @@ mkdir -p "$out" && chmod 700 "$out"
 export GNUPGHOME="$(mktemp -d)"
 trap 'rm -rf "$GNUPGHOME"' EXIT
 # No passphrase: GitHub Actions signs releases unattended. The key only lives in the GitHub secret and your backup.
-gpg --batch --quiet --passphrase '' --quick-gen-key "Devium release signing" ed25519 sign 5y
+gpg --batch --quiet --passphrase '' --quick-gen-key "Devium release signing" ed25519 sign 5y 2>/dev/null
 fpr=$(gpg --batch --with-colons --list-keys | awk -F: '/^fpr/ {print $10; exit}')
 gpg --batch --armor --export "$fpr" > "$out/public-key.asc"
 gpg --batch --armor --export-secret-keys "$fpr" > "$out/private-key.asc"
