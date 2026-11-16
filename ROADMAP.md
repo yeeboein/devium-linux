@@ -11,7 +11,7 @@ Must have before 1.0 (see the beta17 notes for what's done):
 - [x] Safe mode boot entry with reset / undo update / Doctor
 - [x] Secure Boot guide (docs/SECURE-BOOT.md)
 - [ ] Signing key created and saved as the `DEVIUM_SIGNING_KEY` secret (Yeeboein, on the laptop)
-- [ ] Wallpaper source and licence written in CREDITS.md
+- [ ] Wallpaper: ask Magnific for permission to ship photo 10584363 (or swap in an Unsplash/Pexels photo)
 - [ ] Devium's files from an online, signed pacman repo (devium-desktop already exists on the ISO; publish it per
       edition so normal system updates update Devium too, and the Updater switches to it)
 - [ ] Upgrade test: beta15 / beta16 / beta17 to 1.0 in a VM, files kept
