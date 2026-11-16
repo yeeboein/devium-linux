@@ -79,9 +79,22 @@ jobs:
               (cd out/release && split -b 1900M -d -a 3 "$iso" "$iso." && rm "$iso")
             fi
           done
+          (cd out/release && cat ./*.iso.sha256 > SHA256SUMS)
           ls -lh out/release
           notes="docs/releases/${RELEASE}.md"
           { [[ -f $notes ]] && cat "$notes"; echo; cat .github/release-footer.md; } > release-notes.md
+
+      - name: Sign the checksums
+        # Set up once with tools/make-signing-key.sh (adds the DEVIUM_SIGNING_KEY secret). Skipped until then.
+        env:
+          DEVIUM_SIGNING_KEY: ${{ secrets.DEVIUM_SIGNING_KEY }}
+        if: env.DEVIUM_SIGNING_KEY != ''
+        run: |
+          export GNUPGHOME="$(mktemp -d)"
+          printf '%s\n' "$DEVIUM_SIGNING_KEY" | gpg --batch --import
+          gpg --batch --yes --armor --detach-sign --output out/release/SHA256SUMS.asc out/release/SHA256SUMS
+          gpg --batch --verify out/release/SHA256SUMS.asc out/release/SHA256SUMS
+          rm -rf "$GNUPGHOME"
 
       - name: Upload ISO (Actions download)
         if: env.RELEASE == ''
@@ -101,4 +114,4 @@ jobs:
           name: Devium ${{ env.DEVIUM_VERSION }}
           files: out/release/*
           body_path: release-notes.md
-          prerelease: ${{ startsWith(env.RELEASE, 'beta') }}
+          prerelease: ${{ contains(env.RELEASE, 'beta') || contains(env.RELEASE, 'rc') || contains(env.RELEASE, 'alpha') }}
