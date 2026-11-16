@@ -9,7 +9,7 @@ limit=${2:-480}
 name=$(basename "$iso" .iso)
 log="$PWD/$name.boot.log"; shot="$PWD/$name.boot.png"
 work=$(mktemp -d); qpid=""
-trap 'kill "$qpid" 2>/dev/null; rm -rf "$work"' EXIT
+trap 'kill "$qpid" 2>/dev/null; chmod -R u+w "$work" 2>/dev/null; rm -rf "$work"' EXIT
 
 # the kernel, initramfs and the live system's boot options, straight from the ISO
 bsdtar -xf "$iso" -C "$work" arch/boot boot/syslinux 2>/dev/null
@@ -22,7 +22,7 @@ echo "Booting $name: $params"
 kvm=(); [[ -w /dev/kvm ]] && kvm=(-enable-kvm -cpu host)
 qemu-system-x86_64 "${kvm[@]}" -m 4096 -smp 2 -machine q35 -vga virtio -display none \
     -cdrom "$iso" -kernel "$kernel" -initrd "$initrd" \
-    -append "$params console=tty0 console=ttyS0,115200 systemd.show_status=1" \
+    -append "$params console=tty0 console=ttyS0,115200 systemd.show_status=1 plymouth.enable=0 systemd.journald.forward_to_console=1" \
     -serial file:"$log" -monitor unix:"$work/mon",server,nowait -no-reboot &
 qpid=$!
 
@@ -51,5 +51,9 @@ done
 screenshot
 failed=$(grep -E 'Failed to start' "$log" 2>/dev/null | sed 's/.*Failed to start //' | sort -u)
 [[ -n $failed ]] && { echo "Services that failed to start:"; echo "$failed" | sed 's/^/  - /'; }
+if (( result )); then
+    echo "Last boot messages:"
+    tail -n 40 "$log" 2>/dev/null | sed -E 's/([0-9]{1,3}\.){3}[0-9]{1,3}/x.x.x.x/g; s/^/  | /'
+fi
 echo "Log: $log"; [[ -f $shot ]] && echo "Screenshot: $shot"
 exit $result
