@@ -42,6 +42,12 @@ class About(QWidget):
         desc.setWordWrap(True)
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(desc)
+        legal = QLabel(T("Based on Arch Linux, but not made or supported by the Arch Linux team. "
+                         "Free software: GPL-3.0. Credits: github.com/yeeboein/devium-linux/blob/main/CREDITS.md"))
+        legal.setObjectName("subtitle")
+        legal.setWordWrap(True)
+        legal.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(legal)
         lay.addSpacing(6)
         lay.addWidget(ui.developers_widget())
         lay.addSpacing(8)

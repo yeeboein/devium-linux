@@ -154,3 +154,12 @@ My other projects that ship with it: [ArchPill](https://github.com/yeeboein/arch
 [KDElite](https://github.com/yeeboein/kdelite) and [Linux Magnify](https://github.com/yeeboein/linux-magnify).
 
 Made by [Yeeboein](https://github.com/yeeboein).
+
+## Licence
+
+Devium's own code is free software under the [GNU GPL v3](LICENSE). The apps and packages it installs keep their
+own licences; see [CREDITS.md](CREDITS.md) for the artwork and icons Devium uses.
+
+Devium is based on Arch Linux but is not an official Arch Linux product, and is not made or supported by the
+Arch Linux team. "Arch Linux" is a trademark of its owners; please ask Devium questions on the Devium Discord, not
+on Arch's forums.
