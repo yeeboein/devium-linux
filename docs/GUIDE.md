@@ -89,7 +89,7 @@ You need a USB stick of **8 GB or more**. **Everything on it will be erased.**
 3. Choose the USB stick (it may say "UEFI: <USB name>").
 4. Pick **Devium Live**.
 
-> **"Secure Boot violation" or it won't boot?** Go into the BIOS/UEFI settings (usually F2 or Del at startup), turn **Secure Boot** off, save and try again.
+> **"Secure Boot violation" or it won't boot?** Go into the BIOS/UEFI settings (usually F2 or Del at startup), turn **Secure Boot** off, save and try again. Step-by-step help for each brand: [Secure Boot](SECURE-BOOT.md).
 >
 > **Black screen?** Restart and choose **Devium Live – safe graphics**.
 
