@@ -5,7 +5,7 @@ Must have before 1.0 (see the beta17 notes for what's done):
 - [x] Licence (GPL-3.0), CREDITS.md, "based on Arch, not official" notice (README, About)
 - [x] Issue forms (bug, hardware, idea), SECURITY.md, CONTRIBUTING.md
 - [x] Code checks on every push (`tools/check-code.sh`)
-- [x] Boot test: every ISO boots in a VM and must reach the desktop (`tools/boot-test.sh`, Boot test workflow)
+- [x] Boot test: every ISO boots in a VM and must reach the desktop (`tools/boot-test.sh`, Boot test workflow, runs in every build; report-only until proven)
 - [x] Signed checksums (`SHA256SUMS.asc`) once the signing key is set up (`tools/make-signing-key.sh`)
 - [x] Stable and beta update channels; v1.0 ranks above every beta
 - [x] Safe mode boot entry with reset / undo update / Doctor
