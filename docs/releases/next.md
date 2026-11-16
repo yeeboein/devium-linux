@@ -20,6 +20,11 @@ The last beta before **Devium 1.0**: getting everything ready for a full release
 - **Secure Boot guide:** how to turn it off on each laptop brand (it has to be off to start Devium).
 
 ## Also planned
+- **A more polished login screen:** it starts like a phone's lock screen with a big clock; press any key, click
+  or move the mouse and the sign-in card slides up (typing straight away works too). New: a greeting, a
+  show/hide password button, a Caps Lock warning, a spinner while it checks your password, Sleep next to Restart
+  and Shut down, and smoother animations. Pressing Space to wake the screen no longer ends up in your password
+  (spaces inside a password still work).
 - **`support selftest`:** checks that every Devium app, widget and helper works, and gives you a list to share.
 - **Automatic tests for every ISO:** each build boots in a virtual machine and is checked before release, and the
   code is checked on every change.

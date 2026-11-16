@@ -1,6 +1,6 @@
 [SddmGreeterTheme]
 Name=Devium
-Description=Devium login screen: the mountains, a clock and a simple password box
+Description=Devium login screen: the mountains, a big clock, and a sign-in card that slides up when you press a key
 Author=Yeeboein
 License=GPL-3.0-or-later
 Type=sddm-theme
