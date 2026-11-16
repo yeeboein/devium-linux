@@ -15,7 +15,7 @@ Thanks for wanting to help! Join the [Devium Discord](https://discord.gg/YTMattg
 - Files that only exist on the live USB must not end up on installed systems.
 - An update copies new files but doesn't delete old ones: add clean-up for removed files in
   `package_setup` (`usr/lib/devium/devium-setup`).
-- Pull requests run the code checks (`.github/workflows/checks.yml`); please make them pass.
+- Run `tools/check-code.sh` before pushing; pull requests run the same checks (`.github/workflows/checks.yml`).
 
 ## Building an ISO
 On an Arch machine: `sudo EDITION=kdeplasma ./build.sh` (or `xfce`, `hyprland`). Or run the "Build Devium ISO"

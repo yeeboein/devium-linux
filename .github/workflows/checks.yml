@@ -1,0 +1,21 @@
+name: Code checks
+
+# Quick checks on every push and pull request: shell, Python, JSON, KWin JavaScript, desktop files.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install checkers
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck desktop-file-utils
+      - name: Run Devium's code checks
+        run: tools/check-code.sh
