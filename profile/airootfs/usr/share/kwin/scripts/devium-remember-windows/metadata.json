@@ -1,0 +1,16 @@
+{
+    "KPlugin": {
+        "Id": "devium-remember-windows",
+        "Name": "Devium Remember Windows",
+        "Description": "Apps open where you left them: the size and position of each app's window are remembered when you close it.",
+        "Authors": [ { "Name": "Devium" } ],
+        "License": "GPL-3.0-or-later",
+        "Version": "1.0",
+        "Website": "https://github.com/yeeboein/devium-linux",
+        "EnabledByDefault": true
+    },
+    "X-Plasma-API": "declarativescript",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "KPackageStructure": "KWin/Script"
+}

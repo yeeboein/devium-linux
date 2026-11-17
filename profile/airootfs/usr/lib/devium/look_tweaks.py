@@ -86,8 +86,10 @@ T("big-shadows", "windows", "Bigger window shadows", "Windows float more clearly
 T("no-shadows", "windows", "No window shadows", "Flat look, a bit lighter on old computers",
   kde=[("breezerc", "Common", "ShadowSize", "ShadowNone")], xfce=[("xfwm4", "/general/show_frame_shadow", "bool", "false")],
   hypr=["decoration:shadow:enabled = false"], group="shadows")
-T("center-windows", "windows", "Open new windows in the middle", "New windows appear centred on the screen",
-  kde=[("kwinrc", "Windows", "Placement", "Centered")], xfce=[("xfwm4", "/general/placement_mode", "string", "center")])
+T("center-windows", "windows", "Open new windows in the middle", "New windows appear centred on the screen (KDE does this already)",
+  xfce=[("xfwm4", "/general/placement_mode", "string", "center")])
+T("forget-window-places", "windows", "Don't remember where windows were", "Apps open where KDE puts them, not where you left them",
+  kde=[("kwinrc", "Plugins", "devium-remember-windowsEnabled", "false", "true")])
 T("no-drag-maximise", "windows", "Don't maximise when dragged to the top", "Dragging a window to the top edge leaves it as it is",
   kde=[("kwinrc", "Windows", "ElectricBorderMaximize", "false")])
 T("no-edge-snap", "windows", "Don't snap windows to screen edges", "Turns off side-by-side snapping",
@@ -317,7 +319,8 @@ T("tiling", "tiling", "Automatic tiling (like Hyprland)",
   "New windows split the screen by themselves, with gaps. Meta+Shift+Space floats a window, Meta+Shift+T turns "
   "tiling off for a moment, Meta+Alt+arrows swap windows, drag one onto another to swap them",
   kde=[("kwinrc", "Plugins", "devium-tilingEnabled", "true", "false"),
-       ("kwinrc", "Plugins", "devium-snap-assistEnabled", "false", "true")])
+       ("kwinrc", "Plugins", "devium-snap-assistEnabled", "false", "true"),
+       ("kwinrc", "Plugins", "devium-remember-windowsEnabled", "false", "true")])
 T("tiling-master", "tiling", "Tiling: one big window and a stack", "The first window takes the left side, the rest stack on the right",
   kde=[("kwinrc", "Script-devium-tiling", "layout", "master")])
 T("tiling-no-gaps", "tiling", "Tiling: no gaps", "Windows touch each other, for the most space",
@@ -780,7 +783,7 @@ def finish():
         for q in ("qdbus6", "qdbus"):
             if shutil.which(q):
                 # restart the tiling script so new gaps / layout apply now (KWin reads script settings at start)
-                for script in ("devium-tiling", "devium-gestures"):
+                for script in ("devium-tiling", "devium-gestures", "devium-remember-windows"):
                     run([q, "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.unloadScript", script])
                 run([q, "org.kde.KWin", "/KWin", "reconfigure"])
                 run([q, "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.start"])

@@ -17,6 +17,10 @@
   switches off in Low-RAM mode.
 - **fastfetch always side by side:** the Devium logo always sits next to your info, whatever the window size
   (no more logo on top in narrow windows).
+- **Apps open where you left them** (KDE): each app's window size and position are remembered when you close it,
+  and maximised apps open maximised. Turn it off in Customise ("Don't remember where windows were").
+- **The top edge of new windows can always be grabbed:** new windows open in the middle of the screen instead of
+  touching the top, where the resize edge was half off-screen.
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered

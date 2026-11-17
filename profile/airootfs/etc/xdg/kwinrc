@@ -2,6 +2,8 @@
 [Plugins]
 # Devium Snap Assist: snap a window to one side, then pick or open the window for the other side
 devium-snap-assistEnabled=true
+# Devium Remember Windows: apps open where you left them (size and position)
+devium-remember-windowsEnabled=true
 blurEnabled=false
 contrastEnabled=false
 slidingpopupsEnabled=false
@@ -12,4 +14,6 @@ LatencyPolicy=Low
 
 [Windows]
 BorderlessMaximizedWindows=false
+# New windows open in the middle, not touching the top of the screen (so the top edge can be grabbed to resize)
+Placement=Centered
 
