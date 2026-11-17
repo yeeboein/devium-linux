@@ -24,6 +24,10 @@
 - **Home screen pages removed:** if you had them on, they're taken off your desktop when you update.
 - **Automatic tiling no longer overlaps windows:** apps that resize themselves just after opening (browsers,
   terminals, Electron apps) are put back in their tile, and tiling now wins over "remember where windows were".
+- **`lyrics` in the terminal:** shows the words to whatever song is playing (Spotify, your browser, VLC and more),
+  with the current line lit up as the song plays, and it moves on to the next song by itself. `lyrics --once` prints
+  them. Lyrics come from LRCLIB (free, only the song's name and artist are sent).
+- **`album-cover` in the terminal:** draws the playing song's cover in colour, or as ASCII art with `--ascii`.
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered
