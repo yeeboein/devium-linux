@@ -15,6 +15,8 @@
 - **`support selftest`:** checks that every Devium app, widget and helper works, and gives you a list to share.
 - **Lighter on old laptops:** Snap Assist on Xfce only wakes up when a window moves, and the crash catcher
   switches off in Low-RAM mode.
+- **fastfetch always side by side:** the Devium logo always sits next to your info, whatever the window size
+  (no more logo on top in narrow windows).
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered
