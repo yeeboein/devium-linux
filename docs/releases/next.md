@@ -21,6 +21,7 @@
   and maximised apps open maximised. Turn it off in Customise ("Don't remember where windows were").
 - **The top edge of new windows can always be grabbed:** new windows open in the middle of the screen instead of
   touching the top, where the resize edge was half off-screen.
+- **Home screen pages removed:** if you had them on, they're taken off your desktop when you update.
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered

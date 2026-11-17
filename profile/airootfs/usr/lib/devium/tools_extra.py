@@ -328,21 +328,6 @@ def make_look_page(win):
                   label("Dock in the wrong place, panels gone, or the theme looks broken? Put the desktop back "
                         "to Devium's defaults without reinstalling. Your files and apps stay.", "subtitle"),
                   row(button(T("Reset desktop"), lambda: reset_desktop(page), icon="edit-undo"))))
-    if KDE and os.path.isdir("/usr/share/plasma/plasmoids/org.devium.home"):
-        home_box = QCheckBox(T("Home screen pages (like iPhone)"))
-        try:
-            home_box.setChecked(bool(json.load(open(os.path.join(CONFIG, "tweaks.json"))).get("home-pages")))
-        except (OSError, ValueError):
-            home_box.setChecked(False)
-
-        def toggle_home(on):
-            subprocess.Popen(["python3", "/usr/lib/devium/look_tweaks.py", "set", f"home-pages={'on' if on else 'off'}"],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        home_box.toggled.connect(toggle_home)
-        page.add(card(label(T("Home screen pages"), "h2"),
-                      label("Optional: turn your desktop into pages of apps and widgets that you swipe between, like an "
-                            "iPhone. Swipe with the touchpad or mouse, or click the dots. Press and hold to edit.",
-                            "subtitle"), home_box))
     if KDE and os.path.isdir("/usr/share/plasma/plasmoids/org.devium.clock"):
         page.add(widgets_card(page))
     elif (XFCE or HYPR) and shutil.which("devium-desk-widgets"):

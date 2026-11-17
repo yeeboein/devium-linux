@@ -359,13 +359,6 @@ T("mac-top-bar", "desktop", "macOS-style top bar", "A thin bar at the top with t
           "p.addWidget('org.kde.plasma.panelspacer'); p.addWidget('org.kde.plasma.systemtray');"
           "p.addWidget('org.kde.plasma.digitalclock'); }",
           "panels().forEach(function(p){ if (p.location=='top' && p.widgets('org.kde.plasma.appmenu').length) p.remove(); });"))
-T("home-pages", "desktop", "Home screen pages (like iPhone)",
-  "Pages of apps and widgets on your desktop that you swipe between. Press and hold (or Edit) to add apps, "
-  "widgets and pages; icons wiggle, \u2715 removes them",
-  kde_js=("desktops().forEach(function(d){ if (d.widgets('org.devium.home').length == 0) {"
-          " var g = screenGeometry(d.screen);"
-          " d.addWidget('org.devium.home', 0, 0, g.width, g.height - Math.round(gridUnit * 5)); } });",
-          "desktops().forEach(function(d){ d.widgets('org.devium.home').forEach(function(w){ w.remove(); }); });"))
 T("dock-this-desktop", "desktop", "Dock shows only this workspace's windows", "Windows on other workspaces don't appear in the dock",
   kde_js=("panels().forEach(function(p){ p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General']; w.writeConfig('showOnlyCurrentDesktop', true); }); });",
           "panels().forEach(function(p){ p.widgets('org.kde.plasma.icontasks').forEach(function(w){ w.currentConfigGroup=['General']; w.writeConfig('showOnlyCurrentDesktop', false); }); });"))

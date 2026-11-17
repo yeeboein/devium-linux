@@ -157,6 +157,25 @@ if command -v kwriteconfig6 >/dev/null && grep -q '^devium-lampEnabled=true' "$k
     qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || qdbus org.kde.KWin /KWin reconfigure >/dev/null 2>&1
 fi
 
+# --- 1.0: home screen pages are gone; take them off the desktop for people who had them on
+if command -v qdbus6 >/dev/null && grep -q '"home-pages"' "$STATE/tweaks.json" 2>/dev/null; then
+    (
+        sleep 8
+        qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \
+            "desktops().forEach(function(d){ d.widgets('org.devium.home').forEach(function(w){ w.remove(); }); });" >/dev/null 2>&1
+        python3 - "$STATE/tweaks.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+try:
+    s = json.load(open(p))
+except (OSError, ValueError):
+    sys.exit()
+s.pop("home-pages", None)
+json.dump(s, open(p, "w"), indent=1, sort_keys=True)
+PY
+    ) &
+fi
+
 # --- beta15: secret guard on by default (stops commits containing passwords/keys); not if you set your own hooks
 if [[ ! -f $STATE/git-guard ]] && command -v git >/dev/null; then
     [[ -z $(git config --global core.hooksPath) ]] && git config --global core.hooksPath /usr/lib/devium/git-hooks

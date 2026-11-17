@@ -9,8 +9,6 @@
   widget-data stop PID       stop one of your dev servers
   widget-data launch CMD...  start a Devium app
   widget-data focus work|break   notification when a focus timer ends
-  widget-data apps           every app in the app menu (Devium Home): id, name, icon
-  widget-data open-app ID    start an app by its .desktop id (e.g. org.kde.konsole)
 """
 import glob
 import json
@@ -130,30 +128,6 @@ APP_DIRS = [os.path.expanduser("~/.local/share/applications"), "/usr/share/appli
             os.path.expanduser("~/.local/share/flatpak/exports/share/applications")]
 
 
-def desktop_files():
-    seen = {}
-    for d in APP_DIRS:
-        for f in sorted(glob.glob(os.path.join(d, "*.desktop"))):
-            seen.setdefault(os.path.basename(f)[:-8], f)
-    return seen
-
-
-def apps():
-    import configparser
-    out = []
-    for aid, f in desktop_files().items():
-        cp = configparser.ConfigParser(interpolation=None, strict=False)
-        try:
-            cp.read(f, encoding="utf-8")
-            e = cp["Desktop Entry"]
-        except Exception:
-            continue
-        if e.get("Type") != "Application" or e.get("NoDisplay", "").lower() == "true" or e.get("Hidden", "").lower() == "true":
-            continue
-        out.append({"id": aid, "name": e.get("Name", aid), "icon": e.get("Icon", "application-x-executable")})
-    return sorted(out, key=lambda a: a["name"].lower())
-
-
 def spawn(cmd, cwd=None):
     subprocess.Popen(cmd, cwd=cwd, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -197,17 +171,6 @@ def main():
             allowed += ("alacritty", "foot")
         if a[1].startswith(allowed):
             spawn(a[1:])
-    elif k == "apps":
-        print(json.dumps(apps()))
-    elif k == "open-app" and len(a) > 1 and re.fullmatch(r"[A-Za-z0-9._+-]+", a[1]):
-        f = desktop_files().get(a[1])
-        if f:
-            if shutil.which("kioclient"):
-                spawn(["kioclient", "exec", f])
-            elif shutil.which("gtk-launch"):
-                spawn(["gtk-launch", a[1]])
-            else:
-                spawn(["xdg-open", f])
     elif k == "focus":
         brk = len(a) > 1 and a[1] == "break"
         spawn(["notify-send", "--app-name=Devium", "--icon=" + ("appointment-soon" if brk else "chronometer"),
