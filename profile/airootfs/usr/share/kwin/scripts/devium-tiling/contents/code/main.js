@@ -16,6 +16,23 @@ var enabled = true;
 var order = [];          // tiled windows, in the order they were opened
 var floating = {};       // internalId -> true for windows you floated
 var busy = false;        // we're moving windows ourselves
+var assigned = {};       // internalId -> the tile rectangle we gave the window
+var fixes = {};          // internalId -> how many times we put it back since the last retile (apps can refuse)
+
+// Run something a little later (apps often resize themselves right after opening).
+function later(ms, fn) {
+    if (typeof QTimer !== "undefined") {
+        var t = new QTimer();
+        t.singleShot = true;
+        t.interval = ms;
+        t.timeout.connect(fn);
+        t.start();
+    } else if (typeof setTimeout !== "undefined") {
+        setTimeout(fn, ms);
+    } else {
+        fn();
+    }
+}
 
 function key(w) { return String(w.internalId); }
 
@@ -83,12 +100,45 @@ function retile() {
             for (var i = 0; i < wins.length; i++) {
                 var w = wins[i], r = rects[i];
                 if (w.maximizable) w.setMaximize(false, false);
-                w.frameGeometry = { x: r.x, y: r.y, width: Math.max(r.width, 50), height: Math.max(r.height, 50) };
+                var rect = { x: r.x, y: r.y, width: Math.max(r.width, 50), height: Math.max(r.height, 50) };
+                assigned[key(w)] = rect;
+                fixes[key(w)] = 0;
+                w.frameGeometry = rect;
             }
         }
     } finally {
         busy = false;
     }
+}
+
+function off(a, b) { return Math.abs(a - b) > 4; }
+
+// The app changed its own size or position after we tiled it (common right after opening): put it back in its tile.
+// After 3 tries we leave it (some apps have a minimum size they won't go below).
+var checkPending = false;
+function enforce() {
+    checkPending = false;
+    if (!enabled || busy) return;
+    busy = true;
+    try {
+        for (var i = 0; i < order.length; i++) {
+            var w = order[i], r = assigned[key(w)];
+            if (!r || !tileable(w) || w.move || w.resize) continue;
+            var g = w.frameGeometry;
+            if (!(off(g.x, r.x) || off(g.y, r.y) || off(g.width, r.width) || off(g.height, r.height))) continue;
+            if ((fixes[key(w)] || 0) >= 3) continue;
+            fixes[key(w)] = (fixes[key(w)] || 0) + 1;
+            if (w.maximizable) w.setMaximize(false, false);
+            w.frameGeometry = { x: r.x, y: r.y, width: r.width, height: r.height };
+        }
+    } finally {
+        busy = false;
+    }
+}
+function checkSoon() {
+    if (checkPending) return;
+    checkPending = true;
+    later(120, enforce);
 }
 
 function remove(w) {
@@ -113,6 +163,10 @@ function add(w) {
     w.fullScreenChanged.connect(retile);
     w.outputChanged.connect(retile);
     w.desktopsChanged.connect(retile);
+    if (w.frameGeometryChanged)
+        w.frameGeometryChanged.connect(function () {
+            if (!busy && !w.move && !w.resize && assigned[key(w)]) checkSoon();
+        });
     w.interactiveMoveResizeFinished.connect(function () {
         if (!tileable(w)) return;
         // dropped onto another tiled window? swap them; otherwise snap back into place
@@ -127,11 +181,20 @@ function add(w) {
         retile();
     });
     retile();
+    // and again shortly after, once the app has finished sizing its new window
+    later(150, retile);
+    later(700, retile);
 }
 
 workspace.windowList().forEach(add);
 workspace.windowAdded.connect(add);
-workspace.windowRemoved.connect(function (w) { remove(w); delete floating[key(w)]; retile(); });
+workspace.windowRemoved.connect(function (w) {
+    remove(w);
+    delete floating[key(w)];
+    delete assigned[key(w)];
+    delete fixes[key(w)];
+    retile();
+});
 workspace.currentDesktopChanged.connect(retile);
 if (workspace.screensChanged) workspace.screensChanged.connect(retile);
 
@@ -139,7 +202,7 @@ registerShortcut("DeviumTilingFloat", "Devium Tiling: float / tile the window", 
     var w = workspace.activeWindow;
     if (!w) return;
     if (floating[key(w)]) delete floating[key(w)];
-    else floating[key(w)] = true;
+    else { floating[key(w)] = true; delete assigned[key(w)]; }
     retile();
 });
 registerShortcut("DeviumTilingToggle", "Devium Tiling: on / off", "Meta+Shift+T", function () {

@@ -22,6 +22,8 @@
 - **The top edge of new windows can always be grabbed:** new windows open in the middle of the screen instead of
   touching the top, where the resize edge was half off-screen.
 - **Home screen pages removed:** if you had them on, they're taken off your desktop when you update.
+- **Automatic tiling no longer overlaps windows:** apps that resize themselves just after opening (browsers,
+  terminals, Electron apps) are put back in their tile, and tiling now wins over "remember where windows were".
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered
