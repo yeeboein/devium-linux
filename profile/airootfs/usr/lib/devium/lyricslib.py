@@ -4,7 +4,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 import time
@@ -109,12 +108,9 @@ def prefetch_in_background(song, retry_after=90):
             return
     except OSError:
         pass
-    exe = shutil.which("lyrics") or "/usr/local/bin/lyrics"
-    if not os.path.exists(exe):
-        return
     os.makedirs(CACHE, exist_ok=True)
     open(marker, "w").close()
-    subprocess.Popen([sys.executable, exe, "--prefetch"], start_new_session=True,
+    subprocess.Popen([sys.executable, os.path.abspath(__file__), "--prefetch"], start_new_session=True,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
 
 
@@ -127,3 +123,12 @@ def window(synced, position, before=1, after=5):
             cur = i
     start = max(0, cur - before)
     return [{"t": round(t, 2), "w": w} for t, w in synced[start:start + before + after + 1]]
+
+
+if __name__ == "__main__":
+    if "--prefetch" in sys.argv[1:]:      # look up the song that's playing and keep the answer (used by the widget)
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import nowplaying
+        s = nowplaying.current()
+        if s:
+            fetch(s)

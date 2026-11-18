@@ -229,6 +229,10 @@ PAGES = [
             {"id": "ncdu", "name": "ncdu", "desc": "See what's filling your disk", "mb": 1, "pacman": ["ncdu"]},
             {"id": "ranger", "name": "ranger", "desc": "Browse files with the keyboard", "mb": 5,
              "pacman": ["ranger"]},
+            {"id": "lyrics", "name": "lyrics", "desc": "Song lyrics one BIG word at a time, in time with the music "
+             "(Spotify, your browser, VLC...)", "mb": 0, "link": ["lyrics"]},
+            {"id": "albumcover", "name": "album-cover", "desc": "The playing song's cover as a picture in the terminal, "
+             "updating by itself", "mb": 0, "link": ["album-cover", "albumcover"]},
         ],
     },
     {

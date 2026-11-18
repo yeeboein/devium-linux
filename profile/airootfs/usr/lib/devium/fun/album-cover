@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+"""album-cover - the cover of the song that's playing, shown as a picture in the terminal. It changes by itself when
+the song changes.
+
+  album-cover            show the cover and keep it up to date (Ctrl+C to stop)
+  album-cover --once     show it once and exit
+  album-cover --size N   make it N characters wide
+  album-cover --blocks   draw it with coloured blocks even in a terminal that can show real pictures
+
+In kitty (the Hyprland edition's terminal) you get the real picture. In other terminals the cover is drawn with
+coloured blocks (full colour, two pixels per character).
+Works with Spotify, Firefox, Brave, VLC, Elisa and other players that share their cover art.
+"""
+import base64
+import hashlib
+import io
+import os
+import shutil
+import signal
+import sys
+import time
+import urllib.parse
+import urllib.request
+
+sys.path.insert(0, "/usr/lib/devium")
+import nowplaying  # noqa: E402
+
+CACHE = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "devium", "covers")
+B, D, N = "\033[1m", "\033[2m", "\033[0m"
+TITLE, SOFT = "\033[38;2;180;184;224m", "\033[38;2;196;204;214m"
+if not sys.stdout.isatty():
+    B = D = N = TITLE = SOFT = ""
+
+
+def load_cover(url):
+    from PIL import Image
+    if url.startswith("file://"):
+        return Image.open(urllib.parse.unquote(url[7:]))
+    if url.startswith("/"):
+        return Image.open(url)
+    if not url.startswith(("http://", "https://")):
+        return None
+    os.makedirs(CACHE, exist_ok=True)
+    path = os.path.join(CACHE, hashlib.sha1(url.encode()).hexdigest())
+    if not os.path.exists(path):
+        req = urllib.request.Request(url, headers={"User-Agent": "Devium album-cover"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = r.read()
+        with open(path, "wb") as f:
+            f.write(data)
+    return Image.open(path)
+
+
+def can_show_pictures():
+    """kitty can show real pictures (its graphics protocol)."""
+    return bool(os.environ.get("KITTY_WINDOW_ID")) or "kitty" in os.environ.get("TERM", "")
+
+
+def fit(img, cols, rows):
+    """Cells to use for the picture: terminal cells are about twice as tall as wide."""
+    ratio = img.width / img.height
+    m = max(2, min(rows, int(cols / (2 * ratio))))
+    return max(2, min(cols, round(2 * m * ratio))), m
+
+
+def kitty_picture(img, n_cols, n_rows):
+    """The escape codes that make kitty draw this picture n_cols x n_rows cells big (sent in 4 KB pieces)."""
+    from PIL import Image
+    small = img.convert("RGBA")
+    small.thumbnail((900, 900), Image.LANCZOS)
+    buf = io.BytesIO()
+    small.save(buf, "PNG", optimize=True)
+    data = base64.standard_b64encode(buf.getvalue()).decode()
+    chunks = [data[i:i + 4096] for i in range(0, len(data), 4096)] or [""]
+    out = []
+    for i, ch in enumerate(chunks):
+        more = 1 if i < len(chunks) - 1 else 0
+        head = f"a=T,f=100,c={n_cols},r={n_rows},C=1,q=2,m={more}" if i == 0 else f"m={more}"
+        out.append(f"\033_G{head};{ch}\033\\")
+    return "".join(out)
+
+
+def block_picture(img, n_cols, n_rows):
+    """The picture as n_rows lines of half blocks in full colour (the top half of each character is one pixel,
+    the bottom half another)."""
+    from PIL import Image
+    px = img.convert("RGB").resize((n_cols, n_rows * 2), Image.LANCZOS).load()
+    lines = []
+    for y in range(0, n_rows * 2, 2):
+        row = []
+        for x in range(n_cols):
+            a, b = px[x, y], px[x, y + 1]
+            row.append(f"\033[38;2;{a[0]};{a[1]};{a[2]}m\033[48;2;{b[0]};{b[1]};{b[2]}m▀")
+        lines.append("".join(row) + N)
+    return lines
+
+
+def centre(text, cols, visible=None):
+    n = visible if visible is not None else len(text)
+    return " " * max(0, (cols - n) // 2) + text
+
+
+def render(song, force_blocks=False, width=None):
+    """The whole screen for this song as a string, or a message when there is no picture."""
+    cols, rows = shutil.get_terminal_size((80, 24))
+    who = f" — {song['artist']}" if song["artist"] else ""
+    album = f"  ·  {song['album']}" if song["album"] else ""
+    caption1 = f"{B}{TITLE}♪ {song['title']}{N}"
+    cap1_len = len(f"♪ {song['title']}")
+    caption2 = f"{SOFT}{(song['artist'] + album).strip(' ·—')}{N}" if (song["artist"] or song["album"]) else ""
+    cap2_len = len((song["artist"] + album).strip(" ·—"))
+    if not song["art"]:
+        return "\n".join(["", centre(caption1, cols, cap1_len), centre(caption2, cols, cap2_len), "",
+                          centre(f"{D}(this player doesn't share a cover){N}", cols, 31)])
+    try:
+        img = load_cover(song["art"])
+    except Exception:
+        img = None
+    if img is None:
+        return "\n".join(["", centre(caption1, cols, cap1_len), "", centre(f"{D}(couldn't get the cover){N}", cols, 24)])
+    room_rows = max(4, rows - 4)
+    n_cols, n_rows = fit(img, width or cols, room_rows)
+    if width:
+        n_cols = min(width, cols)
+        n_rows = max(2, round(n_cols / 2 / (img.width / img.height)))
+    left = max(0, (cols - n_cols) // 2)
+    below = ["", centre(caption1, cols, cap1_len), centre(caption2, cols, cap2_len)]
+    if can_show_pictures() and not force_blocks:
+        picture = f"\033[1;{left + 1}H" + kitty_picture(img, n_cols, n_rows)
+        # kitty keeps the cursor where it was (C=1), so put the text under the picture ourselves
+        return picture + f"\033[{n_rows + 2};1H" + "\n".join(below)
+    lines = [" " * left + line for line in block_picture(img, n_cols, n_rows)]
+    return "\n".join(lines + below)
+
+
+def message(text):
+    cols, rows = shutil.get_terminal_size((80, 24))
+    return "\n".join(["", centre(f"{SOFT}{text}{N}", cols, len(text)), "",
+                      centre(f"{D}Waiting for a song…  (Ctrl+C to stop){N}", cols, 38)])
+
+
+def live(force_blocks, width):
+    sys.stdout.write("\033[?1049h\033[?25l")      # own screen, hide the cursor
+    sys.stdout.flush()
+
+    def restore(*_):
+        sys.stdout.write("\033_Ga=d\033\\\033[0m\033[?25h\033[?1049l")
+        sys.stdout.flush()
+        sys.exit(0)
+    signal.signal(signal.SIGINT, restore)
+    signal.signal(signal.SIGTERM, restore)
+    last = None
+    while True:
+        song = nowplaying.current()
+        key = ((song["id"], song["art"]) if song else None, shutil.get_terminal_size((80, 24)))
+        if key != last:
+            last = key
+            screen = render(song, force_blocks, width) if song else message("Nothing is playing.")
+            sys.stdout.write("\033_Ga=d\033\\\033[H\033[2J" + screen)
+            sys.stdout.flush()
+        time.sleep(1.0)
+
+
+def main():
+    args = sys.argv[1:]
+    if "-h" in args or "--help" in args:
+        print(__doc__.strip())
+        return 0
+    width = None
+    if "--size" in args:
+        try:
+            width = int(args[args.index("--size") + 1])
+        except (IndexError, ValueError):
+            print("album-cover: --size needs a number, e.g. --size 40")
+            return 1
+    force_blocks = "--blocks" in args
+    if "--once" in args or not sys.stdout.isatty():
+        song = nowplaying.current()
+        if not song:
+            print("Nothing is playing. Start a song in Spotify, your browser or any music app.")
+            return 1
+        print(render(song, force_blocks, width))
+        return 0
+    live(force_blocks, width)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

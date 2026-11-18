@@ -432,6 +432,8 @@ class Wizard(QWidget):
             already = (not page["single"] and (it.get("pacman") or it.get("flatpak"))
                        and all(installed(x) for x in it.get("pacman", []))
                        and all(flatpak_installed(x) for x in it.get("flatpak", [])))
+            if it.get("link"):     # a Devium command that's on the PATH only when chosen (lyrics, album-cover)
+                already = all(os.path.exists("/usr/local/bin/" + n) for n in it["link"])
             if already:
                 # Running Devium Configure again: installed things start ticked; untick to remove them
                 self.was_installed.add(it["id"])
@@ -827,10 +829,11 @@ class Wizard(QWidget):
         # Unticked things that were installed: remove them (never Devium's base packages,
         # never packages another ticked item still needs)
         keep = base_packages() | {x for it in items for x in it.get("pacman", [])}
-        rm_pac, rm_fl, freed = [], [], 0
+        rm_pac, rm_fl, freed, unlink = [], [], 0, []
         for iid in self.was_installed:
             if not self.checked(iid):
                 it = self.items[iid]
+                unlink += it.get("link", [])
                 rm_pac += [x for x in it.get("pacman", []) if x not in keep]
                 rm_fl += it.get("flatpak", [])
                 freed += it.get("mb", 0)
@@ -846,7 +849,7 @@ class Wizard(QWidget):
                 "remove": dedupe(rm_pac), "remove_flatpak": dedupe(rm_fl), "freed": freed,
                 "removed_items": [self.items[i]["name"] for i in self.was_installed if not self.checked(i)]
                                  + (["Linux Magnify"] if magnify_gone else []),
-                "magnify_gone": magnify_gone,
+                "magnify_gone": magnify_gone, "unlink": unlink,
                 "services": dedupe(svcs), "groups": dedupe(groups), "ext": dedupe(ext),
                 "shell": shell, "mb": mb}
 
@@ -924,6 +927,12 @@ class Wizard(QWidget):
             if it.get("helper"):
                 steps.append((f"Installing {it['name']}…", "pkexec",
                               ["/usr/lib/devium/devium-helper", it["helper"]], max(it.get("mb", 0), 30), "pacman"))
+            if it.get("link") and not all(os.path.exists("/usr/local/bin/" + n) for n in it["link"]):
+                steps.append((f"Adding {it['name']}…", "pkexec",
+                              ["/usr/lib/devium/devium-helper", "fun-link", *it["link"]], 5, "pacman"))
+        if p.get("unlink"):
+            steps.append(("Removing terminal commands…", "pkexec",
+                          ["/usr/lib/devium/devium-helper", "fun-unlink", *p["unlink"]], 5, "pacman"))
         for pkg in p["aur"]:
             mb = next((it.get("mb", 50) for it in items if pkg in it.get("aur", [])), 50)
             steps.append((f"Building {pkg} from the AUR…", "bash", ["-c", self.aur_script(pkg)], mb, "build"))

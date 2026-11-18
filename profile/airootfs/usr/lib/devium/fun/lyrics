@@ -1,0 +1,323 @@
+#!/usr/bin/env python3
+"""lyrics - the words to the song that's playing right now, one BIG word at a time, in time with the music.
+
+  lyrics          one huge word at a time ("Hey" ... "This" ... "Is" ... "A" ... "Song"), with the line below it
+  lyrics --lines  the classic view: the whole lyrics, the current line lit up
+  lyrics --once   print the whole lyrics once and exit
+
+Works with Spotify, Firefox, Brave, VLC, Elisa and other players, and moves on to the next song by itself.
+Lyrics come from LRCLIB (lrclib.net, free, no account): only the song's title, artist, album and length are sent.
+The timing of each word is an estimate (the lyrics are timed per line). Press Ctrl+C to stop.
+"""
+import bisect
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, "/usr/lib/devium")
+import lyricslib  # noqa: E402
+import nowplaying  # noqa: E402
+
+B, D, N = "\033[1m", "\033[2m", "\033[0m"
+ACCENT, SOFT, TITLE = "\033[38;2;143;180;216m", "\033[38;2;196;204;214m", "\033[38;2;180;184;224m"
+BG = (27, 32, 38)                       # the big-word screen is painted in this colour
+GRAD = ((143, 180, 216), (190, 186, 228))
+if not sys.stdout.isatty():
+    B = D = N = ACCENT = SOFT = TITLE = ""
+
+
+def header(song):
+    who = f" — {song['artist']}" if song["artist"] else ""
+    paused = "  (paused)" if song["status"] == "Paused" else ""
+    return f"{B}{TITLE}♪ {song['title']}{N}{SOFT}{who}{N}{D}{paused}{N}"
+
+
+def no_song():
+    return f"{SOFT}Nothing is playing. Start a song in Spotify, your browser or any music app.{N}"
+
+
+def once():
+    song = nowplaying.current()
+    if not song:
+        print(no_song())
+        return 1
+    print(header(song))
+    print()
+    lyr = lyricslib.fetch(song)
+    if lyr is None:
+        print(f"{SOFT}Couldn't reach the lyrics site. Check your internet.{N}")
+        return 1
+    if lyr["instrumental"]:
+        print(f"{SOFT}(Instrumental: no words){N}")
+    elif lyr["plain"] or lyr["synced"]:
+        print(lyr["plain"] or "\n".join(w for _t, w in lyr["synced"]))
+    else:
+        print(f"{SOFT}No lyrics found for this song.{N}")
+    return 0
+
+
+# ---------------------------------------------------------------------------- when each word is sung
+def word_timeline(synced):
+    """The lyrics are timed per line. Spread each line's words over the time it takes to sing it (longer words
+    get more time) and mark long pauses with a note. -> ([start times], [words]); "" is nothing, "♪" is a break."""
+    times, words = [], []
+    for i, (t, text) in enumerate(synced):
+        nxt = synced[i + 1][0] if i + 1 < len(synced) else t + 6
+        gap = max(0.3, nxt - t)
+        parts = text.split()
+        if not parts:
+            times.append(t)
+            words.append("♪")
+            continue
+        chars = sum(len(w) for w in parts)
+        sing = min(gap, max(0.3 * len(parts), 0.3 * chars + 0.2 * len(parts) + 0.5))
+        weights = [len(re.sub(r"\W", "", w)) + 2 for w in parts]
+        total = sum(weights)
+        at = t
+        for w, wt in zip(parts, weights):
+            times.append(at)
+            words.append(w)
+            at += sing * wt / total
+        if gap - sing > 4:                         # an instrumental break
+            times.append(t + sing + 0.6)
+            words.append("♪")
+    return times, words
+
+
+def line_index(synced, pos):
+    cur = -1
+    for i, (t, _w) in enumerate(synced):
+        if t <= pos + 0.1:
+            cur = i
+    return cur
+
+
+# ---------------------------------------------------------------------------- drawing a word really big
+_font_cache = {}
+_art_cache = {}
+
+
+def font_for(word):
+    """A bold font that has the letters of this word (Noto/Inter/DejaVu, or whatever fontconfig finds)."""
+    from PIL import ImageFont
+    wide = any(ord(c) > 0x24F for c in word)
+    key = "wide" if wide else "latin"
+    if key not in _font_cache:
+        paths = []
+        if wide:
+            first = next(c for c in word if ord(c) > 0x24F)
+            try:
+                found = subprocess.run(["fc-match", "-f", "%{file}", f":bold:charset={ord(first):x}"],
+                                       capture_output=True, text=True, timeout=2).stdout.strip()
+                paths.append(found)
+            except (OSError, subprocess.SubprocessError):
+                pass
+            paths += ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"]
+        paths += ["/usr/share/fonts/noto/NotoSans-Bold.ttf", "/usr/share/fonts/opentype/inter/Inter-Bold.otf",
+                  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"]
+        try:
+            found = subprocess.run(["fc-match", "-f", "%{file}", "sans-serif:bold"], capture_output=True, text=True,
+                                   timeout=2).stdout.strip()
+            paths.append(found)
+        except (OSError, subprocess.SubprocessError):
+            pass
+        _font_cache[key] = next((p for p in paths if p and os.path.exists(p)), None)
+    return _font_cache[key]
+
+
+def big_word(word, cols, rows):
+    """The word as `rows` lines, `cols` wide: anti-aliased pixels drawn with half blocks in full colour, scaled up
+    as big as the space allows, with a soft blue-to-lavender gradient."""
+    key = (word, cols, rows)
+    if key in _art_cache:
+        return _art_cache[key]
+    from PIL import Image, ImageDraw, ImageFont
+    path = font_for(word)
+    W, H = cols, rows * 2
+    ref = ImageFont.truetype(path, 220) if path else ImageFont.load_default(220)
+    l, t, r, b = ref.getbbox(word)
+    tw, th = max(1, r - l), max(1, b - t)
+    size = max(8, int(220 * min((W - 4) / tw, (H - 2) / th)))
+    f = ImageFont.truetype(path, size) if path else ImageFont.load_default(size)
+    l, t, r, b = f.getbbox(word)
+    mask = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(mask).text(((W - (r - l)) / 2 - l, (H - (b - t)) / 2 - t), word, font=f, fill=255)
+    px = mask.load()
+    lines = []
+    for y in range(0, H, 2):
+        row = []
+        for x in range(W):
+            k = x / max(1, W - 1)
+            fg = tuple(GRAD[0][i] + (GRAD[1][i] - GRAD[0][i]) * k for i in range(3))
+            c = []
+            for yy in (y, y + 1):
+                a = px[x, yy] / 255 if yy < H else 0
+                c.append(tuple(int(BG[i] + (fg[i] - BG[i]) * a) for i in range(3)))
+            row.append(f"\033[38;2;{c[0][0]};{c[0][1]};{c[0][2]}m\033[48;2;{c[1][0]};{c[1][1]};{c[1][2]}m▀")
+        lines.append("".join(row) + N)
+    if len(_art_cache) > 60:
+        _art_cache.clear()
+    _art_cache[key] = lines
+    return lines
+
+
+def plain_len(s):
+    return len(re.sub(r"\x1b\[[0-9;]*m", "", s))
+
+
+def centre(s, cols):
+    pad = max(0, (cols - plain_len(s)) // 2)
+    return " " * pad + s
+
+
+def paint(lines, cols, rows):
+    """Every row exactly as wide as the terminal, on the Devium background, so nothing of the last frame is left."""
+    bg = f"\033[48;2;{BG[0]};{BG[1]};{BG[2]}m"
+    out = []
+    for line in lines[:rows]:
+        fixed = line.replace(N, N + bg)
+        out.append(bg + fixed + bg + " " * max(0, cols - plain_len(line)) + N)
+    while len(out) < rows:
+        out.append(bg + " " * cols + N)
+    return out
+
+
+def sentence(words_line, current_word_index, cols):
+    """The line being sung, small, with the word being sung lit up."""
+    parts = words_line.split()
+    shown = []
+    for i, w in enumerate(parts):
+        if i == current_word_index:
+            shown.append(f"{B}{ACCENT}{w}{N}")
+        elif i < current_word_index:
+            shown.append(f"{D}{w}{N}")
+        else:
+            shown.append(f"{SOFT}{w}{N}")
+    text = " ".join(shown)
+    if plain_len(text) > cols - 4:        # too long: only the words around the current one
+        lo = max(0, current_word_index - 4)
+        text = " ".join(shown[lo:lo + 9])
+    return text
+
+
+def build_words(song, lyr, tl, pos, cols, rows):
+    """One frame of the big-word view (a list of `rows` painted lines)."""
+    synced = lyr["synced"]
+    times, words = tl
+    top = [centre(header(song), cols), ""]
+    k = bisect.bisect_right(times, pos + 0.05) - 1
+    word = words[k] if k >= 0 else ""
+    li = line_index(synced, pos)
+    below, nxt = [], ""
+    if li >= 0:
+        text = synced[li][1]
+        parts = text.split()
+        # which word of the line is current: count the words of this line already started
+        start = bisect.bisect_left(times, synced[li][0] - 1e-6)
+        idx = -1
+        for j in range(len(parts)):
+            if start + j < len(times) and times[start + j] <= pos + 0.05:
+                idx = j
+        below = [centre(sentence(text, idx if word not in ("♪", "") else len(parts), cols), cols)]
+    if li + 1 < len(synced):
+        nxt = centre(f"{D}{synced[li + 1][1]}{N}"[: cols + 20], cols)
+    footer = [""] + below + [nxt]
+    area = rows - len(top) - len(footer)
+    if area < 4:
+        return None
+    art = big_word(word, cols, area) if word else [" " * cols] * area
+    return paint(top + art + footer, cols, rows)
+
+
+# ---------------------------------------------------------------------------- the classic line view
+def build_lines(song, lyr, pos, cols, rows):
+    top = [header(song), ""]
+    if lyr is None:
+        return top + [f"{SOFT}Couldn't reach the lyrics site. Check your internet.{N}"]
+    if lyr["instrumental"]:
+        return top + [f"{SOFT}(Instrumental: no words){N}"]
+    if not lyr["synced"]:
+        if lyr["plain"]:
+            body = lyr["plain"].splitlines()[: max(1, rows - 4)]
+            return top + body + ["", f"{D}(These lyrics don't have timing, so they don't follow along){N}"]
+        return top + [f"{SOFT}No lyrics found for this song.{N}"]
+    lines = lyr["synced"]
+    cur = line_index(lines, pos)
+    room = max(3, rows - len(top) - 1)
+    start = max(0, min(cur - room // 3, len(lines) - room))
+    out = list(top)
+    for i in range(start, min(len(lines), start + room)):
+        words = (lines[i][1] or "♪")[: cols - 2]
+        if i == cur:
+            out.append(f"{B}{ACCENT}{words}{N}")
+        elif i < cur:
+            out.append(f"{D}{words}{N}")
+        else:
+            out.append(f"{SOFT}{words}{N}")
+    return out
+
+
+def draw(lines):
+    sys.stdout.write("\033[H\033[2J" + "\n".join(lines))
+    sys.stdout.flush()
+
+
+def live(big):
+    sys.stdout.write("\033[?1049h\033[?25l")      # own screen, hide the cursor
+    sys.stdout.flush()
+
+    def restore(*_):
+        sys.stdout.write("\033[0m\033[?25h\033[?1049l")
+        sys.stdout.flush()
+        sys.exit(0)
+    signal.signal(signal.SIGINT, restore)
+    signal.signal(signal.SIGTERM, restore)
+
+    song_id, lyr, tl, last = None, None, None, None
+    pos_at, pos_time = 0.0, time.monotonic()
+    next_poll, song = 0.0, None
+    while True:
+        now = time.monotonic()
+        if now >= next_poll:
+            song = nowplaying.current()
+            next_poll = now + 1.0
+            if song:
+                pos_at, pos_time = song["position"], now
+                if song["id"] != song_id:
+                    song_id = song["id"]
+                    draw([header(song), "", f"{SOFT}Looking up the lyrics…{N}"])
+                    lyr = lyricslib.fetch(song)
+                    tl = word_timeline(lyr["synced"]) if lyr and lyr.get("synced") else None
+                    last = None
+        pos = pos_at + (time.monotonic() - pos_time if song and song["status"] == "Playing" else 0)
+        cols, rows = shutil.get_terminal_size((80, 24))
+        frame = None
+        if not song:
+            frame = [no_song(), "", f"{D}Waiting for a song…  (Ctrl+C to stop){N}"]
+        elif big and tl and cols >= 30 and rows >= 12:
+            frame = build_words(song, lyr, tl, pos, cols, rows)
+        if frame is None:
+            frame = build_lines(song, lyr, pos, cols, rows)
+        key = (frame, cols, rows)
+        if key != last:
+            draw(frame)
+            last = key
+        time.sleep(0.12)
+
+
+def main():
+    args = sys.argv[1:]
+    if args and args[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0
+    if "--once" in args or not sys.stdout.isatty():
+        return once()
+    live(big="--lines" not in args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

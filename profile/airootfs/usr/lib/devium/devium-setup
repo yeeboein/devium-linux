@@ -172,6 +172,14 @@ package_setup() {
     [[ -d /run/archiso ]] || rm -f /usr/share/applications/devium-about.desktop
     # 1.0: home screen pages are gone (devium-firstrun takes them off the desktop)
     rm -rf /usr/share/plasma/plasmoids/org.devium.home
+    # beta19: lyrics and album-cover are Terminal fun options now. Whoever already has the commands keeps them
+    # (pointing at the new versions); everyone else gets them only by ticking them in Devium Configure.
+    for c in lyrics album-cover albumcover; do
+        if [[ -e /usr/local/bin/$c || -L /usr/local/bin/$c ]]; then
+            t=$c; [[ $c == albumcover ]] && t=album-cover
+            ln -sf "/usr/lib/devium/fun/$t" "/usr/local/bin/$c"
+        fi
+    done
     # beta17: the magic-lamp close effect is gone (minimise keeps KWin's own Magic Lamp)
     rm -rf /usr/share/kwin/effects/devium-lamp
     strip_live_repo

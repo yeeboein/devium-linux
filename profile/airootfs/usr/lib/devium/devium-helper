@@ -28,6 +28,7 @@
 #   devium-helper clean-system       old packages, unused Flatpaks, old logs, coredumps (Clean up page)
 #   devium-helper service ID on|off  switch a system service (Background and extras page; only the ones listed)
 #   devium-helper remove-extra ID... | add-extra ID...   remove / add back Devium's extra apps
+#   devium-helper fun-link NAME... | fun-unlink NAME...   add / remove Terminal fun commands (lyrics, album-cover)
 #   devium-helper doctor-fix ID...   repairs picked by devium-doctor (unlock, cache, journal, reinstall:PKG...)
 set -uo pipefail
 export LC_ALL=C.UTF-8 TERM=dumb
@@ -282,6 +283,22 @@ PY
         command -v flatpak >/dev/null && { flatpak repair --system >/dev/null 2>&1 && echo "  OK    Flatpak apps checked"; }
         broken=$(pacman -Qkq 2>/dev/null | awk '{print $1}' | sort -u | head -20 | tr '\n' ' ')
         [[ -z $broken ]] && echo "  OK    No damaged packages" || { echo "  FIX   Reinstalling: $broken"; pacman -S --noconfirm $broken; }
+        ;;
+    fun-link|fun-unlink)
+        # Terminal fun commands that live in /usr/lib/devium/fun and are put on the PATH only when chosen
+        action="$1"; shift
+        for name in "$@"; do
+            case $name in
+                lyrics)       target=lyrics ;;
+                album-cover|albumcover) target=album-cover ;;
+                *) echo "unknown command: $name"; continue ;;
+            esac
+            if [[ $action == fun-link ]]; then
+                ln -sf "/usr/lib/devium/fun/$target" "/usr/local/bin/$name" && echo "Added the $name command."
+            else
+                [[ -L /usr/local/bin/$name || -f /usr/local/bin/$name ]] && rm -f "/usr/local/bin/$name" && echo "Removed the $name command."
+            fi
+        done
         ;;
     doctor-fix)
         # devium-doctor: only the repairs listed here, each checked before it runs
