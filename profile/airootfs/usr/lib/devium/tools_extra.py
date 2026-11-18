@@ -170,6 +170,7 @@ DEVIUM_WIDGETS = [   # plugin id, name, what it shows
     ("org.devium.servers", "Dev servers", "What's running on which port"),
     ("org.devium.links", "Devium shortcuts", "Spotlight, Tools, Configure, Updates…"),
     ("org.devium.photo", "Photo", "A picture or a slideshow from your Pictures folder"),
+    ("org.devium.nowplaying", "Now playing", "The song that's playing: cover, lyric line and controls"),
 ]
 
 

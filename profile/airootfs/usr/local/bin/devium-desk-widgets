@@ -20,7 +20,7 @@ CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.c
 QS_SHELL = "/usr/share/devium/desk-widgets"
 TYPES = {"clock": "ClockWidget", "weather": "WeatherWidget", "sea": "SeaWidget", "system": "SystemWidget",
          "focus": "FocusWidget", "projects": "ProjectsWidget", "servers": "ServersWidget", "links": "LinksWidget",
-         "photo": "PhotoWidget"}
+         "photo": "PhotoWidget", "nowplaying": "NowPlayingWidget"}
 
 
 def load():
@@ -125,13 +125,13 @@ def x11(cfg):
         v.setColor(QColor(0, 0, 0, 0))
         v.engine().addImportPath("/usr/lib/qt6/qml")
         ctx = v.rootContext()
-        ctx.setContextProperty("runner", runner)
+        ctx.setContextProperty("deskRunner", runner)       # not "runner": `runner: runner` would bind to itself
         ctx.setContextProperty("deskPlace", cfg.get("place", ""))
         ctx.setContextProperty("deskImperial", bool(cfg.get("imperial", False)))
         ctx.setContextProperty("deskPhotoFolder", cfg.get("photoFolder", ""))
         extra = "  folder: deskPhotoFolder\n" if kind == "PhotoWidget" else ""
         qml = ("import QtQuick\nimport org.devium.widgets\n"
-               f"{kind} {{ runner: runner; place: deskPlace; imperial: deskImperial\n" + extra +
+               f"{kind} {{ runner: deskRunner; place: deskPlace; imperial: deskImperial\n" + extra +
                "  MouseArea { anchors.fill: parent; z: -2; acceptedButtons: Qt.LeftButton\n"
                "    onPressed: (m) => { m.accepted = true; Window.window.startSystemMove() } } }\n")
         path = os.path.join(os.path.expanduser("~/.cache/devium"), f"desk-{kind}.qml")

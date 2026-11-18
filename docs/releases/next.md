@@ -38,6 +38,10 @@
   Devium Tools > Look. KDE, Xfce and Hyprland. In a terminal: `devium-wallpaper`.
 - **A calmer lock and login screen:** they now use the mountain photo without the big logo, so the clock and the
   sign-in card are easier to read. The desktop keeps the logo.
+- **Now playing widget** (KDE, Xfce, Hyprland): a card on your desktop with the cover, title, artist, a progress bar,
+  the lyric line being sung, and play/pause/next/previous buttons. Works with Spotify, your browser, VLC and other
+  players. Add it from right-click desktop > Add Widgets (KDE) or Devium Tools > Look > Devium widgets.
+- **Fixed: Devium widgets on Xfce** never got their data (weather, sea, system...) because of how they were started.
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered

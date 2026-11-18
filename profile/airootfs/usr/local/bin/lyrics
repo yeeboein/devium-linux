@@ -7,23 +7,16 @@
 Works with Spotify, Firefox, Brave, VLC, Elisa and other players. Lyrics come from LRCLIB (lrclib.net, free, no
 account): only the song's title, artist, album and length are sent. Press Ctrl+C to stop.
 """
-import hashlib
-import json
 import os
-import re
 import shutil
 import signal
 import sys
 import time
-import urllib.error
-import urllib.parse
-import urllib.request
 
 sys.path.insert(0, "/usr/lib/devium")
+import lyricslib  # noqa: E402
 import nowplaying  # noqa: E402
 
-CACHE = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "devium", "lyrics")
-UA = "Devium lyrics (https://github.com/yeeboein/devium-linux)"
 B, D, N = "\033[1m", "\033[2m", "\033[0m"
 ACCENT, SOFT, TITLE = "\033[38;2;143;180;216m", "\033[38;2;196;204;214m", "\033[38;2;180;184;224m"
 if not sys.stdout.isatty():
@@ -31,66 +24,11 @@ if not sys.stdout.isatty():
 
 
 def fetch(song):
-    """{"synced": [(seconds, line)...] or None, "plain": str or None, "instrumental": bool} or None."""
-    key = hashlib.sha1(f"{song['artist']}|{song['title']}|{song['album']}".lower().encode()).hexdigest()
-    path = os.path.join(CACHE, key + ".json")
-    try:
-        data = json.load(open(path))
-    except (OSError, ValueError):
-        data = None
-    if data is None:
-        data = ask_lrclib(song)
-        if data is not None:
-            os.makedirs(CACHE, exist_ok=True)
-            with open(path, "w") as f:
-                json.dump(data, f)
-    if not data:
-        return None
-    return {"synced": parse_lrc(data.get("syncedLyrics") or ""), "plain": data.get("plainLyrics"),
-            "instrumental": bool(data.get("instrumental"))}
-
-
-def get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=10) as r:
-        return json.load(r)
-
-
-def ask_lrclib(song):
-    q = {"artist_name": song["artist"], "track_name": song["title"]}
-    if song["album"]:
-        q["album_name"] = song["album"]
-    if song["length"]:
-        q["duration"] = int(round(song["length"]))
-    try:
-        return get("https://lrclib.net/api/get?" + urllib.parse.urlencode(q))
-    except urllib.error.HTTPError as e:
-        if e.code != 404:
-            return None
-    except Exception:
-        return None
-    # not an exact match: search instead and take the closest length
-    try:
-        results = get("https://lrclib.net/api/search?" + urllib.parse.urlencode(
-            {"track_name": song["title"], "artist_name": song["artist"]}))
-    except Exception:
-        return None
-    if not results:
-        return {}
-    length = song["length"] or 0
-    results.sort(key=lambda r: (not r.get("syncedLyrics"), abs((r.get("duration") or 0) - length)))
-    return results[0]
+    return lyricslib.fetch(song)
 
 
 def parse_lrc(text):
-    lines = []
-    for raw in text.splitlines():
-        stamps = re.findall(r"\[(\d+):(\d+(?:\.\d+)?)\]", raw)
-        words = re.sub(r"\[[^\]]*\]", "", raw).strip()
-        for m, s in stamps:
-            lines.append((int(m) * 60 + float(s), words))
-    lines.sort()
-    return lines or None
+    return lyricslib.parse_lrc(text)
 
 
 def header(song):
@@ -202,6 +140,11 @@ def main():
     args = sys.argv[1:]
     if args and args[0] in ("-h", "--help"):
         print(__doc__.strip())
+        return 0
+    if args and args[0] == "--prefetch":      # used by the Now playing widget: look up and keep, print nothing
+        song = nowplaying.current()
+        if song:
+            lyricslib.fetch(song)
         return 0
     if (args and args[0] == "--once") or not sys.stdout.isatty():
         return once()

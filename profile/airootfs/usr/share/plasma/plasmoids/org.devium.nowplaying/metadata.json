@@ -1,0 +1,19 @@
+{
+  "KPlugin": {
+    "Id": "org.devium.nowplaying",
+    "Name": "Now playing (Devium)",
+    "Description": "The song that's playing: cover, title, artist, the lyric line and play/pause/next/previous",
+    "Icon": "multimedia-player",
+    "Category": "Multimedia",
+    "Authors": [
+      {
+        "Name": "Yeeboein"
+      }
+    ],
+    "License": "GPL-2.0-or-later",
+    "Version": "1.0",
+    "Website": "https://github.com/yeeboein/devium-linux"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}

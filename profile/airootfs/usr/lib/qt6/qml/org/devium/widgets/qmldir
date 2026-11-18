@@ -26,4 +26,6 @@ ProjectsWidget 1.0 ProjectsWidget.qml
 ServersWidget 1.0 ServersWidget.qml
 LinksWidget 1.0 LinksWidget.qml
 PhotoView 1.0 PhotoView.qml
+NowPlayingView 1.0 NowPlayingView.qml
 PhotoWidget 1.0 PhotoWidget.qml
+NowPlayingWidget 1.0 NowPlayingWidget.qml

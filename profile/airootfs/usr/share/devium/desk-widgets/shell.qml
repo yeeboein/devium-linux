@@ -13,7 +13,7 @@ ShellRoot {
     property bool ignoreNext: false   // our own save shouldn't reload everything
     readonly property var types: ({ clock: clockC, weather: weatherC, sea: seaC, system: systemC,
                                     focus: focusC, projects: projectsC, servers: serversC, links: linksC,
-                                    photo: photoC })
+                                    photo: photoC, nowplaying: nowplayingC })
 
     FileView {
         id: file
@@ -54,6 +54,7 @@ ShellRoot {
     Component { id: serversC; ServersWidget {} }
     Component { id: linksC; LinksWidget {} }
     Component { id: photoC; PhotoWidget {} }
+    Component { id: nowplayingC; NowPlayingWidget {} }
 
     Variants {
         model: (root.cfg.widgets || []).map(function (w, i) { return i })

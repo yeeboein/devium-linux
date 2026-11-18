@@ -71,3 +71,19 @@ def current():
             return info
         best = best or info
     return best
+
+
+def control(action):
+    """Play/pause, next or previous on the player that's playing (or the first one that has a song)."""
+    method = {"playpause": "PlayPause", "next": "Next", "previous": "Previous"}.get(action)
+    if not method:
+        return False
+    song = current()
+    bus = song["bus"] if song else (players() or [None])[0]
+    if not bus:
+        return False
+    try:
+        return subprocess.run(["busctl", "--user", "call", bus, PATH, IFACE, method], capture_output=True,
+                              timeout=3).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
