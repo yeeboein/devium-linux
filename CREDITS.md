@@ -23,8 +23,8 @@ Devium's own code (scripts, apps, widgets, KWin scripts, config) is © Yeeboein 
 
 ## Artwork
 - **Mountain wallpaper and login background** (`usr/share/wallpapers/Devium`, SDDM theme, Calamares welcome
-  picture): photo "Beautiful shot of mountains and trees covered in snow and fog" from Magnific (ID 10584363),
-  Designed by Magnific (www.magnific.com), with the Devium logo added. *Before 1.0: Magnific's free licence doesn't
+  picture): photo "Beautiful shot of mountains and trees covered in snow and fog" (ID 10584363),
+  designed by wirestock - Magnific.com (https://www.magnific.com), with the Devium logo added. *Before 1.0: Magnific's free licence doesn't
   allow making the file available for download, so permission has been requested; if it isn't given, this is
   replaced with a freely licensed photo.*
 - Theme previews and screenshots: Devium.
