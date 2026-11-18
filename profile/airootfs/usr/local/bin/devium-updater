@@ -37,7 +37,7 @@ def api_url(repo):
 
 def next_name(v):
     """beta15 -> beta16, 2026.11.15 -> the next release (shown as "the next version")."""
-    m = re.match(r"^(.*?)(\d+)$", v or "")
+    m = re.match(r"^(.*?)(\d+)(?:\.\d+)?$", v or "")        # beta18 and beta18.5 are both followed by beta19
     return f"{m.group(1)}{int(m.group(2)) + 1}" if m and not re.match(r"^\d{4}\.", v) else "the next version"
 
 
@@ -67,13 +67,15 @@ def version_key(v):
     """Comparable version: beta1..beta99 (before 1.0) < v1.0-beta1 < v1.0-rc1 < v1.0 < v1.0.1 < v1.1 ..."""
     v = (v or "").strip().lower()
     v = v[1:] if v.startswith("v") else v
-    m = re.match(r"^(\d+(?:\.\d+)*)?[-_.]?(alpha|beta|rc)?(\d+)?", v)
+    m = re.match(r"^(\d+(?:\.\d+)*)?[-_.]?(alpha|beta|rc)?(\d+(?:\.\d+)*)?", v)
     nums = [int(x) for x in (m.group(1) or "0").split(".")] if m else [0]
     nums = (nums + [0, 0, 0])[:3]
     stage = {"alpha": 0, "beta": 1, "rc": 2}.get(m.group(2) if m else None, 3)
     if (m and not m.group(1) and not m.group(2)) or nums[0] >= 2000:   # test builds (dated, e.g. 2026.11.15): oldest
         return [0, 0, 0, 0, 0]
-    return nums + [stage, int(m.group(3) or 0) if m else 0]
+    # the number after the stage can have a dot too: beta18 < beta18.5 < beta19
+    sub = [int(x) for x in (m.group(3) or "0").split(".")] if m else [0]
+    return nums + [stage] + (sub + [0, 0])[:2]
 
 
 CHANNEL_FILE = os.path.expanduser("~/.config/devium/update-channel")
@@ -210,7 +212,7 @@ class Updater(QWidget):
             lines = text.strip().splitlines()
             if lines and lines[0].startswith("# "):
                 title = lines[0][2:].strip()
-                m = re.search(r"\b(beta\d+|\d+\.\d+(?:\.\d+)?)\b", title)
+                m = re.search(r"\b(beta\d+(?:\.\d+)?|\d+\.\d+(?:\.\d+)?)\b", title)
                 if m:
                     self.show_next(m.group(1), False)
                 lines = lines[1:]
