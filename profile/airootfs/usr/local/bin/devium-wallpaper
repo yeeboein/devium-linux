@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""devium-wallpaper - choose the home (desktop) and lock screen pictures separately.
+
+  devium-wallpaper status                 what's set now (JSON)
+  devium-wallpaper home PICTURE|default   the desktop picture
+  devium-wallpaper lock PICTURE|default   the lock screen picture
+  devium-wallpaper login PICTURE|default  the login screen picture (asks for your password)
+
+"default" puts Devium's own pictures back. Your chosen pictures are copied to ~/.local/share/devium/wallpapers,
+so moving or deleting the original doesn't break anything. Works on KDE Plasma, Xfce and Hyprland (on Xfce the
+lock screen is the login screen, so `lock` and `login` do the same there).
+"""
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+HOME = os.path.expanduser("~")
+CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.join(HOME, ".config")), "devium")
+STATE = os.path.join(CONFIG, "wallpapers.json")
+STORE = os.path.join(os.environ.get("XDG_DATA_HOME", os.path.join(HOME, ".local/share")), "devium", "wallpapers")
+HOME_DEFAULT = "/usr/share/wallpapers/Devium/contents/images/1920x1080.jpg"
+HOME_DEFAULT_DIR = "/usr/share/wallpapers/Devium/"
+LOCK_DEFAULT = "/usr/share/wallpapers/DeviumLock/contents/images/1920x1080.jpg"
+LOCK_DEFAULT_DIR = "/usr/share/wallpapers/DeviumLock/"
+HELPER = ["pkexec", "/usr/lib/devium/devium-helper"]
+
+KDE = shutil.which("plasmashell") is not None
+XFCE = shutil.which("xfwm4") is not None and not KDE
+HYPR = (shutil.which("Hyprland") is not None or shutil.which("hyprctl") is not None) and not KDE and not XFCE
+
+
+def load():
+    try:
+        return json.load(open(STATE))
+    except (OSError, ValueError):
+        return {}
+
+
+def save(state):
+    os.makedirs(CONFIG, exist_ok=True)
+    with open(STATE, "w") as f:
+        json.dump(state, f, indent=1, sort_keys=True)
+
+
+def run(cmd, **kw):
+    try:
+        return subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kw).returncode == 0
+    except OSError:
+        return False
+
+
+def keep_copy(kind, src):
+    """Check it's a picture and keep our own copy (as a JPEG or PNG), so the original can move or go."""
+    try:
+        from PIL import Image
+        im = Image.open(src)
+        im.load()
+    except Exception:
+        raise SystemExit(f"{src} isn't a picture I can open (try a JPG, PNG or WebP file).")
+    if min(im.size) < 400:
+        raise SystemExit("That picture is very small and would look blurry. Pick one that's at least 1280 wide.")
+    os.makedirs(STORE, exist_ok=True)
+    for old in os.listdir(STORE):
+        if old.startswith(kind + "."):
+            os.remove(os.path.join(STORE, old))
+    has_alpha = im.mode in ("RGBA", "LA", "P") and "transparency" in getattr(im, "info", {}) or im.mode in ("RGBA", "LA")
+    ext = "png" if has_alpha else "jpg"
+    out = os.path.join(STORE, f"{kind}.{ext}")
+    if max(im.size) > 3840:
+        im.thumbnail((3840, 3840))
+    if ext == "jpg":
+        im.convert("RGB").save(out, quality=92, optimize=True)
+    else:
+        im.save(out, optimize=True)
+    return out
+
+
+def set_home(path):
+    if KDE:
+        if path:
+            return run(["plasma-apply-wallpaperimage", path])
+        return run(["plasma-apply-wallpaperimage", HOME_DEFAULT])
+    if XFCE:
+        target = path or HOME_DEFAULT
+        props = subprocess.run(["xfconf-query", "-c", "xfce4-desktop", "-l"], capture_output=True, text=True).stdout
+        found = [p for p in props.splitlines() if p.endswith("last-image")]
+        for prop in found or ["/backdrop/screen0/monitor0/workspace0/last-image"]:
+            run(["xfconf-query", "-c", "xfce4-desktop", "-p", prop, "-n", "-t", "string", "-s", target])
+        return True
+    if HYPR:
+        target = path or HOME_DEFAULT
+        conf = os.path.join(HOME, ".config/hypr/hyprpaper.conf")
+        os.makedirs(os.path.dirname(conf), exist_ok=True)
+        with open(conf, "w") as f:
+            f.write(f"preload = {target}\nwallpaper = , {target}\nsplash = false\n")
+        run(["hyprctl", "hyprpaper", "preload", target])
+        run(["hyprctl", "hyprpaper", "wallpaper", f", {target}"])
+        return True
+    return False
+
+
+def set_lock(path):
+    if KDE:
+        target = path or LOCK_DEFAULT_DIR
+        cmd = ["kwriteconfig6", "--file", "kscreenlockerrc", "--group", "Greeter", "--group", "Wallpaper",
+               "--group", "org.kde.image", "--group", "General"]
+        ok = run(cmd + ["--key", "Image", ("file://" + path) if path else LOCK_DEFAULT_DIR])
+        run(cmd + ["--key", "PreviewImage", ("file://" + path) if path else LOCK_DEFAULT_DIR])
+        return ok
+    if HYPR:
+        conf = os.path.join(HOME, ".config/hypr/hyprlock.conf")
+        try:
+            text = open(conf).read()
+        except OSError:
+            return False
+        target = path or LOCK_DEFAULT
+        new, n = re.subn(r"(background\s*\{[^}]*?\bpath\s*=\s*)[^\n]*", lambda m: m.group(1) + target, text, count=1, flags=re.S)
+        if n:
+            open(conf, "w").write(new)
+        return bool(n)
+    return False
+
+
+def set_login(path):
+    """The login screen (SDDM or LightDM) lives in system files, so this goes through the privileged helper."""
+    return run(HELPER + ["login-wallpaper", path or "default"])
+
+
+def main():
+    a = sys.argv[1:]
+    if not a or a[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0
+    cmd = a[0]
+    if cmd == "status":
+        s = load()
+        print(json.dumps({"home": s.get("home"), "lock": s.get("lock"), "login": s.get("login"),
+                          "home_default": HOME_DEFAULT, "lock_default": LOCK_DEFAULT}))
+        return 0
+    if cmd not in ("home", "lock", "login") or len(a) < 2:
+        print(__doc__.strip())
+        return 1
+    state = load()
+    if a[1] == "default":
+        copy = None
+        if os.path.isdir(STORE):          # forget our stored copy of the old choice
+            for old in os.listdir(STORE):
+                if old.startswith(cmd + "."):
+                    os.remove(os.path.join(STORE, old))
+    else:
+        src = os.path.expanduser(a[1])
+        if not os.path.isfile(src):
+            print(f"I can't find {src}")
+            return 1
+        copy = keep_copy(cmd, src)
+    if cmd == "home":
+        ok = set_home(copy)
+    elif cmd == "lock":
+        ok = set_lock(copy)
+        if XFCE:       # on Xfce the lock screen is the login screen
+            ok = set_login(copy)
+    else:
+        ok = set_login(copy)
+    if not ok and not (KDE or XFCE or HYPR):
+        print("I couldn't tell which desktop this is.")
+        return 1
+    state[cmd] = copy
+    if cmd == "lock" and XFCE:
+        state["login"] = copy
+    save(state)
+    print(("Done: " if ok else "Saved, but couldn't apply it: ") + f"{cmd} picture " + ("is Devium's again." if not copy else "set."))
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

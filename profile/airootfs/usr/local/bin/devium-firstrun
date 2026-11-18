@@ -190,6 +190,20 @@ if [[ ! -f $STATE/glass-pictures ]] && grep -q '"glass-always": true' "$STATE/tw
 fi
 touch "$STATE/glass-pictures"
 
+# --- 1.0: the lock screen has its own picture (no logo). Move people who still use the old default lock picture;
+#     anyone who picked their own picture in devium-wallpaper or System Settings keeps it.
+if [[ ! -f $STATE/lock-picture ]]; then
+    kscr="${XDG_CONFIG_HOME:-$HOME/.config}/kscreenlockerrc"
+    if [[ -f $kscr ]] && grep -q '^Image=/usr/share/wallpapers/Devium/\?$' "$kscr"; then
+        sed -i 's|^Image=/usr/share/wallpapers/Devium/\?$|Image=/usr/share/wallpapers/DeviumLock/|' "$kscr"
+    fi
+    hl="$HOME/.config/hypr/hyprlock.conf"
+    if [[ -f $hl ]]; then
+        sed -i 's|path = /usr/share/wallpapers/Devium/contents/images/1920x1080.jpg|path = /usr/share/wallpapers/DeviumLock/contents/images/1920x1080.jpg|' "$hl"
+    fi
+    touch "$STATE/lock-picture"
+fi
+
 # --- beta15: secret guard on by default (stops commits containing passwords/keys); not if you set your own hooks
 if [[ ! -f $STATE/git-guard ]] && command -v git >/dev/null; then
     [[ -z $(git config --global core.hooksPath) ]] && git config --global core.hooksPath /usr/lib/devium/git-hooks

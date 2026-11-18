@@ -25,6 +25,7 @@ Devium's own code (scripts, apps, widgets, KWin scripts, config) is © Yeeboein 
 - **Mountain wallpaper, login background and installer picture** (`usr/share/wallpapers/Devium`, SDDM theme,
   Calamares welcome picture): a photo from [Unsplash](https://unsplash.com) (Unsplash License: free to use, including
   in software), with the Devium logo added. *Photographer and photo link: to be added.*
+- The lock screen and login screen use the same photo without the logo (`usr/share/wallpapers/DeviumLock`).
 - Theme previews in Devium Configure: drawn by `tools/make-previews.py` on the wallpaper.
 - Theme previews and screenshots: Devium.
 

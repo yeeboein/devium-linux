@@ -21,6 +21,7 @@
 #   devium-helper health             check disk health now (installs smartmontools the first time)
 #   devium-helper move-install FILE  reinstall apps from a Backup / Move to a new PC file
 #   devium-helper sddm-accent A B    give the login screen the accent colour you picked
+#   devium-helper login-wallpaper PICTURE|default   the login screen picture (devium-wallpaper uses this)
 #   devium-helper devpack ID...      install developer tools from Devium Tools > Developer
 #   devium-helper local-https USER   install mkcert and trust its local certificate authority (https://localhost)
 #   devium-helper guest on|off       add or remove the Guest account (wiped every time it logs out)
@@ -537,8 +538,49 @@ EOF
         a="${2:-}"; b="${3:-$2}"
         [[ $a =~ ^#[0-9a-fA-F]{6}$ && $b =~ ^#[0-9a-fA-F]{6}$ ]] || { echo "usage: sddm-accent #rrggbb #rrggbb"; exit 1; }
         [[ -d /usr/share/sddm/themes/devium ]] || exit 0
+        # keep the login picture if the user chose one (it lives in the same file)
+        bg=$(sed -n 's/^background=//p' /usr/share/sddm/themes/devium/theme.conf.user 2>/dev/null | head -1)
         printf '[General]\naccent=%s\naccent2=%s\n' "$a" "$b" > /usr/share/sddm/themes/devium/theme.conf.user
+        [[ -n $bg ]] && printf 'background=%s\n' "$bg" >> /usr/share/sddm/themes/devium/theme.conf.user
         echo "The login screen now uses $a."
+        ;;
+    login-wallpaper)
+        # The picture for the login screen (SDDM on KDE and Hyprland, LightDM on Xfce).
+        # A chosen picture must be a normal file of the user who asked (never read someone else's files as root).
+        src="${2:-}"
+        [[ -n $src ]] || { echo "usage: login-wallpaper PICTURE|default"; exit 1; }
+        dest_dir=/var/lib/devium
+        dest="$dest_dir/login-wallpaper.jpg"
+        if [[ $src == default ]]; then
+            rm -f "$dest"
+            bg=""
+        else
+            [[ -f $src && ! -L $src ]] || { echo "not a picture file"; exit 1; }
+            [[ -z ${PKEXEC_UID:-} || $(stat -c %u "$src") == "$PKEXEC_UID" ]] || { echo "that file isn't yours"; exit 1; }
+            (( $(stat -c %s "$src") < 60000000 )) || { echo "that picture is too big"; exit 1; }
+            mkdir -p "$dest_dir"; chmod 755 "$dest_dir"
+            python3 - "$src" "$dest" 2>/dev/null <<'PY' || { echo "couldn't read that picture"; exit 1; }
+import sys
+from PIL import Image
+im = Image.open(sys.argv[1])
+im.thumbnail((3840, 2160))
+im.convert("RGB").save(sys.argv[2], quality=90, optimize=True)
+PY
+            chmod 644 "$dest"
+            bg="$dest"
+        fi
+        if [[ -d /usr/share/sddm/themes/devium ]]; then
+            conf=/usr/share/sddm/themes/devium/theme.conf.user
+            touch "$conf"
+            sed -i '/^background=/d' "$conf"
+            grep -q '^\[General\]' "$conf" || sed -i '1i [General]' "$conf"
+            [[ -n $bg ]] && printf 'background=file://%s\n' "$bg" >> "$conf"
+        fi
+        if [[ -f /etc/lightdm/lightdm-gtk-greeter.conf ]]; then
+            sed -i "s|^background=.*|background=${bg:-/usr/share/wallpapers/DeviumLock/contents/images/1920x1080.jpg}|" \
+                /etc/lightdm/lightdm-gtk-greeter.conf
+        fi
+        if [[ -n $bg ]]; then echo "The login screen picture is set."; else echo "The login screen picture is back to Devium default."; fi
         ;;
     devpack)
         shift

@@ -32,6 +32,11 @@
   (Gwenview, Okular, GIMP, Krita and others) are no longer see-through, so pictures look right. Tick "Keep pictures
   see-through too" in Customise if you like them see-through.
 - **New wallpaper:** a snowy mountain peak with the Devium logo, on the desktop, login screen and installer.
+- **Separate desktop and lock screen pictures:** Devium Tools > Look has a new Wallpapers section: choose your own
+  desktop (home) picture and lock screen picture, each with "Use Devium's" to go back. The lock screen picture can
+  also be used on the login screen. KDE, Xfce and Hyprland. In a terminal: `devium-wallpaper`.
+- **A calmer lock and login screen:** they now use the mountain photo without the big logo, so the clock and the
+  sign-in card are easier to read. The desktop keeps the logo.
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered

@@ -251,6 +251,98 @@ def desk_widgets_card(page):
                 holder, place, imperial, row(button(T("Apply"), apply, True, "dialog-ok")), note)
 
 
+def wallpapers_card(page):
+    """Pick the desktop (home) picture and the lock screen picture separately (devium-wallpaper does the work)."""
+    def status():
+        try:
+            out = subprocess.run(["devium-wallpaper", "status"], capture_output=True, text=True, timeout=5).stdout
+            return json.loads(out)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return {}
+
+    st = status()
+    note = label("", "subtitle")
+    note.setWordWrap(True)
+    login_box = QCheckBox(T("Use the lock screen picture on the login screen too (asks for your password)"))
+    login_box.setChecked(True)
+    login_box.setVisible(not XFCE and (os.path.isdir("/usr/share/sddm/themes/devium") or HYPR))
+    thumbs = {}
+
+    def show(kind):
+        s = status()
+        path = s.get(kind) or s.get(kind + "_default") or ""
+        pm = QPixmap(path) if path and os.path.exists(path) else QPixmap()
+        if not pm.isNull():
+            thumbs[kind].setPixmap(pm.scaled(224, 126, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                             Qt.TransformationMode.SmoothTransformation).copy(0, 0, 224, 126))
+        else:
+            thumbs[kind].setText(T("(no picture)"))
+
+    def run_cmd(args, done):
+        proc = QProcess(page)
+        proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        proc.finished.connect(lambda code, _s: done(code, bytes(proc.readAllStandardOutput()).decode(errors="replace")))
+        proc.start("devium-wallpaper", args)
+
+    def apply(kind, source):
+        note.setText(T("Working…"))
+        wanted = [kind] + (["login"] if kind == "lock" and login_box.isVisible() and login_box.isChecked() else [])
+        todo = list(wanted)
+
+        def next_step(_code=0, _out=""):
+            if not todo:
+                show(kind)
+                note.setText(T("Done!"))
+                return
+            k = todo.pop(0)
+
+            def done(code, out, k=k):
+                if code != 0:
+                    note.setText(out.strip().splitlines()[-1] if out.strip() else T("That didn't work."))
+                    show(kind)
+                    return
+                next_step()
+            run_cmd([k, source], done)
+        next_step()
+
+    def choose(kind):
+        start = os.path.join(HOME, "Pictures") if os.path.isdir(os.path.join(HOME, "Pictures")) else HOME
+        f, _ = QFileDialog.getOpenFileName(page, T("Choose a picture"), start,
+                                           T("Pictures") + " (*.jpg *.jpeg *.png *.webp *.bmp)")
+        if f:
+            apply(kind, f)
+
+    def one(kind, title, desc):
+        thumb = QLabel()
+        thumb.setFixedSize(224, 126)
+        thumb.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        thumb.setStyleSheet("border-radius: 10px; background: rgba(255,255,255,0.06);")
+        thumbs[kind] = thumb
+        show(kind)
+        box = QWidget()
+        lay = QHBoxLayout(box)
+        lay.setContentsMargins(0, 6, 0, 10)
+        lay.setSpacing(16)
+        lay.addWidget(thumb)
+        col = QVBoxLayout()
+        col.addWidget(label(title, "h2"))
+        col.addWidget(label(desc, "subtitle"))
+        btns = QHBoxLayout()
+        btns.addWidget(button(T("Choose picture…"), lambda: choose(kind), True, "document-open"))
+        btns.addWidget(button(T("Use Devium's"), lambda: apply(kind, "default"), icon="edit-undo"))
+        btns.addStretch(1)
+        col.addLayout(btns)
+        col.addStretch(1)
+        lay.addLayout(col, 1)
+        return box
+
+    lock_desc = ("The picture behind the clock when you lock your computer."
+                 if not XFCE else "The picture behind the login and lock screen.")
+    page.add(card(one("home", T("Desktop picture"), T("The wallpaper behind your windows (your home screen).")),
+                  one("lock", T("Lock screen picture"), T(lock_desc)),
+                  login_box, note))
+
+
 def make_look_page(win):
     page = Page(T("Look"), T("Pick your accent colour, or put the desktop back to how Devium starts."))
     a, b = current_accent()
@@ -294,6 +386,8 @@ def make_look_page(win):
                   label(f"Changes {what}, the Devium apps and the login screen to match.", "subtitle"),
                   w, row(button(T("Pick any colour…"), custom, icon="color-picker"), login), page.current,
                   page.done_note))
+    if shutil.which("devium-wallpaper"):
+        wallpapers_card(page)
     engines = [("browser", "Your browser and its search engine"), ("duckduckgo", "DuckDuckGo"),
                ("brave", "Brave Search"), ("google", "Google"),
                ("startpage", "Startpage"), ("bing", "Bing"), ("ecosia", "Ecosia")]
@@ -334,7 +428,7 @@ def make_look_page(win):
         page.add(desk_widgets_card(page))
     if KDE:
         page.add(card(label(T("More looks"), "h2"),
-                      label("Light or dark theme, icons, wallpaper and fonts are in System Settings.", "subtitle"),
+                      label("Light or dark theme, icons, fonts and more wallpaper options are in System Settings.", "subtitle"),
                       row(button(T("Colours and theme"), lambda: ui.launch("systemsettings", "kcm_colors"),
                                  icon="preferences-desktop-color"),
                           button(T("Wallpaper"), lambda: ui.launch("systemsettings", "kcm_wallpaper"),

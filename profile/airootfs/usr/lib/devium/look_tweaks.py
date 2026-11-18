@@ -738,6 +738,12 @@ def dim_wallpaper(on):
     if not KDE:
         return
     src = "/usr/share/wallpapers/Devium/contents/images/1920x1080.jpg"
+    try:    # the picture chosen with devium-wallpaper, if any
+        mine = json.load(open(os.path.join(CFG, "devium", "wallpapers.json"))).get("home")
+        if mine and os.path.exists(mine):
+            src = mine
+    except (OSError, ValueError):
+        pass
     out = os.path.join(HOME, ".local/share/devium/wallpaper-dim.jpg")
     if on:
         try:
