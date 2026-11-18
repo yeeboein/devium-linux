@@ -10,46 +10,12 @@
 - **Devium updates through normal system updates:** Devium's own files come from a signed online package repo, so
   updating your system updates Devium too, and old files are cleaned up properly.
 - **Signed downloads switched on** for every ISO.
-- **Tested upgrades:** beta15, beta16 and beta17 move to 1.0 with one click, keeping your files and apps.
+- **Tested upgrades:** beta15 to beta18 move to 1.0 with one click, keeping your files and apps.
 - **A tested installer:** every build installs Devium in a virtual machine and starts it.
 - **`support selftest`:** checks that every Devium app, widget and helper works, and gives you a list to share.
 - **Lighter on old laptops:** Snap Assist on Xfce only wakes up when a window moves, and the crash catcher
   switches off in Low-RAM mode.
-- **fastfetch always side by side:** the Devium logo always sits next to your info, whatever the window size
-  (no more logo on top in narrow windows).
-- **Apps open where you left them** (KDE): each app's window size and position are remembered when you close it,
-  and maximised apps open maximised. Turn it off in Customise ("Don't remember where windows were").
-- **The top edge of new windows can always be grabbed:** new windows open in the middle of the screen instead of
-  touching the top, where the resize edge was half off-screen.
-- **Home screen pages removed:** if you had them on, they're taken off your desktop when you update.
-- **Automatic tiling no longer overlaps windows:** apps that resize themselves just after opening (browsers,
-  terminals, Electron apps) are put back in their tile, and tiling now wins over "remember where windows were".
-- **`lyrics` in the terminal:** shows the words to whatever song is playing (Spotify, your browser, VLC and more),
-  with the current line lit up as the song plays, and it moves on to the next song by itself. `lyrics --once` prints
-  them. Lyrics come from LRCLIB (free, only the song's name and artist are sent).
-- **`album-cover` in the terminal:** draws the playing song's cover in colour, or as ASCII art with `--ascii`.
-- **Pictures stay solid in see-through mode:** with "See-through all the time", photo viewers and image editors
-  (Gwenview, Okular, GIMP, Krita and others) are no longer see-through, so pictures look right. Tick "Keep pictures
-  see-through too" in Customise if you like them see-through.
-- **New wallpaper:** a snowy mountain peak with the Devium logo, on the desktop, login screen and installer.
-- **Separate desktop and lock screen pictures:** choose your own desktop (home) picture and lock screen picture,
-  each with "Use Devium's" to go back. The lock screen picture can also be used on the login screen. Find it in
-  System Settings > Appearance > **Lock Screen Wallpaper** (right under Wallpaper), the new **Wallpapers** app, or
-  Devium Tools > Look. KDE, Xfce and Hyprland. In a terminal: `devium-wallpaper`.
-- **A calmer lock and login screen:** they now use the mountain photo without the big logo, so the clock and the
-  sign-in card are easier to read. The desktop keeps the logo.
-- **Now playing widget** (KDE, Xfce, Hyprland): a card on your desktop with the cover, title, artist, a progress bar,
-  the lyric line being sung, and play/pause/next/previous buttons. Works with Spotify, your browser, VLC and other
-  players. Add it from right-click desktop > Add Widgets (KDE) or Devium Tools > Look > Devium widgets.
-- **Fixed: Devium widgets on Xfce** never got their data (weather, sea, system...) because of how they were started.
-- **Screenshot Editor** (`devium-shot`, or Meta+Ctrl+S): take a screenshot of an area, the whole screen or a window,
-  then crop it, draw arrows and boxes, highlight, add text, and **hide private details** (passwords, emails, your IP
-  address) behind big blocks. Copy it, or save it to Pictures/Screenshots. Works on KDE, Xfce and Hyprland, and can
-  also edit any picture or the one on your clipboard.
-- **`note` in the terminal:** quick notes. `note "buy milk"` adds one, `note` shows them, `note done 2` ticks one
-  off, `note rm 3` deletes one, `note search word` finds them, and #tags work. They're a plain checklist file you
-  can open in any editor (`note open`).
-- **Fixes** for everything beta17 testers report on Discord.
+- **Fixes** for everything beta18 testers report on Discord.
 
 ## Ideas being considered
 - Automatic snapshots before every update (Btrfs)
