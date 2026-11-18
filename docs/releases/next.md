@@ -28,6 +28,9 @@
   with the current line lit up as the song plays, and it moves on to the next song by itself. `lyrics --once` prints
   them. Lyrics come from LRCLIB (free, only the song's name and artist are sent).
 - **`album-cover` in the terminal:** draws the playing song's cover in colour, or as ASCII art with `--ascii`.
+- **Pictures stay solid in see-through mode:** with "See-through all the time", photo viewers and image editors
+  (Gwenview, Okular, GIMP, Krita and others) are no longer see-through, so pictures look right. Tick "Keep pictures
+  see-through too" in Customise if you like them see-through.
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered

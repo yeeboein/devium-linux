@@ -184,6 +184,12 @@ if command -v kwriteconfig6 >/dev/null && grep -q '^devium-tilingEnabled=true' "
     qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1
 fi
 
+# --- 1.0: "See-through all the time" keeps pictures solid now; re-apply it once for people who had it on
+if [[ ! -f $STATE/glass-pictures ]] && grep -q '"glass-always": true' "$STATE/tweaks.json" 2>/dev/null; then
+    (sleep 6; python3 /usr/lib/devium/look_tweaks.py set glass-always=on >/dev/null 2>&1) &
+fi
+touch "$STATE/glass-pictures"
+
 # --- beta15: secret guard on by default (stops commits containing passwords/keys); not if you set your own hooks
 if [[ ! -f $STATE/git-guard ]] && command -v git >/dev/null; then
     [[ -z $(git config --global core.hooksPath) ]] && git config --global core.hooksPath /usr/lib/devium/git-hooks

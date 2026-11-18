@@ -125,19 +125,19 @@ T("glass-all", "glass", "Glass mode: see-through everything",
         "decoration:blur:noise = 0.02", "decoration:blur:vibrancy = 0.2",
         "windowrulev2 = opaque, fullscreen:1",
         "windowrulev2 = opaque, class:^(mpv|vlc|celluloid|io.github.celluloid_player.Celluloid|steam|steam_app_.*|"
-        "gamescope|com.obsproject.Studio|obs|gimp|org.gimp.GIMP|krita|org.kde.krita|kdenlive|org.kde.kdenlive|"
-        "darktable|blender|org.kde.gwenview|loupe|org.gnome.Loupe)$"],
+        "gamescope|com.obsproject.Studio|obs|kdenlive|org.kde.kdenlive|blender)$"],
   func="glass_all", group="glass-level")
 T("glass-always", "glass", "See-through all the time",
   "Every window is see-through, always: the one you're using, background windows, videos, games and full-screen "
-  "apps. Strong frosted blur behind, the dock and terminal too",
+  "apps. Strong frosted blur behind, the dock and terminal too. Pictures stay solid unless you tick the option below",
   kde=[("kwinrc", "Plugins", "blurEnabled", "true")],
   kde_js=("panels().forEach(function(p){ p.opacity = 'translucent'; });",
           "panels().forEach(function(p){ p.opacity = 'adaptive'; });"),
-  hypr=["decoration:active_opacity = 0.85", "decoration:inactive_opacity = 0.85", "decoration:fullscreen_opacity = 0.85",
-        "decoration:blur:enabled = true", "decoration:blur:size = 8", "decoration:blur:passes = 3",
-        "decoration:blur:noise = 0.02", "decoration:blur:vibrancy = 0.2"],
   func="glass_always", group="glass-level")
+T("glass-images", "glass", "Keep pictures see-through too",
+  "With glass mode or see-through all the time, photo viewers and image editors stay solid so pictures look "
+  "right. Tick this to make them see-through like everything else",
+  func="glass_images")
 T("glass-menus", "glass", "See-through menus", "Menus and pop-ups let the window behind show through",
   kde=[("kwinrc", "Plugins", "translucencyEnabled", "true"), ("kwinrc", "Effect-translucency", "Menus", "88"),
        ("kwinrc", "Effect-translucency", "DropdownMenus", "88"), ("kwinrc", "Effect-translucency", "PopupMenus", "88")])
@@ -642,19 +642,45 @@ def kde_tap_click(on):
     kde_input("TapToClick", on)
 
 
-SOLID_APPS = ("mpv|vlc|celluloid|io.github.celluloid_player.Celluloid|steam|steam_app_.*|gamescope|obs|"
-              "com.obsproject.Studio|gimp|org.gimp.GIMP|krita|org.kde.krita|kdenlive|org.kde.kdenlive|darktable|"
-              "blender|gwenview|org.kde.gwenview|okular|org.kde.okular|spectacle|org.kde.spectacle")
+VIDEO_GAME_APPS = ("mpv|vlc|celluloid|io.github.celluloid_player.Celluloid|steam|steam_app_.*|gamescope|obs|"
+                   "com.obsproject.Studio|kdenlive|org.kde.kdenlive|blender")
+IMAGE_APPS = ("gwenview|org.kde.gwenview|okular|org.kde.okular|spectacle|org.kde.spectacle|loupe|org.gnome.Loupe|"
+              "eog|org.gnome.eog|ristretto|org.xfce.ristretto|feh|imv|nsxiv|sxiv|nomacs|qimgv|shotwell|"
+              "org.gnome.Shotwell|digikam|org.kde.digikam|gthumb|org.gnome.gThumb|gimp|org.gimp.GIMP|krita|"
+              "org.kde.krita|darktable|inkscape|org.inkscape.Inkscape|pix|xviewer")
+SOLID_APPS = VIDEO_GAME_APPS + "|" + IMAGE_APPS
+CURRENT = {}     # the tweaks being set right now (set_many fills it), so glass mode knows about the pictures option
+
+
+def pictures_solid():
+    return not CURRENT.get("glass-images")
 
 
 def glass_all(on):
-    """KDE: window rules. Videos, games and photo apps stay solid; every other window is 93% (85% in the background)."""
-    glass_rules(on, solid=True, active="93", inactive="85")
+    """KDE: window rules. Videos, games and picture apps stay solid; every other window is 93% (85% in the background)."""
+    glass_rules(on, SOLID_APPS if pictures_solid() else VIDEO_GAME_APPS, active="93", inactive="85")
+    if HYPR:   # picture apps solid (the videos and games rule is in the tweak's own lines)
+        hypr_lines("glass-all-pictures", [f"windowrulev2 = opaque, class:^({IMAGE_APPS})$"], on and pictures_solid())
 
 
 def glass_always(on):
-    """KDE: every window 85% see-through, all the time, no exceptions."""
-    glass_rules(on, solid=False, active="85", inactive="85")
+    """Every window 85% see-through, all the time. Picture apps stay solid unless "Keep pictures see-through too"."""
+    glass_rules(on, IMAGE_APPS if pictures_solid() else None, active="85", inactive="85")
+    if HYPR:
+        lines = ["decoration:active_opacity = 0.85", "decoration:inactive_opacity = 0.85",
+                 "decoration:fullscreen_opacity = 0.85", "decoration:blur:enabled = true", "decoration:blur:size = 8",
+                 "decoration:blur:passes = 3", "decoration:blur:noise = 0.02", "decoration:blur:vibrancy = 0.2"]
+        if pictures_solid():
+            lines.append(f"windowrulev2 = opaque, class:^({IMAGE_APPS})$")
+        hypr_lines("glass-always", lines, on)
+
+
+def glass_images(on):
+    """Re-apply whichever glass mode is on, with picture apps see-through (on) or solid (off)."""
+    if CURRENT.get("glass-always"):
+        glass_always(True)
+    elif CURRENT.get("glass-all"):
+        glass_all(True)
 
 
 def glass_rules(on, solid, active, inactive):
@@ -672,8 +698,8 @@ def glass_rules(on, solid, active, inactive):
             if cp.has_section(sec):
                 cp.remove_section(sec)
         if on and solid:
-            cp["devium-solid"] = {"Description": "Devium glass mode: keep videos, games and photo apps solid",
-                                  "wmclass": SOLID_APPS, "wmclassmatch": "3", "wmclasscomplete": "false",
+            cp["devium-solid"] = {"Description": "Devium glass mode: keep these apps solid (videos, games, pictures)",
+                                  "wmclass": solid, "wmclassmatch": "3", "wmclasscomplete": "false",
                                   "opacityactive": "100", "opacityactiverule": "2",
                                   "opacityinactive": "100", "opacityinactiverule": "2"}
         if on:
@@ -733,7 +759,7 @@ def dim_wallpaper(on):
 
 
 # ---------------------------------------------------------------------------- applying
-FUNC_DESKTOPS = {"glass_all": "any", "glass_always": "kde", "kde_fast_pointer": "kde", "kde_left_handed": "kde",
+FUNC_DESKTOPS = {"glass_all": "any", "glass_always": "any", "glass_images": "any", "kde_fast_pointer": "kde", "kde_left_handed": "kde",
                  "no_titlebars": "kde", "dolphin_hidden": "kde", "konsole_glass": "kde", "konsole_font": "kde", "kde_natural_scroll": "kde", "kde_tap_click": "kde",
                  "dim_wallpaper": "kde", "waybar_reload": "hypr", "waybar_clock": "hypr"}
 
@@ -744,7 +770,7 @@ def available(t):
     if XFCE:
         return bool(t["xfce"])
     if HYPR:
-        return bool(t["hypr"] or FUNC_DESKTOPS.get(t["func"]) == "hypr" or any("kitty" in k for k in t["lines"]))
+        return bool(t["hypr"] or FUNC_DESKTOPS.get(t["func"]) in ("hypr", "any") or any("kitty" in k for k in t["lines"]))
     return False
 
 
@@ -799,15 +825,17 @@ def save_state(s):
 
 
 def set_many(pairs):
+    global CURRENT
     state = load_state()
+    CURRENT = state
     by_id = {t["id"]: t for t in TWEAKS}
     # turn things off first, so a tweak turned on afterwards wins (e.g. switching button layouts)
     for tid, on in sorted(pairs.items(), key=lambda kv: kv[1]):
         t = by_id.get(tid)
         if not t or not available(t):
             continue
-        apply(t, on)
         state[tid] = on
+        apply(t, on)
         print(("on:  " if on else "off: ") + t["name"])
     save_state(state)
     finish()
