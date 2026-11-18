@@ -31,6 +31,7 @@
 - **Pictures stay solid in see-through mode:** with "See-through all the time", photo viewers and image editors
   (Gwenview, Okular, GIMP, Krita and others) are no longer see-through, so pictures look right. Tick "Keep pictures
   see-through too" in Customise if you like them see-through.
+- **New wallpaper:** a snowy mountain peak with the Devium logo, on the desktop, login screen and installer.
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered
