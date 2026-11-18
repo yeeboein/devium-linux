@@ -1,0 +1,460 @@
+#!/usr/bin/env python3
+"""devium-shot - take a screenshot and mark it up: crop, arrows, boxes, highlight, text, and hide private details.
+
+  devium-shot             pick an area of the screen, then edit it
+  devium-shot --full      the whole screen
+  devium-shot --window    the window you're using (KDE)
+  devium-shot FILE        edit a picture you already have
+  devium-shot --clipboard edit the picture on the clipboard
+
+In the editor: Ctrl+C copies the result, Ctrl+S saves it to Pictures/Screenshots, Ctrl+Z undoes.
+"Hide" turns the area you drag over into big blocks, so passwords, emails and IP addresses can't be read.
+"""
+import datetime
+import math
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+
+sys.path.insert(0, "/usr/lib/devium")
+from PyQt6.QtCore import QPointF, QRect, QRectF, Qt
+from PyQt6.QtGui import (QAction, QBrush, QColor, QFont, QGuiApplication, QImage, QKeySequence, QPainter, QPainterPath,
+                         QPen, QPolygonF)
+from PyQt6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QInputDialog, QLabel, QPushButton, QSlider,
+                             QVBoxLayout, QWidget)
+
+try:
+    import devium_ui as ui
+except ImportError:
+    ui = None
+
+SAVE_DIR = os.path.join(os.path.expanduser("~"), "Pictures", "Screenshots")
+COLOURS = ["#e8504f", "#f0b429", "#4fc16d", "#4f9be8", "#b06ee8", "#ffffff", "#1b2026"]
+TOOLS = [("arrow", "Arrow"), ("box", "Box"), ("highlight", "Highlight"), ("text", "Text"), ("hide", "Hide"),
+         ("crop", "Crop")]
+
+
+# ---------------------------------------------------------------------------- taking the screenshot
+def capture(mode="region"):
+    """Take a screenshot with whatever this desktop has. Returns the path of a PNG, or None."""
+    out = os.path.join(tempfile.mkdtemp(prefix="devium-shot-"), "capture.png")
+
+    def ok(cmd):
+        try:
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return os.path.exists(out) and os.path.getsize(out) > 0
+        except (OSError, subprocess.CalledProcessError):
+            return False
+
+    if shutil.which("grim") and os.environ.get("WAYLAND_DISPLAY") and not shutil.which("spectacle"):
+        if mode == "region":
+            try:
+                geo = subprocess.run(["slurp"], capture_output=True, text=True, check=True).stdout.strip()
+            except (OSError, subprocess.CalledProcessError):
+                return None
+            return out if ok(["grim", "-g", geo, out]) else None
+        return out if ok(["grim", out]) else None
+    if shutil.which("spectacle"):
+        flag = {"region": "-r", "full": "-f", "window": "-a"}[mode]
+        return out if ok(["spectacle", "-b", "-n", flag, "-o", out]) else None
+    if shutil.which("xfce4-screenshooter"):
+        flag = {"region": "-r", "full": "-f", "window": "-w"}[mode]
+        return out if ok(["xfce4-screenshooter", flag, "-s", out]) else None
+    if shutil.which("gnome-screenshot"):
+        flag = {"region": ["-a"], "full": [], "window": ["-w"]}[mode]
+        return out if ok(["gnome-screenshot", *flag, "-f", out]) else None
+    if shutil.which("scrot"):
+        flag = {"region": ["-s"], "full": [], "window": ["-u"]}[mode]
+        return out if ok(["scrot", *flag, out]) else None
+    return None
+
+
+# ---------------------------------------------------------------------------- drawing the marks
+def draw_op(p, img, op):
+    """Draw one mark onto `img` with painter `p`. Marks are plain dicts: kind, geometry, colour, width."""
+    kind = op["kind"]
+    col = QColor(op.get("colour", "#e8504f"))
+    w = op.get("width", 4)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    if kind == "arrow":
+        a, b = QPointF(*op["a"]), QPointF(*op["b"])
+        if (a - b).manhattanLength() < 3:
+            return
+        pen = QPen(col, w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+        ang = math.atan2(b.y() - a.y(), b.x() - a.x())
+        head = 14 + w * 3
+        base = QPointF(b.x() - math.cos(ang) * head * 0.8, b.y() - math.sin(ang) * head * 0.8)
+        p.setPen(pen)
+        p.drawLine(a, base)
+        left = QPointF(b.x() - math.cos(ang - 0.45) * head, b.y() - math.sin(ang - 0.45) * head)
+        right = QPointF(b.x() - math.cos(ang + 0.45) * head, b.y() - math.sin(ang + 0.45) * head)
+        p.setBrush(QBrush(col))
+        p.drawPolygon(QPolygonF([b, left, right]))
+    elif kind == "box":
+        r = QRectF(*op["r"]).normalized()
+        p.setPen(QPen(col, w, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawRoundedRect(r, 4, 4)
+    elif kind == "highlight":
+        c = QColor(col)
+        c.setAlpha(110)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(c))
+        p.drawRoundedRect(QRectF(*op["r"]).normalized(), 3, 3)
+    elif kind == "text":
+        f = QFont("Noto Sans")
+        f.setPixelSize(op.get("size", 28))
+        f.setBold(True)
+        p.setFont(f)
+        pos = QPointF(*op["p"])
+        path = QPainterPath()
+        path.addText(pos, f, op["text"])
+        p.setPen(QPen(QColor(0, 0, 0, 170) if col.lightness() > 128 else QColor(255, 255, 255, 190), max(3, op.get("size", 28) // 9),
+                      Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawPath(path)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(col))
+        p.drawPath(path)
+    elif kind == "hide":
+        r = QRect(*[int(v) for v in QRectF(*op["r"]).normalized().getRect()]).intersected(img.rect())
+        if r.width() < 2 or r.height() < 2:
+            return
+        block = max(10, min(r.width(), r.height()) // 2)
+        sub = img.copy(r)
+        small = sub.scaled(max(1, r.width() // block), max(1, r.height() // block), Qt.AspectRatioMode.IgnoreAspectRatio,
+                           Qt.TransformationMode.SmoothTransformation)
+        big = small.scaled(r.size(), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.FastTransformation)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        p.drawImage(r.topLeft(), big)
+
+
+# ---------------------------------------------------------------------------- the canvas
+class Canvas(QWidget):
+    def __init__(self, image, parent=None):
+        super().__init__(parent)
+        self.base = image.convertToFormat(QImage.Format.Format_ARGB32)
+        self.ops = []
+        self.undo, self.redo = [], []
+        self.tool = "arrow"
+        self.colour = COLOURS[0]
+        self.width = 4
+        self.drag = None            # (start, current) in picture coordinates while dragging
+        self.cache = None
+        self.on_change = lambda: None
+        self.setMinimumSize(520, 340)
+        self.setMouseTracking(True)
+        self.setCursor(Qt.CursorShape.CrossCursor)
+
+    # -- picture <-> screen
+    def geometry_for_image(self):
+        iw, ih = self.base.width(), self.base.height()
+        s = min(self.width_() / iw, self.height_() / ih, 1.0)
+        w, h = iw * s, ih * s
+        return s, QPointF((self.width_() - w) / 2, (self.height_() - h) / 2)
+
+    def width_(self):
+        return max(1, QWidget.width(self) - 24)
+
+    def height_(self):
+        return max(1, QWidget.height(self) - 24)
+
+    def to_image(self, pt):
+        s, off = self.geometry_for_image()
+        return QPointF((pt.x() - 12 - off.x()) / s, (pt.y() - 12 - off.y()) / s)
+
+    # -- the result
+    def render(self, preview=None):
+        if self.cache is None:
+            img = self.base.copy()
+            p = QPainter(img)
+            for op in self.ops:
+                draw_op(p, img, op)
+            p.end()
+            self.cache = img
+        if preview is None:
+            return self.cache
+        img = self.cache.copy()
+        p = QPainter(img)
+        draw_op(p, img, preview)
+        p.end()
+        return img
+
+    def current_op(self):
+        if not self.drag:
+            return None
+        a, b = self.drag
+        if self.tool == "arrow":
+            return {"kind": "arrow", "a": (a.x(), a.y()), "b": (b.x(), b.y()), "colour": self.colour, "width": self.width}
+        r = QRectF(a, b).normalized()
+        if self.tool in ("box", "highlight", "hide", "crop"):
+            kind = "box" if self.tool == "crop" else self.tool
+            op = {"kind": kind, "r": (r.x(), r.y(), r.width(), r.height()), "colour": self.colour, "width": self.width}
+            if self.tool == "crop":
+                op.update(colour="#ffffff", width=2)
+            return op
+        return None
+
+    # -- history
+    def push_history(self):
+        self.undo.append((self.base, [dict(o) for o in self.ops]))
+        self.redo.clear()
+        self.cache = None
+
+    def do_undo(self):
+        if self.undo:
+            self.redo.append((self.base, [dict(o) for o in self.ops]))
+            self.base, self.ops = self.undo.pop()
+            self.cache = None
+            self.update()
+            self.on_change()
+
+    def do_redo(self):
+        if self.redo:
+            self.undo.append((self.base, [dict(o) for o in self.ops]))
+            self.base, self.ops = self.redo.pop()
+            self.cache = None
+            self.update()
+            self.on_change()
+
+    def add(self, op):
+        self.push_history()
+        self.ops.append(op)
+        self.update()
+        self.on_change()
+
+    def crop_to(self, rect):
+        r = rect.toRect().intersected(self.base.rect())
+        if r.width() < 8 or r.height() < 8:
+            return
+        flat = self.render()
+        self.push_history()
+        self.base = flat.copy(r)
+        self.ops = []
+        self.cache = None
+        self.update()
+        self.on_change()
+
+    # -- the mouse
+    def mousePressEvent(self, e):
+        if e.button() != Qt.MouseButton.LeftButton:
+            return
+        pt = self.to_image(e.position())
+        if self.tool == "text":
+            text, ok = QInputDialog.getText(self, "Text", "What should it say?")
+            if ok and text.strip():
+                self.add({"kind": "text", "p": (pt.x(), pt.y()), "text": text.strip(), "colour": self.colour,
+                          "size": 14 + self.width * 5})
+            return
+        self.drag = (pt, pt)
+
+    def mouseMoveEvent(self, e):
+        if self.drag:
+            self.drag = (self.drag[0], self.to_image(e.position()))
+            self.update()
+
+    def mouseReleaseEvent(self, e):
+        if not self.drag or e.button() != Qt.MouseButton.LeftButton:
+            return
+        op = self.current_op()
+        a, b = self.drag
+        self.drag = None
+        if self.tool == "crop":
+            self.crop_to(QRectF(a, b).normalized())
+        elif op is not None and (a - b).manhattanLength() >= 4:
+            self.add(op)
+        self.update()
+
+    def paintEvent(self, _e):
+        p = QPainter(self)
+        p.fillRect(self.rect(), QColor("#1b2026"))
+        s, off = self.geometry_for_image()
+        img = self.render(self.current_op() if self.tool != "crop" else None)
+        target = QRectF(12 + off.x(), 12 + off.y(), self.base.width() * s, self.base.height() * s)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+        p.drawImage(target, img)
+        p.setPen(QPen(QColor("#3a4350"), 1))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawRect(target.adjusted(-0.5, -0.5, 0.5, 0.5))
+        if self.drag and self.tool == "crop":   # dim everything outside the crop
+            a, b = self.drag
+            r = QRectF(a.x() * s + 12 + off.x(), a.y() * s + 12 + off.y(), 0, 0)
+            r = QRectF(QPointF(a.x() * s + 12 + off.x(), a.y() * s + 12 + off.y()),
+                       QPointF(b.x() * s + 12 + off.x(), b.y() * s + 12 + off.y())).normalized()
+            path = QPainterPath()
+            path.addRect(target)
+            hole = QPainterPath()
+            hole.addRect(r)
+            p.fillPath(path.subtracted(hole), QColor(0, 0, 0, 150))
+            p.setPen(QPen(QColor("#ffffff"), 1, Qt.PenStyle.DashLine))
+            p.drawRect(r)
+
+
+# ---------------------------------------------------------------------------- the window
+class Editor(QWidget):
+    def __init__(self, image, source=""):
+        super().__init__()
+        self.setWindowTitle("Devium Shot")
+        if ui:
+            self.setWindowIcon(ui.app_icon())
+        self.saved_path = None
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(10, 10, 10, 8)
+        lay.setSpacing(8)
+        self.canvas = Canvas(image)
+        self.canvas.on_change = self.changed
+
+        bar = QHBoxLayout()
+        bar.setSpacing(6)
+        self.tool_buttons = {}
+        for key, name in TOOLS:
+            b = QPushButton(name)
+            b.setCheckable(True)
+            b.setStyleSheet("QPushButton:checked { background: #8fb4d8; color: #1b2026; font-weight: bold; }")
+            b.clicked.connect(lambda _c=False, k=key: self.pick_tool(k))
+            bar.addWidget(b)
+            self.tool_buttons[key] = b
+        bar.addSpacing(12)
+        self.swatches = []
+        for c in COLOURS:
+            s = QPushButton()
+            s.setFixedSize(26, 26)
+            s.setCheckable(True)
+            s.setStyleSheet(f"QPushButton {{ background: {c}; border: 2px solid #3a4350; border-radius: 13px; }}"
+                            f"QPushButton:checked {{ border: 3px solid #eef2f7; }}")
+            s.clicked.connect(lambda _c=False, col=c: self.pick_colour(col))
+            bar.addWidget(s)
+            self.swatches.append((c, s))
+        bar.addSpacing(8)
+        bar.addWidget(QLabel("Size"))
+        self.size = QSlider(Qt.Orientation.Horizontal)
+        self.size.setRange(2, 14)
+        self.size.setValue(4)
+        self.size.setFixedWidth(90)
+        self.size.valueChanged.connect(lambda v: setattr(self.canvas, "width", v))
+        bar.addWidget(self.size)
+        bar.addStretch(1)
+        self.undo_btn = QPushButton("Undo")
+        self.undo_btn.clicked.connect(self.canvas.do_undo)
+        self.redo_btn = QPushButton("Redo")
+        self.redo_btn.clicked.connect(self.canvas.do_redo)
+        bar.addWidget(self.undo_btn)
+        bar.addWidget(self.redo_btn)
+        lay.addLayout(bar)
+        lay.addWidget(self.canvas, 1)
+
+        bottom = QHBoxLayout()
+        self.note = QLabel("Tip: use Hide on passwords, emails and your IP address before you share a screenshot.")
+        self.note.setObjectName("subtitle")
+        self.note.setWordWrap(True)
+        bottom.addWidget(self.note, 1)
+        for text, fn, primary in (("Copy", self.copy, False), ("Save as…", self.save_as, False), ("Save", self.save, True)):
+            b = QPushButton(text)
+            if primary:
+                b.setObjectName("primary")
+            b.clicked.connect(fn)
+            bottom.addWidget(b)
+        lay.addLayout(bottom)
+
+        for seq, fn in ((QKeySequence.StandardKey.Undo, self.canvas.do_undo), (QKeySequence.StandardKey.Redo, self.canvas.do_redo),
+                        (QKeySequence("Ctrl+Y"), self.canvas.do_redo), (QKeySequence.StandardKey.Copy, self.copy),
+                        (QKeySequence.StandardKey.Save, self.save)):
+            a = QAction(self)
+            a.setShortcut(seq)
+            a.triggered.connect(fn)
+            self.addAction(a)
+        self.pick_tool("arrow")
+        self.pick_colour(COLOURS[0])
+        self.changed()
+        scr = QGuiApplication.primaryScreen().availableGeometry()
+        w = min(max(image.width() + 40, 820), int(scr.width() * 0.92))
+        h = min(max(image.height() + 150, 560), int(scr.height() * 0.92))
+        self.resize(w, h)
+
+    def pick_tool(self, key):
+        self.canvas.tool = key
+        for k, b in self.tool_buttons.items():
+            b.setChecked(k == key)
+        self.canvas.setCursor(Qt.CursorShape.IBeamCursor if key == "text" else Qt.CursorShape.CrossCursor)
+
+    def pick_colour(self, col):
+        self.canvas.colour = col
+        for c, s in self.swatches:
+            s.setChecked(c == col)
+
+    def changed(self):
+        self.undo_btn.setEnabled(bool(self.canvas.undo))
+        self.redo_btn.setEnabled(bool(self.canvas.redo))
+
+    def result(self):
+        return self.canvas.render()
+
+    def copy(self):
+        QGuiApplication.clipboard().setImage(self.result())
+        self.note.setText("Copied. Paste it into a chat, an email or a document.")
+
+    def save(self):
+        os.makedirs(SAVE_DIR, exist_ok=True)
+        name = datetime.datetime.now().strftime("Devium-%Y-%m-%d_%H-%M-%S.png")
+        path = os.path.join(SAVE_DIR, name)
+        if self.result().save(path):
+            self.saved_path = path
+            self.note.setText(f"Saved to {path.replace(os.path.expanduser('~'), '~')}")
+        else:
+            self.note.setText("Couldn't save the picture.")
+
+    def save_as(self):
+        os.makedirs(SAVE_DIR, exist_ok=True)
+        path, _ = QFileDialog.getSaveFileName(self, "Save picture", os.path.join(SAVE_DIR, "screenshot.png"),
+                                              "Pictures (*.png *.jpg *.jpeg *.webp)")
+        if path:
+            if "." not in os.path.basename(path):
+                path += ".png"
+            if self.result().save(path):
+                self.saved_path = path
+                self.note.setText(f"Saved to {path.replace(os.path.expanduser('~'), '~')}")
+            else:
+                self.note.setText("Couldn't save the picture.")
+
+
+def main():
+    args = sys.argv[1:]
+    if "-h" in args or "--help" in args:
+        print(__doc__.strip())
+        return 0
+    app = QApplication(sys.argv)
+    app.setApplicationName("Devium Shot")
+    app.setDesktopFileName("devium-shot")
+    if ui:
+        ui.style_app(app)
+    image = None
+    if "--clipboard" in args:
+        image = QGuiApplication.clipboard().image()
+        if image.isNull():
+            print("There's no picture on the clipboard.")
+            return 1
+    elif args and not args[0].startswith("-"):
+        image = QImage(os.path.expanduser(args[0]))
+        if image.isNull():
+            print(f"I can't open {args[0]} as a picture.")
+            return 1
+    else:
+        mode = "full" if "--full" in args else "window" if "--window" in args else "region"
+        path = capture(mode)
+        if not path:
+            print("No screenshot was taken (cancelled, or this desktop has no screenshot tool).")
+            return 1
+        image = QImage(path)
+        shutil.rmtree(os.path.dirname(path), ignore_errors=True)
+        if image.isNull():
+            print("The screenshot couldn't be read.")
+            return 1
+    win = Editor(image)
+    win.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

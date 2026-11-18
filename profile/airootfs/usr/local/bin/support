@@ -54,6 +54,7 @@ cmd "devium-doctor --check"           "Only check, change nothing (--report save
 cmd "support learn"                   "Learn the terminal: 10 short hands-on lessons"
 cmd "support dev"                     "Check your coding setup (Git, SSH, GitHub, languages, Docker)"
 cmd "snip / snip <name>"              "Your saved code snippets (snip add <name> to save one)"
+cmd "devium-shot"                     "Take a screenshot, then crop, draw arrows, add text and hide private details (Meta+Ctrl+S)"
 cmd "devium-wallpaper"                "Pick the desktop and lock screen pictures separately (or use Devium Tools > Look)"
 cmd "lyrics"                          "Words to the song that's playing, following along (--once to print them)"
 cmd "album-cover"                     "The playing song's album cover in the terminal (--ascii for ASCII art)"

@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshot Editor
+GenericName=Screenshot and markup
+Comment=Take a screenshot, then crop, draw arrows, add text and hide private details
+Icon=applets-screenshooter
+Exec=devium-shot
+Terminal=false
+Categories=Graphics;
+Keywords=screenshot;snip;crop;annotate;arrow;blur;hide;markup;edit;screen;capture;
+Actions=Region;Full;Clipboard;
+
+[Desktop Action Region]
+Name=Pick an area
+Exec=devium-shot
+
+[Desktop Action Full]
+Name=Whole screen
+Exec=devium-shot --full
+
+[Desktop Action Clipboard]
+Name=Edit the picture on the clipboard
+Exec=devium-shot --clipboard

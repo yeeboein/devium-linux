@@ -42,6 +42,10 @@
   the lyric line being sung, and play/pause/next/previous buttons. Works with Spotify, your browser, VLC and other
   players. Add it from right-click desktop > Add Widgets (KDE) or Devium Tools > Look > Devium widgets.
 - **Fixed: Devium widgets on Xfce** never got their data (weather, sea, system...) because of how they were started.
+- **Screenshot Editor** (`devium-shot`, or Meta+Ctrl+S): take a screenshot of an area, the whole screen or a window,
+  then crop it, draw arrows and boxes, highlight, add text, and **hide private details** (passwords, emails, your IP
+  address) behind big blocks. Copy it, or save it to Pictures/Screenshots. Works on KDE, Xfce and Hyprland, and can
+  also edit any picture or the one on your clipboard.
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered

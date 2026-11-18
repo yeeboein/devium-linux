@@ -136,6 +136,15 @@ if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [
     touch "$STATE/spotlight-key"
 fi
 
+# --- 1.0: Meta+Ctrl+S opens the Screenshot Editor (KDE; new users get it from /etc/skel)
+if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [[ ! -f $STATE/shot-key ]]; then
+    if ! grep -q "devium-shot.desktop" "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" 2>/dev/null; then
+        kwriteconfig6 --file kglobalshortcutsrc --group services --group devium-shot.desktop \
+            --key _launch "Meta+Ctrl+S"
+    fi
+    touch "$STATE/shot-key"
+fi
+
 # --- beta15: with ArchPill, brightness shows only in the pill (Plasma's own brightness popup off), once
 if [[ ! -f $STATE/archpill-osd ]] && command -v plasmashell >/dev/null && \
    [[ -f $STATE/archpill-wanted || -d ${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/archpill ]]; then

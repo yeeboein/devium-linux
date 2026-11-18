@@ -13,3 +13,6 @@ _launch=Meta+U
 
 [services][devium-spotlight.desktop]
 _launch=Meta+Space
+
+[services][devium-shot.desktop]
+_launch=Meta+Ctrl+S
