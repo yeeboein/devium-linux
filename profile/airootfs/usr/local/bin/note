@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+"""note - quick notes in the terminal.
+
+  note "buy milk"          add a note (#tags work: note "call mum #family")
+  note                     show your notes
+  note list [word]         show notes, only those with a word or #tag if you give one (also: note search word)
+  note today               notes you wrote today
+  note done 3              tick note 3 off (note undo 3 un-ticks it)
+  note edit 3 "new text"   change note 3
+  note rm 3                delete note 3 (note rm 1 4 5 for several)
+  note clear               delete every ticked-off note
+  note open                open the notes file in your editor
+  note path                where the notes are kept
+  cat file.txt | note -    add each line of a file or command output as a note
+  note add list eggs       add a note that starts with a command word (list, done, rm, open...)
+
+Your notes are a plain checklist in ~/.local/share/devium/notes.md. The numbers are the position in the list,
+so they change when you delete a note: `note` always shows the current numbers.
+"""
+import datetime
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+PATH = os.path.join(os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")), "devium", "notes.md")
+LINE = re.compile(r"^- \[( |x|X)\] (?:(\d{4}-\d\d-\d\d)(?: (\d\d:\d\d))?  )?(.*)$")
+B, D, N = "\033[1m", "\033[2m", "\033[0m"
+ACCENT, SOFT, GOOD = "\033[38;2;143;180;216m", "\033[38;2;196;204;214m", "\033[38;2;143;212;184m"
+if not sys.stdout.isatty() or os.environ.get("NO_COLOR"):
+    B = D = N = ACCENT = SOFT = GOOD = ""
+
+
+def read_lines():
+    try:
+        with open(PATH, encoding="utf-8") as f:
+            return f.read().splitlines()
+    except OSError:
+        return []
+
+
+def write_lines(lines):
+    os.makedirs(os.path.dirname(PATH), exist_ok=True)
+    tmp = PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + ("\n" if lines else ""))
+    os.replace(tmp, PATH)
+
+
+def notes(lines):
+    """[(line_index, done, date, time, text)] for the note lines, in order (the number is the position + 1)."""
+    out = []
+    for i, line in enumerate(lines):
+        m = LINE.match(line)
+        if m:
+            out.append((i, m.group(1) != " ", m.group(2) or "", m.group(3) or "", m.group(4)))
+    return out
+
+
+def make_line(text, done=False, date=None):
+    stamp = date or datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    return f"- [{'x' if done else ' '}] {stamp}  {text}"
+
+
+def pretty_date(date, time):
+    if not date:
+        return ""
+    try:
+        d = datetime.date.fromisoformat(date)
+    except ValueError:
+        return date
+    today = datetime.date.today()
+    if d == today:
+        day = "today"
+    elif d == today - datetime.timedelta(days=1):
+        day = "yesterday"
+    else:
+        day = d.strftime("%b %-d")
+    return f"{day} {time}".strip()
+
+
+def tagged(text):
+    return re.sub(r"(#\w+)", lambda m: f"{ACCENT}{m.group(1)}{N}", text)
+
+
+def show(items, title=None, empty="You have no notes yet. Add one: note \"buy milk\""):
+    if not items:
+        print(f"{SOFT}{empty}{N}")
+        return
+    if title:
+        print(f"{B}{title}{N}")
+    width = len(str(max(n for n, *_ in items)))
+    for n, done, date, time, text in items:
+        when = f"{D}{pretty_date(date, time):<16}{N}"
+        if done:
+            print(f" {D}{n:>{width}}  ✔  {when} {D}{text}{N}")
+        else:
+            print(f" {B}{n:>{width}}{N}  {ACCENT}○{N}  {when} {tagged(text)}")
+    open_count = sum(1 for it in items if not it[1])
+    print(f"{D}{open_count} to do, {len(items) - open_count} done{N}")
+
+
+def numbered(lines):
+    return [(n + 1, *rest) for n, (_i, *rest) in enumerate(notes(lines))]
+
+
+def pick(lines, args):
+    """The note numbers given on the command line -> their line indexes (or an error message)."""
+    items = notes(lines)
+    idx = []
+    for a in args:
+        if not a.isdigit() or not 1 <= int(a) <= len(items):
+            return None, f"There's no note {a}. Type `note` to see the numbers."
+        idx.append(items[int(a) - 1][0])
+    return idx, None
+
+
+def add(text):
+    text = " ".join(text.split())
+    if not text:
+        return 1
+    lines = read_lines()
+    lines.append(make_line(text))
+    write_lines(lines)
+    print(f"{GOOD}Noted:{N} {tagged(text)}  {D}(note {len(notes(lines))}){N}")
+    return 0
+
+
+def main():
+    args = sys.argv[1:]
+    if args and args[0] in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return 0
+    if args == ["-"]:                      # note -   (reads lines from a pipe: cat file | note -)
+        added = 0
+        for line in sys.stdin.read().splitlines():
+            if line.strip():
+                added += add(line) == 0
+        return 0 if added else 1
+    if not args:
+        show(numbered(read_lines()))
+        return 0
+    cmd, rest = args[0].lower(), args[1:]
+    lines = read_lines()
+    if cmd == "add":
+        return add(" ".join(rest)) if rest else (print("Say what to note: note add \"buy milk\"") or 1)
+    if cmd in ("list", "ls", "search"):
+        items = numbered(lines)
+        if rest:
+            word = " ".join(rest).lower()
+            items = [it for it in items if word in it[4].lower()]
+            show(items, empty=f"No notes with \"{' '.join(rest)}\".")
+        else:
+            show(items)
+        return 0
+    if cmd == "today":
+        today = datetime.date.today().isoformat()
+        show([it for it in numbered(lines) if it[2] == today], empty="Nothing noted today yet.")
+        return 0
+    if cmd in ("done", "d", "check", "undo", "uncheck") and rest and all(a.isdigit() for a in rest):
+        idx, err = pick(lines, rest)
+        if err:
+            print(err)
+            return 1
+        want_done = cmd in ("done", "d", "check")
+        for i in idx:
+            m = LINE.match(lines[i])
+            lines[i] = make_line(m.group(4), want_done, f"{m.group(2)} {m.group(3)}".strip() if m.group(2) else None)
+        write_lines(lines)
+        print(f"{GOOD}{'Ticked off' if want_done else 'Back on the list'}:{N} " + ", ".join(rest))
+        return 0
+    if cmd in ("rm", "del", "delete", "remove") and rest and all(a.isdigit() for a in rest):
+        idx, err = pick(lines, rest)
+        if err:
+            print(err)
+            return 1
+        for i in sorted(set(idx), reverse=True):
+            del lines[i]
+        write_lines(lines)
+        print(f"Deleted {len(set(idx))} note{'s' if len(set(idx)) != 1 else ''}.")
+        return 0
+    if cmd in ("edit", "change") and len(rest) >= 2 and rest[0].isdigit():
+        idx, err = pick(lines, rest[:1])
+        if err:
+            print(err)
+            return 1
+        m = LINE.match(lines[idx[0]])
+        lines[idx[0]] = make_line(" ".join(" ".join(rest[1:]).split()), m.group(1) != " ",
+                                  f"{m.group(2)} {m.group(3)}".strip() if m.group(2) else None)
+        write_lines(lines)
+        print(f"{GOOD}Changed note {rest[0]}.{N}")
+        return 0
+    if cmd == "clear":
+        keep = [line for line in lines if not (LINE.match(line) and LINE.match(line).group(1) != " ")]
+        removed = len(lines) - len(keep)
+        if removed:
+            write_lines(keep)
+        print(f"Cleared {removed} finished note{'s' if removed != 1 else ''}.")
+        return 0
+    if cmd == "path":
+        print(PATH)
+        return 0
+    if cmd == "open":
+        if not os.path.exists(PATH):
+            write_lines([])
+        for ed in (os.environ.get("VISUAL"), os.environ.get("EDITOR"), "kate", "gnome-text-editor", "mousepad", "nano"):
+            if ed and shutil.which(ed.split()[0]):
+                return subprocess.call(ed.split() + [PATH])
+        print(f"I couldn't find a text editor. The notes are in {PATH}")
+        return 1
+    # anything else is a new note ("note buy milk" works without quotes too)
+    return add(" ".join(args))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -46,6 +46,9 @@
   then crop it, draw arrows and boxes, highlight, add text, and **hide private details** (passwords, emails, your IP
   address) behind big blocks. Copy it, or save it to Pictures/Screenshots. Works on KDE, Xfce and Hyprland, and can
   also edit any picture or the one on your clipboard.
+- **`note` in the terminal:** quick notes. `note "buy milk"` adds one, `note` shows them, `note done 2` ticks one
+  off, `note rm 3` deletes one, `note search word` finds them, and #tags work. They're a plain checklist file you
+  can open in any editor (`note open`).
 - **Fixes** for everything beta17 testers report on Discord.
 
 ## Ideas being considered
