@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Lock Screen Wallpaper
+Comment=Choose the picture on your lock screen (and login screen)
+Icon=preferences-desktop-wallpaper
+Exec=devium-wallpaper gui
+Keywords=lock;lockscreen;lock screen;wallpaper;background;login;picture;
+X-KDE-System-Settings-Parent-Category=appearance
+X-KDE-Weight=11

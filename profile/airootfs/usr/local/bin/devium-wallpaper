@@ -5,6 +5,8 @@
   devium-wallpaper home PICTURE|default   the desktop picture
   devium-wallpaper lock PICTURE|default   the lock screen picture
   devium-wallpaper login PICTURE|default  the login screen picture (asks for your password)
+  devium-wallpaper gui                    a small window to pick both (System Settings > Appearance >
+                                          Lock Screen Wallpaper opens this)
 
 "default" puts Devium's own pictures back. Your chosen pictures are copied to ~/.local/share/devium/wallpapers,
 so moving or deleting the original doesn't break anything. Works on KDE Plasma, Xfce and Hyprland (on Xfce the
@@ -129,12 +131,134 @@ def set_login(path):
     return run(HELPER + ["login-wallpaper", path or "default"])
 
 
+def gui():
+    """A small window: desktop picture and lock screen picture, each with a preview, Choose and Use Devium's."""
+    sys.path.insert(0, "/usr/lib/devium")
+    from PyQt6.QtCore import QProcess, Qt
+    from PyQt6.QtGui import QPixmap
+    from PyQt6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QHBoxLayout, QLabel, QPushButton,
+                                 QVBoxLayout, QWidget)
+    try:
+        import devium_ui as ui
+    except ImportError:
+        ui = None
+    app = QApplication(sys.argv)
+    app.setApplicationName("Devium Wallpapers")
+    app.setDesktopFileName("devium-wallpapers")
+    if ui:
+        ui.style_app(app)
+    win = QWidget()
+    win.setWindowTitle("Wallpapers")
+    if ui:
+        win.setWindowIcon(ui.app_icon())
+    lay = QVBoxLayout(win)
+    lay.setContentsMargins(22, 18, 22, 18)
+    lay.setSpacing(10)
+    if ui:
+        lay.addWidget(ui.header("Wallpapers", "Pick the picture for your desktop and for your lock screen."))
+    note = QLabel("")
+    note.setWordWrap(True)
+    login_box = QCheckBox("Use the lock screen picture on the login screen too (asks for your password)")
+    login_box.setChecked(True)
+    login_box.setVisible(not XFCE and (os.path.isdir("/usr/share/sddm/themes/devium") or HYPR))
+    thumbs = {}
+
+    def current(kind):
+        s = load()
+        return s.get(kind) or (HOME_DEFAULT if kind == "home" else LOCK_DEFAULT)
+
+    def show(kind):
+        pm = QPixmap(current(kind))
+        if pm.isNull():
+            thumbs[kind].setText("(no picture)")
+        else:
+            thumbs[kind].setPixmap(pm.scaled(240, 135, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                             Qt.TransformationMode.SmoothTransformation).copy(0, 0, 240, 135))
+
+    def apply(kind, source):
+        steps = [kind] + (["login"] if kind == "lock" and login_box.isVisible() and login_box.isChecked() else [])
+        note.setText("Working…")
+
+        def step():
+            if not steps:
+                show(kind)
+                note.setText("Done!")
+                return
+            k = steps.pop(0)
+            proc = QProcess(win)
+            proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+
+            def finished(code, _status, proc=proc):
+                out = bytes(proc.readAllStandardOutput()).decode(errors="replace").strip()
+                if code != 0:
+                    note.setText(out.splitlines()[-1] if out else "That didn't work.")
+                    show(kind)
+                else:
+                    step()
+            proc.finished.connect(finished)
+            proc.start(sys.executable, [os.path.abspath(__file__), k, source])
+        step()
+
+    def choose(kind):
+        start = os.path.join(HOME, "Pictures") if os.path.isdir(os.path.join(HOME, "Pictures")) else HOME
+        f, _ = QFileDialog.getOpenFileName(win, "Choose a picture", start, "Pictures (*.jpg *.jpeg *.png *.webp *.bmp)")
+        if f:
+            apply(kind, f)
+
+    def row(kind, title, desc):
+        box = QWidget()
+        h = QHBoxLayout(box)
+        h.setContentsMargins(0, 6, 0, 6)
+        h.setSpacing(16)
+        thumb = QLabel()
+        thumb.setFixedSize(240, 135)
+        thumb.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        thumb.setStyleSheet("border-radius: 10px; background: rgba(255,255,255,0.06);")
+        thumbs[kind] = thumb
+        show(kind)
+        h.addWidget(thumb)
+        v = QVBoxLayout()
+        t = QLabel(title)
+        t.setObjectName("h2")
+        d = QLabel(desc)
+        d.setObjectName("subtitle")
+        d.setWordWrap(True)
+        v.addWidget(t)
+        v.addWidget(d)
+        b = QHBoxLayout()
+        pick = QPushButton("Choose picture…")
+        pick.setObjectName("primary")
+        pick.clicked.connect(lambda: choose(kind))
+        reset = QPushButton("Use Devium's")
+        reset.clicked.connect(lambda: apply(kind, "default"))
+        b.addWidget(pick)
+        b.addWidget(reset)
+        b.addStretch(1)
+        v.addLayout(b)
+        v.addStretch(1)
+        h.addLayout(v, 1)
+        return box
+
+    lay.addWidget(row("lock", "Lock screen picture",
+                      "The picture behind the clock when you lock your computer." if not XFCE
+                      else "The picture behind the login and lock screen."))
+    lay.addWidget(login_box)
+    lay.addWidget(row("home", "Desktop picture", "The wallpaper behind your windows (your home screen)."))
+    lay.addWidget(note)
+    lay.addStretch(1)
+    win.resize(640, 470)
+    win.show()
+    return app.exec()
+
+
 def main():
     a = sys.argv[1:]
     if not a or a[0] in ("-h", "--help"):
         print(__doc__.strip())
         return 0
     cmd = a[0]
+    if cmd == "gui":
+        return gui()
     if cmd == "status":
         s = load()
         print(json.dumps({"home": s.get("home"), "lock": s.get("lock"), "login": s.get("login"),

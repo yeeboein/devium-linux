@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Wallpapers
+GenericName=Desktop and lock screen pictures
+Comment=Choose your desktop picture and your lock screen picture
+Icon=preferences-desktop-wallpaper
+Exec=devium-wallpaper gui
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=wallpaper;background;lock screen;lockscreen;login;picture;
