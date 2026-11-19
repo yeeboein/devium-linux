@@ -14,6 +14,7 @@ conversions and terminal commands.
   docs python:split       search the offline docs (Zeal) or DevDocs
 """
 import ast
+import atexit
 import configparser
 import glob
 import json
@@ -23,6 +24,7 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 
@@ -369,6 +371,72 @@ def terminal(command):
             return
 
 
+# ---------------------------------------------------------------------------- Hyprland: never part of the tiling
+ON_HYPRLAND = bool(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"))
+
+
+def hypr(*args):
+    try:
+        return subprocess.run(["hyprctl", *args], capture_output=True, text=True, timeout=1.5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def hypr_float_and_place():
+    """Hyprland tiles every new window and ignores where a Qt window asks to be put. Window rules should float
+    Spotlight, but their syntax has changed between Hyprland versions, so make sure here: float it, put it near the
+    top in the middle of the screen it's on, and give it the keyboard. True when it was found."""
+    try:
+        mine = next(c for c in json.loads(hypr("-j", "clients") or "[]")
+                    if "devium-spotlight" in (c.get("class"), c.get("initialClass")))
+    except (ValueError, StopIteration):
+        return False
+    addr = f"address:{mine['address']}"
+    if not mine.get("floating"):
+        hypr("dispatch", "setfloating", addr)
+    try:
+        mons = json.loads(hypr("-j", "monitors") or "[]")
+        mon = next((m for m in mons if m.get("id") == mine.get("monitor")), None) or \
+            next((m for m in mons if m.get("focused")), mons[0])
+        scale = mon.get("scale") or 1
+        w, _h = mine.get("size", [680, 100])
+        x = mon["x"] + (mon["width"] / scale - w) / 2
+        y = mon["y"] + mon["height"] / scale * 0.2
+        hypr("dispatch", "movewindowpixel", f"exact {int(x)} {int(y)},{addr}")
+    except (ValueError, KeyError, IndexError, StopIteration):
+        hypr("dispatch", "centerwindow")
+    hypr("dispatch", "focuswindow", addr)
+    return True
+
+
+def hypr_when_mapped(tries=8):
+    """The window shows up a moment after show(): try again shortly until Hyprland knows about it."""
+    if not hypr_float_and_place() and tries > 1:
+        QTimer.singleShot(60, lambda: hypr_when_mapped(tries - 1))
+
+
+def toggle_if_open():
+    """Hyprland: pressing Super+Space while Spotlight is open closes it, instead of opening a second one (which
+    would be tiled next to the first). Returns True when it closed the open one."""
+    pidfile = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), f"devium-spotlight-{os.getuid()}.pid")
+    try:
+        pid = int(open(pidfile).read().strip())
+        cmd = open(f"/proc/{pid}/cmdline", "rb").read().replace(b"\0", b" ").decode(errors="replace")
+        if pid != os.getpid() and "devium-spotlight" in cmd:
+            os.kill(pid, signal.SIGTERM)
+            return True
+    except (OSError, ValueError):
+        pass
+    try:
+        with open(pidfile, "w") as f:
+            f.write(str(os.getpid()))
+        atexit.register(lambda: os.path.exists(pidfile) and open(pidfile).read().strip() == str(os.getpid())
+                        and os.remove(pidfile))
+    except OSError:
+        pass
+    return False
+
+
 # ---------------------------------------------------------------------------- window
 class Spotlight(QWidget):
     def __init__(self):
@@ -541,6 +609,8 @@ class Spotlight(QWidget):
 
 
 def main():
+    if ON_HYPRLAND and toggle_if_open():
+        return
     app = QApplication(sys.argv)
     app.setApplicationName("Devium Spotlight")
     app.setDesktopFileName("devium-spotlight")
@@ -549,6 +619,8 @@ def main():
     w.show()
     w.activateWindow()
     w.edit.setFocus()
+    if ON_HYPRLAND:
+        QTimer.singleShot(30, hypr_when_mapped)
     # close when you click somewhere else (once it has had focus)
     seen = {"active": False}
 

@@ -213,6 +213,22 @@ if [[ ! -f $STATE/lock-picture ]]; then
     touch "$STATE/lock-picture"
 fi
 
+# --- 1.0: Spotlight is exempt from Hyprland's tiling (Hyprland edition; new users get this from /etc/skel)
+hl="$HOME/.config/hypr/hyprland.conf"
+if [[ -f $hl && ! -f $STATE/spotlight-float ]] && command -v hyprctl >/dev/null; then
+    if ! grep -q 'center, class:^(devium-spotlight)' "$hl"; then
+        cat >> "$hl" <<'RULES'
+
+# Devium Spotlight floats above the tiling and never joins it
+windowrulev2 = float, class:^(devium-spotlight)$
+windowrulev2 = center, class:^(devium-spotlight)$
+windowrulev2 = noanim, class:^(devium-spotlight)$
+windowrulev2 = noshadow, class:^(devium-spotlight)$
+RULES
+    fi
+    touch "$STATE/spotlight-float"
+fi
+
 # --- beta15: secret guard on by default (stops commits containing passwords/keys); not if you set your own hooks
 if [[ ! -f $STATE/git-guard ]] && command -v git >/dev/null; then
     [[ -z $(git config --global core.hooksPath) ]] && git config --global core.hooksPath /usr/lib/devium/git-hooks

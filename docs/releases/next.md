@@ -15,6 +15,9 @@
 - **`support selftest`:** checks that every Devium app, widget and helper works, and gives you a list to share.
 - **Lighter on old laptops:** Snap Assist on Xfce only wakes up when a window moves, and the crash catcher
   switches off in Low-RAM mode.
+- **Spotlight is exempt from Hyprland's tiling:** Super+Space opens it as a floating box near the top of the screen
+  that never joins the tiled windows (Spotlight now makes sure of that itself, whatever Hyprland version you have),
+  and pressing Super+Space again closes it instead of opening a second copy.
 - **Fixes** for everything beta18.5 testers report on Discord.
 
 ## Ideas being considered
