@@ -15,4 +15,27 @@ fi
 
 dir=/etc/xdg/fastfetch
 # Always the same layout: the Devium logo on the left with your info right next to it, whatever the window size.
+# Lines longer than the window are cut (colours kept) so they never wrap back under the logo.
+if [[ -t 1 ]] && command -v python3 >/dev/null; then
+    cols=$(tput cols 2>/dev/null || echo 0)
+    if (( cols >= 20 )); then
+        "$real" --pipe false -c "$dir/config$suffix.jsonc" "$@" | python3 -c '
+import re, sys
+cols = int(sys.argv[1])
+esc = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+for line in sys.stdin:
+    line = line.rstrip("\n")
+    out, vis, i = [], 0, 0
+    while i < len(line):
+        m = esc.match(line, i)
+        if m:
+            out.append(m.group()); i = m.end(); continue
+        if vis >= cols - 1:
+            break
+        out.append(line[i]); vis += 1; i += 1
+    sys.stdout.write("".join(out) + ("\x1b[0m" if "\x1b" in line else "") + "\n")
+' "$cols"
+        exit "${PIPESTATUS[0]}"
+    fi
+fi
 exec "$real" -c "$dir/config$suffix.jsonc" "$@"

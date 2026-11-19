@@ -25,3 +25,4 @@
 - Screenshot editor (crop, arrows, blur private details)
 - Clone a GitHub repo from Spotlight and open it ready to code
 - Community themes in Devium Tools > Look
+- fastfetch: long lines are cut to the window width so they never wrap back under the logo (narrow windows looked broken).
