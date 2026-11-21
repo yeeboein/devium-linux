@@ -50,7 +50,7 @@ QPushButton#tile2:hover {{ border: 1px solid {ACCENT}; background: palette(alter
 QPushButton#tile2:pressed {{ background: palette(button); }}
 QLabel#tiletitle {{ font-size: 11.5pt; font-weight: 600; }}
 QFrame#statcard {{ border: 1px solid palette(mid); border-radius: 16px; background: palette(base); }}
-QLabel#statvalue {{ font-size: 18pt; font-weight: 700; }}
+QLabel#statvalue {{ font-size: 14pt; font-weight: 700; }}
 QLineEdit, QSpinBox, QComboBox {{
     padding: 6px 10px; border-radius: 9px; border: 1px solid palette(mid); background: palette(base);
 }}

@@ -240,7 +240,7 @@ class Tile(QPushButton):
         super().__init__()
         self.setObjectName("tile2")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setMinimumHeight(84)
+        self.setMinimumHeight(92)
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.setToolTip(desc)
         lay = QHBoxLayout(self)
@@ -253,6 +253,7 @@ class Tile(QPushButton):
         lay.addWidget(pic)
         col = QVBoxLayout()
         col.setSpacing(2)
+        col.addStretch(1)
         title = QLabel(name)
         title.setObjectName("tiletitle")
         text = QLabel(desc)
@@ -262,6 +263,7 @@ class Tile(QPushButton):
             w.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         col.addWidget(title)
         col.addWidget(text)
+        col.addStretch(1)
         lay.addLayout(col, 1)
         self.clicked.connect(act)
 
@@ -316,7 +318,7 @@ class HomePage(Page):
         self.col.addLayout(self.stats)
         groups = [
             (T("Look after your computer"), [
-                (T("Updates"), "Install updates with a restore point first (Meta+U)", "system-software-update",
+                (T("Updates"), "Install updates with undo (Meta+U)", "system-software-update",
                  lambda: win.go("updates")),
                 (T("System storage"), "See where your disk space went", "drive-harddisk", lambda: win.go("storage")),
                 (T("Clean up"), "Find what takes space and free it", "edit-clear", lambda: win.go("clean")),
@@ -329,30 +331,29 @@ class HomePage(Page):
                 ("Devium Configure", "Add or remove apps and the look", "devium", lambda: ui.launch("devium-setup-wizard")),
                 ("Devium Updater", "Get new Devium versions", "devium", lambda: ui.launch("devium-updater")),
                 (T("App Manager"), "Size, RAM and remove apps", "view-list-details", lambda: win.go("apps")),
-                (T("Background and extras"), "Turn off background apps, remove extra apps",
+                (T("Background apps"), "Turn off apps that run quietly",
                  "preferences-system-startup", lambda: win.go("background")),
                 (T("Backup and move"), "Back up to USB, or move to a new PC", "document-save", lambda: win.go("backup")),
-                (T("Coding tools"), "Databases, secret guard, HTTPS, sharing, versions", "code-block",
+                (T("Coding tools"), "Databases, secret guard, HTTPS", "code-block",
                  lambda: win.go("coding")),
             ]),
             (T("Everyday"), [
                 (T("Look"), "Accent colour, and reset the desktop", "preferences-desktop-color", lambda: win.go("look")),
                 (T("Privacy"), "Firewall, Wi-Fi tracking, location", "security-high", lambda: win.go("privacy")),
-                (T("Phone link"), "Files, notifications and clipboard with your phone", "smartphone",
+                (T("Phone link"), "Files and notifications on your PC", "smartphone",
                  lambda: win.go("phone")),
                 (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
                 (T("Report a problem"), "Tell the Devium team what went wrong", "tools-report-bug",
                  lambda: ReportDialog(win).exec()),
             ]),
         ]
+        self.grids = []       # [(grid, [tiles])]: laid out in 3, 2 or 1 columns depending on the window width
         for title, tiles in groups:
             self.add(label(title, "h2"))
             grid = QGridLayout()
             grid.setSpacing(12)
-            for i, (name, desc, icon, act) in enumerate(tiles):
-                grid.addWidget(Tile(name, desc, icon, act), i // 3, i % 3)
-            for c in range(3):
-                grid.setColumnStretch(c, 1)
+            made = [Tile(name, desc, icon, act) for name, desc, icon, act in tiles]
+            self.grids.append((grid, made))
             holder = QWidget()
             holder.setLayout(grid)
             self.add(holder)
@@ -365,6 +366,28 @@ class HomePage(Page):
             links.setText(links.text() + f" &nbsp;·&nbsp; <a href='{invite}'>Discord</a>")
         self.add(links)
         self.finish()
+
+    def relayout(self):
+        cols = 3 if self.width() >= 900 else 2 if self.width() >= 560 else 1
+        if getattr(self, "cols", 0) == cols:
+            return
+        self.cols = cols
+        for grid, tiles in self.grids:
+            for t in tiles:
+                grid.removeWidget(t)
+            for c in range(3):
+                grid.setColumnStretch(c, 1 if c < cols else 0)
+            for i, t in enumerate(tiles):
+                grid.addWidget(t, i // cols, i % cols)
+        self.stats.setDirection(QHBoxLayout.Direction.LeftToRight)
+
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        self.relayout()
+
+    def showEvent(self, ev):
+        super().showEvent(ev)
+        self.relayout()
 
     def on_show(self):
         m = meminfo()
