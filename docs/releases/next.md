@@ -27,3 +27,6 @@
 - Community themes in Devium Tools > Look
 - fastfetch: long lines are cut to the window width so they never wrap back under the logo (narrow windows looked broken).
 - fastfetch in a narrow or tall window: CPU, GPU, Memory, Disk and Packages show short versions (no clock speed, percentage or file system) so nothing wraps under the logo.
+- Spotlight polish: every result has a small label (App, Setting, File, Web, Answer...), the hint under the box says what Enter will do for the selected result, the window fades in, and results are drawn cleaner.
+- Spotlight remembers what you open: apps you use a lot rank higher, and an empty box shows your recent apps and commands.
+- Spotlight keys: Alt+1 to Alt+8 opens that result, Ctrl+N / Ctrl+P (or Ctrl+J / Ctrl+K) and PageUp / PageDown move through results, and Up on the first result goes to the last.

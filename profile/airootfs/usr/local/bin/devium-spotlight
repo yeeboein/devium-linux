@@ -30,9 +30,12 @@ import sys
 
 sys.path.insert(0, "/usr/lib/devium")
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QGuiApplication, QIcon
-from PyQt6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+import time
+
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, QSize, Qt, QTimer
+from PyQt6.QtGui import QColor, QFont, QGuiApplication, QIcon, QLinearGradient, QPainter, QPainterPath
+from PyQt6.QtWidgets import (QApplication, QLabel, QLineEdit, QListWidget, QListWidgetItem, QStyle, QStyledItemDelegate,
+                             QVBoxLayout, QWidget)
 
 import devium_ui as ui
 from devium_i18n import T
@@ -437,6 +440,99 @@ def toggle_if_open():
     return False
 
 
+# ---------------------------------------------------------------------------- what you opened before
+HISTORY = os.path.join(os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state")), "devium",
+                       "spotlight-history.json")
+
+
+def load_history():
+    try:
+        with open(HISTORY, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def remember(title, icon, kind, val, tag):
+    """Count what you open so the things you use most come first (and show up when the box is empty)."""
+    hist = load_history()
+    key = f"{kind}|{val if isinstance(val, str) else ' '.join(val)}"
+    old = hist.get(key, {})
+    hist[key] = {"t": title, "i": icon, "k": kind, "v": val, "g": tag, "n": old.get("n", 0) + 1, "ts": time.time()}
+    if len(hist) > 60:   # keep the 60 most recent
+        for k, _v in sorted(hist.items(), key=lambda kv: kv[1].get("ts", 0))[:len(hist) - 60]:
+            del hist[k]
+    try:
+        os.makedirs(os.path.dirname(HISTORY), exist_ok=True)
+        with open(HISTORY + ".tmp", "w", encoding="utf-8") as f:
+            json.dump(hist, f)
+        os.replace(HISTORY + ".tmp", HISTORY)
+    except OSError:
+        pass
+
+
+ROLE_SUB, ROLE_TAG, ROLE_ACTION, ROLE_ICON = (Qt.ItemDataRole.UserRole + 1, Qt.ItemDataRole.UserRole + 2,
+                                              Qt.ItemDataRole.UserRole, Qt.ItemDataRole.UserRole + 3)
+ROW_H = 54
+VERBS = {"app": "open", "cmd": "open", "open": "open", "url": "open in your browser", "copy": "copy",
+         "term": "run in the terminal", "run": "run"}
+
+
+class RowDelegate(QStyledItemDelegate):
+    """A result row: icon, title, a softer second line, and a small label on the right saying what it is."""
+
+    def sizeHint(self, option, index):
+        return QSize(option.rect.width(), ROW_H)
+
+    def paint(self, painter, option, index):
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
+        r = QRectF(option.rect).adjusted(2, 2, -2, -2)
+        text = option.palette.windowText().color()
+        soft = QColor(text); soft.setAlphaF(0.62)
+        if selected:
+            g = QLinearGradient(r.left(), 0, r.right(), 0)
+            g.setColorAt(0, QColor(ui.ACCENT)); g.setColorAt(1, QColor(ui.ACCENT2))
+            path = QPainterPath(); path.addRoundedRect(r, 11, 11); painter.fillPath(path, g)
+            text = QColor("#1b2026"); soft = QColor(27, 32, 38, 170)
+        elif option.state & QStyle.StateFlag.State_MouseOver:
+            hov = QColor(text); hov.setAlphaF(0.07)
+            path = QPainterPath(); path.addRoundedRect(r, 11, 11); painter.fillPath(path, hov)
+        icon = index.data(Qt.ItemDataRole.DecorationRole)
+        left = r.left() + 10
+        if isinstance(icon, QIcon):
+            icon.paint(painter, int(left), int(r.top() + (r.height() - 32) / 2), 32, 32)
+        left += 44
+        tag = index.data(ROLE_TAG) or ""
+        tag_w = 0
+        if tag:
+            f = QFont(option.font); f.setPointSizeF(max(7.5, option.font.pointSizeF() - 2.5)); f.setBold(True)
+            painter.setFont(f)
+            tag_w = painter.fontMetrics().horizontalAdvance(tag) + 18
+            box = QRectF(r.right() - tag_w - 8, r.center().y() - 10, tag_w, 20)
+            pill = QColor(text); pill.setAlphaF(0.16 if not selected else 0.12)
+            pp = QPainterPath(); pp.addRoundedRect(box, 10, 10); painter.fillPath(pp, pill)
+            painter.setPen(soft); painter.drawText(box, Qt.AlignmentFlag.AlignCenter, tag)
+            tag_w += 16
+        avail = int(r.right() - left - tag_w - 6)
+        title, sub = index.data(Qt.ItemDataRole.DisplayRole) or "", index.data(ROLE_SUB) or ""
+        f = QFont(option.font); f.setPointSizeF(option.font.pointSizeF() + 0.5); painter.setFont(f); painter.setPen(text)
+        fm = painter.fontMetrics()
+        if sub:
+            painter.drawText(int(left), int(r.top() + 8 + fm.ascent()),
+                             fm.elidedText(title, Qt.TextElideMode.ElideRight, avail))
+            f2 = QFont(option.font); f2.setPointSizeF(max(8, option.font.pointSizeF() - 1.5)); painter.setFont(f2)
+            painter.setPen(soft); fm2 = painter.fontMetrics()
+            painter.drawText(int(left), int(r.top() + 8 + fm.height() + fm2.ascent() - 1),
+                             fm2.elidedText(sub, Qt.TextElideMode.ElideRight, avail))
+        else:
+            painter.drawText(int(left), int(r.center().y() + (fm.ascent() - fm.descent()) / 2),
+                             fm.elidedText(title, Qt.TextElideMode.ElideRight, avail))
+        painter.restore()
+
+
 # ---------------------------------------------------------------------------- window
 class Spotlight(QWidget):
     def __init__(self):
@@ -454,9 +550,7 @@ class Spotlight(QWidget):
             QWidget#spot {{ background: palette(window); border: 1px solid {ui.ACCENT}; border-radius: 18px; }}
             QLineEdit {{ font-size: 17pt; padding: 12px 14px; border: none; background: transparent; }}
             QListWidget {{ border: none; background: transparent; font-size: 11pt; }}
-            QListWidget::item {{ padding: 7px 10px; border-radius: 10px; }}
-            QListWidget::item:selected {{ background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-                stop:0 {ui.ACCENT}, stop:1 {ui.ACCENT2}); color: #1b2026; }}""")
+            QListWidget::item {{ border: none; }}""")
         outer.addWidget(box)
         lay = QVBoxLayout(box)
         lay.setContentsMargins(10, 8, 10, 10)
@@ -467,13 +561,16 @@ class Spotlight(QWidget):
         self.edit.installEventFilter(self)
         lay.addWidget(self.edit)
         self.list = QListWidget()
+        self.list.setItemDelegate(RowDelegate(self.list))
+        self.list.setMouseTracking(True)
         self.list.setIconSize(self.list.iconSize() * 2)
         self.list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.list.itemActivated.connect(lambda _i: self.activate())
+        self.list.currentItemChanged.connect(lambda *_: self.update_hint())
         self.list.hide()
         lay.addWidget(self.list)
-        self.hint = QLabel(T("Enter to open · ↑↓ to choose · Esc to close"))
+        self.hint = QLabel(T("Enter to open · ↑↓ to choose · Alt+1-8 to jump · Esc to close"))
         self.hint.setObjectName("subtitle")
         self.hint.setAlignment(Qt.AlignmentFlag.AlignRight)
         lay.addWidget(self.hint)
@@ -481,6 +578,14 @@ class Spotlight(QWidget):
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.search)
         self.apps = load_apps()
+        self.history = load_history()
+        self.search()      # empty box: shows what you opened recently
+        self.setWindowOpacity(0.0)
+        self.fade = QPropertyAnimation(self, b"windowOpacity", self)
+        self.fade.setDuration(130)
+        self.fade.setStartValue(0.0)
+        self.fade.setEndValue(1.0)
+        self.fade.setEasingCurve(QEasingCurve.Type.OutCubic)
         self.adjustSize()
         scr = QGuiApplication.primaryScreen().availableGeometry()
         self.move(scr.x() + (scr.width() - self.width()) // 2, scr.y() + int(scr.height() * 0.2))
@@ -490,22 +595,57 @@ class Spotlight(QWidget):
             if ev.key() == Qt.Key.Key_Escape:
                 self.close()
                 return True
-            if ev.key() in (Qt.Key.Key_Down, Qt.Key.Key_Up) and self.list.count():
-                r = self.list.currentRow() + (1 if ev.key() == Qt.Key.Key_Down else -1)
-                self.list.setCurrentRow(max(0, min(self.list.count() - 1, r)))
+            n = self.list.count()
+            mods, key = ev.modifiers(), ev.key()
+            if n and mods & Qt.KeyboardModifier.AltModifier and Qt.Key.Key_1 <= key <= Qt.Key.Key_8:
+                if key - Qt.Key.Key_1 < n:               # Alt+1..8 opens that result
+                    self.list.setCurrentRow(key - Qt.Key.Key_1)
+                    self.activate()
+                return True
+            ctrl = bool(mods & Qt.KeyboardModifier.ControlModifier)
+            step = {Qt.Key.Key_Down: 1, Qt.Key.Key_Up: -1, Qt.Key.Key_PageDown: 4, Qt.Key.Key_PageUp: -4}.get(key, 0)
+            if ctrl and key in (Qt.Key.Key_N, Qt.Key.Key_J):
+                step = 1
+            elif ctrl and key in (Qt.Key.Key_P, Qt.Key.Key_K):
+                step = -1
+            if step and n:
+                r = self.list.currentRow() + step
+                if abs(step) == 1:                       # up from the first goes to the last, and back round
+                    r %= n
+                self.list.setCurrentRow(max(0, min(n - 1, r)))
                 return True
         return super().eventFilter(obj, ev)
 
-    def add(self, title, sub, icon, action):
+    def showEvent(self, ev):
+        super().showEvent(ev)
+        self.fade.start()
+
+    def update_hint(self):
+        it = self.list.currentItem()
+        if not it:
+            return
+        verb = VERBS.get(it.data(ROLE_ACTION)[0], "open")
+        self.hint.setText(T(f"Enter to {verb} · ↑↓ to choose · Alt+1-8 to jump · Esc to close"))
+
+    def add(self, title, sub, icon, action, tag=""):
         it = QListWidgetItem(QIcon.fromTheme(icon, ui.app_icon()) if icon and not icon.startswith("/")
-                             else QIcon(icon) if icon else ui.app_icon(),
-                             title + (f"\n{sub}" if sub else ""))
-        it.setData(Qt.ItemDataRole.UserRole, action)
+                             else QIcon(icon) if icon else ui.app_icon(), title)
+        it.setData(ROLE_ACTION, action)
+        it.setData(ROLE_SUB, sub)
+        it.setData(ROLE_TAG, tag)
+        it.setData(ROLE_ICON, icon or "")
         self.list.addItem(it)
 
-    def insert(self, row, title, sub, icon, action):
-        self.add(title, sub, icon, action)
+    def insert(self, row, title, sub, icon, action, tag=""):
+        self.add(title, sub, icon, action, tag)
         self.list.insertItem(row, self.list.takeItem(self.list.count() - 1))
+
+    def show_recent(self):
+        """Nothing typed yet: the things you open most, newest first."""
+        recent = sorted(self.history.values(), key=lambda h: -h.get("ts", 0))[:6]
+        for h in recent:
+            val = h["v"] if isinstance(h["v"], str) else list(h["v"])
+            self.add(h["t"], T("Recent"), h.get("i", ""), (h["k"], val), h.get("g", ""))
 
     def search(self):
         self.list.clear()
@@ -522,57 +662,63 @@ class Spotlight(QWidget):
                 for name, text in sorted(snips.items()):
                     if not word or word in name.lower() or word in text.lower():
                         first = text.strip().splitlines()[0][:60] if text.strip() else ""
-                        self.add(name, first + ("…" if len(first) == 60 else ""), "edit-paste", ("copy", text))
+                        self.add(name, first + ("…" if len(first) == 60 else ""), "edit-paste", ("copy", text), T("Snippet"))
                 if not self.list.count():
                     self.add(T("No snippets yet"), T("Add some in Devium Tools > Coding tools"), "edit-paste",
                              ("cmd", ["devium-tools", "coding"]))
             elif q.startswith("docs "):
                 word = raw.strip()[5:].strip()
                 if shutil.which("zeal"):
-                    self.add(f"Search the offline docs for: {word}", "Zeal", "zeal", ("cmd", ["zeal", word]))
+                    self.add(f"Search the offline docs for: {word}", "Zeal", "zeal", ("cmd", ["zeal", word]), T("Docs"))
                 self.add(f"Search the web docs for: {word}", "DevDocs", "internet-web-browser",
-                         ("open", "https://devdocs.io/#q=" + word.replace(" ", "%20")))
+                         ("open", "https://devdocs.io/#q=" + word.replace(" ", "%20")), T("Docs"))
             elif q.startswith(">"):
                 cmd = raw.strip()[1:].strip()
                 if cmd:
-                    self.add(f"Run in terminal: {cmd}", "", "utilities-terminal", ("term", cmd))
+                    self.add(f"Run in terminal: {cmd}", "", "utilities-terminal", ("term", cmd), T("Command"))
             else:
                 ans = convert(q)
                 if ans:
-                    self.add(ans, T("Press Enter to copy"), "accessories-calculator", ("copy", ans.split(" = ")[1]))
+                    self.add(ans, T("Press Enter to copy"), "accessories-calculator", ("copy", ans.split(" = ")[1]), T("Answer"))
                 ans = calc(q)
                 if ans is not None:
-                    self.add(f"= {ans}", T("Press Enter to copy"), "accessories-calculator", ("copy", ans))
-                apps = sorted(((score(a["words"], a["name"], q), a) for a in self.apps), key=lambda x: -x[0])
+                    self.add(f"= {ans}", T("Press Enter to copy"), "accessories-calculator", ("copy", ans), T("Answer"))
+                def used(a):   # apps you open a lot rank a little higher
+                    return min(self.history.get(f"app|{a['file']}", {}).get("n", 0), 6) * 3
+                apps = sorted(((score(a["words"], a["name"], q), a) for a in self.apps),
+                              key=lambda x: -(x[0] + (used(x[1]) if x[0] else 0)))
                 for s, a in [x for x in apps if x[0]][:7]:
-                    self.add(a["name"], a["desc"], a["icon"], ("app", a["file"]))
+                    self.add(a["name"], a["desc"], a["icon"], ("app", a["file"]), T("App"))
                 for words, title, cmd in SETTINGS:
                     if any(w.startswith(q) for w in words.split()) or q in title.lower():
                         if shutil.which(cmd[0]):
-                            self.add(title, T("Setting"), "preferences-system", ("cmd", cmd))
+                            self.add(title, T("Settings"), "preferences-system", ("cmd", cmd), T("Setting"))
                 for f in find_files(q):
                     self.add(os.path.basename(f), f.replace(HOME, "~", 1),
-                             "folder" if os.path.isdir(f) else "text-x-generic", ("open", f))
+                             "folder" if os.path.isdir(f) else "text-x-generic", ("open", f),
+                             T("Folder") if os.path.isdir(f) else T("File"))
                 # the web: a site shortcut ("yt cats"), an address ("github.com"), or a normal web search
                 word, _, rest = raw.strip().partition(" ")
                 if word.lower() in SITES and rest.strip():
                     name, url, icon = SITES[word.lower()]
                     self.insert(0, f"Search {name} for \u201c{rest.strip()}\u201d", T("Opens in your browser"), icon,
-                                ("url", url.format(quote_plus(rest.strip()))))
+                                ("url", url.format(quote_plus(rest.strip()))), T("Web"))
                 elif looks_like_url(raw):
                     addr = raw.strip() if raw.strip().startswith(("http://", "https://")) else "https://" + raw.strip()
                     if addr.startswith("https://localhost"):
                         addr = "http" + addr[5:]
-                    self.insert(0, f"Open {raw.strip()}", T("Opens in your browser"), "internet-web-browser", ("url", addr))
+                    self.insert(0, f"Open {raw.strip()}", T("Opens in your browser"), "internet-web-browser", ("url", addr), T("Web"))
                 if len(q) >= 2:
                     name, action = web_search(raw.strip())
-                    self.add(f"Search the web for \u201c{raw.strip()}\u201d", name, "internet-web-browser", action)
+                    self.add(f"Search the web for \u201c{raw.strip()}\u201d", name, "internet-web-browser", action, T("Web"))
                 first = raw.strip().split()[0]
                 if shutil.which(first) and self.list.count() <= 1:   # looks like a command, and little else matched
                     self.add(f"Run in terminal: {raw.strip()}", T("Tip: start with > to run a command"),
-                             "utilities-terminal", ("term", raw.strip()))
+                             "utilities-terminal", ("term", raw.strip()), T("Command"))
+        else:
+            self.show_recent()
         self.list.setVisible(self.list.count() > 0)
-        self.list.setFixedHeight(min(self.list.count(), 8) * 54 + 6)
+        self.list.setFixedHeight(min(self.list.count(), 8) * ROW_H + 6)
         if self.list.count():
             self.list.setCurrentRow(0)
         self.layout().activate()
@@ -582,7 +728,9 @@ class Spotlight(QWidget):
         it = self.list.currentItem()
         if not it:
             return
-        kind, val = it.data(Qt.ItemDataRole.UserRole)
+        kind, val = it.data(ROLE_ACTION)
+        if kind in ("app", "cmd", "term"):
+            remember(it.text(), it.data(ROLE_ICON) or "", kind, val, it.data(ROLE_TAG) or "")
         if kind == "copy":
             QGuiApplication.clipboard().setText(val)
             self.hint.setText(T("Copied!"))
