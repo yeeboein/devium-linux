@@ -26,6 +26,9 @@ and a setup app that asks what you actually want instead of installing everythin
 browser, editor, languages, games and apps, it shows you how much space each one takes, and that's
 all that goes on your computer.
 
+Devium is Arch-based and **rolling**: install once and keep updating, no reinstalling for new versions
+([how updates work](docs/ROLLING.md)).
+
 It's still in beta, so expect the odd bug. If you find one, tell me on
 [Discord](https://discord.gg/YTMattgyG3) or open an issue.
 
