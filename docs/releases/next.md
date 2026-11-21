@@ -26,3 +26,4 @@
 - Clone a GitHub repo from Spotlight and open it ready to code
 - Community themes in Devium Tools > Look
 - fastfetch: long lines are cut to the window width so they never wrap back under the logo (narrow windows looked broken).
+- fastfetch in a narrow or tall window: CPU, GPU, Memory, Disk and Packages show short versions (no clock speed, percentage or file system) so nothing wraps under the logo.

@@ -19,7 +19,12 @@ dir=/etc/xdg/fastfetch
 if [[ -t 1 ]] && command -v python3 >/dev/null; then
     cols=$(tput cols 2>/dev/null || echo 0)
     if (( cols >= 20 )); then
-        "$real" --pipe false -c "$dir/config$suffix.jsonc" "$@" | python3 -c '
+        # A narrow (e.g. tall, half-screen) window has no room for the long CPU/GPU/Memory/Disk lines next to the
+        # 40-column logo, so use short versions there instead of letting them run into the logo.
+        short=()
+        (( cols < 92 )) && short=(--cpu-format '{name}' --gpu-format '{name}' --memory-format '{used} / {total}'
+                                  --disk-format '{size-used} / {size-total}' --packages-format '{all}')
+        "$real" --pipe false -c "$dir/config$suffix.jsonc" "${short[@]}" "$@" | python3 -c '
 import re, sys
 cols = int(sys.argv[1])
 esc = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
