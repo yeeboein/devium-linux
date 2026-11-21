@@ -76,6 +76,7 @@ SETTINGS = [
     ("git github ssh docker ports developer", "Developer (Devium Tools)", ["devium-tools", "developer"]),
     ("database postgres mysql redis mongo https env secret snippets share mise coding", "Coding tools (Devium Tools)",
      ["devium-tools", "coding"]),
+    ("storage system disk space usage full used big drive", "System storage (Devium Tools)", ["devium-tools", "storage"]),
     ("clean space disk free storage junk", "Clean up (Devium Tools)", ["devium-tools", "clean"]),
     ("background startup autostart services bloat extras remove", "Background and extras (Devium Tools)",
      ["devium-tools", "background"]),

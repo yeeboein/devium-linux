@@ -31,6 +31,7 @@ import devium_ui as ui
 import tools_extra as extra
 import tools_dev as dev
 import tools_background as background
+import tools_storage as storage
 from devium_i18n import LANGUAGES, T, current as current_language, set_language
 
 HELPER = "/usr/lib/devium/devium-helper"
@@ -256,6 +257,7 @@ class HomePage(Page):
             (T("Health check"), "Disks, temperatures and battery wear", "heart", lambda: win.go("health")),
             (T("Phone link"), "Files, notifications and clipboard with your phone", "smartphone",
              lambda: win.go("phone")),
+            (T("System storage"), "See where your disk space went", "drive-harddisk", lambda: win.go("storage")),
             (T("Clean up"), "Find what takes space and free it", "edit-clear", lambda: win.go("clean")),
             (T("Background and extras"), "Turn off background apps, remove extra apps", "preferences-system-startup",
              lambda: win.go("background")),
@@ -1186,6 +1188,7 @@ PAGES = [
     ("drivers", T("Drivers"), "preferences-system-hardware", extra.make_drivers_page),
     ("health", T("Health check"), "heart", extra.make_health_page),
     ("phone", T("Phone link"), "smartphone", extra.make_phone_page),
+    ("storage", T("System storage"), "drive-harddisk", storage.make_storage_page),
     ("clean", T("Clean up"), "edit-clear", dev.make_clean_page),
     ("background", T("Background and extras"), "preferences-system-startup", background.make_page),
     ("speed", T("Speed and memory"), "speedometer", SpeedPage),
