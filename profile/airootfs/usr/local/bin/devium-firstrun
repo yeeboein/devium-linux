@@ -136,6 +136,14 @@ if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [
     touch "$STATE/spotlight-key"
 fi
 
+# --- 1.0: Devium Spotlight replaces KRunner: Alt+Space and Alt+F2 open it too (KDE; new users get it from /etc/skel)
+if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [[ ! -f $STATE/krunner-replaced ]]; then
+    kwriteconfig6 --file kglobalshortcutsrc --group services --group devium-spotlight.desktop \
+        --key _launch "Meta+Space"$'\t'"Alt+Space"$'\t'"Alt+F2"
+    kwriteconfig6 --file kglobalshortcutsrc --group services --group org.kde.krunner.desktop --key _launch "none"
+    touch "$STATE/krunner-replaced"
+fi
+
 # --- 1.0: Meta+Ctrl+S opens the Screenshot Editor (KDE; new users get it from /etc/skel)
 if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [[ ! -f $STATE/shot-key ]]; then
     if ! grep -q "devium-shot.desktop" "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" 2>/dev/null; then

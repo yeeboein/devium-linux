@@ -12,7 +12,10 @@ _launch=Meta+T
 _launch=Meta+U
 
 [services][devium-spotlight.desktop]
-_launch=Meta+Space
+_launch=Meta+Space	Alt+Space	Alt+F2
+
+[services][org.kde.krunner.desktop]
+_launch=none
 
 [services][devium-shot.desktop]
 _launch=Meta+Ctrl+S
