@@ -32,7 +32,7 @@ sys.path.insert(0, "/usr/lib/devium")
 
 import time
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, QSize, Qt, QTimer
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, QSize, Qt, QTimer, QVariantAnimation
 from PyQt6.QtGui import QColor, QFont, QGuiApplication, QIcon, QLinearGradient, QPainter, QPainterPath
 from PyQt6.QtWidgets import (QApplication, QLabel, QLineEdit, QListWidget, QListWidgetItem, QStyle, QStyledItemDelegate,
                              QVBoxLayout, QWidget)
@@ -546,6 +546,7 @@ class Spotlight(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         box = QWidget()
+        self.box = box
         box.setObjectName("spot")
         box.setStyleSheet(f"""
             QWidget#spot {{ background: palette(window); border: 1px solid {ui.ACCENT}; border-radius: 18px; }}
@@ -580,7 +581,12 @@ class Spotlight(QWidget):
         self.timer.timeout.connect(self.search)
         self.apps = load_apps()
         self.history = load_history()
-        self.search()      # empty box: shows what you opened recently
+        self.recent_mode = False
+        self.height_anim = QVariantAnimation(self)
+        self.height_anim.setDuration(120)
+        self.height_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.height_anim.valueChanged.connect(lambda v: self.setFixedHeight(int(v)))
+        self.search()
         self.setWindowOpacity(0.0)
         self.fade = QPropertyAnimation(self, b"windowOpacity", self)
         self.fade.setDuration(130)
@@ -609,6 +615,10 @@ class Spotlight(QWidget):
                 step = 1
             elif ctrl and key in (Qt.Key.Key_P, Qt.Key.Key_K):
                 step = -1
+            if step == 1 and not n and not self.edit.text() and self.history:
+                self.recent_mode = True
+                self.search()
+                return True
             if step and n:
                 r = self.list.currentRow() + step
                 if abs(step) == 1:                       # up from the first goes to the last, and back round
@@ -716,14 +726,40 @@ class Spotlight(QWidget):
                 if shutil.which(first) and self.list.count() <= 1:   # looks like a command, and little else matched
                     self.add(f"Run in terminal: {raw.strip()}", T("Tip: start with > to run a command"),
                              "utilities-terminal", ("term", raw.strip()), T("Command"))
-        else:
+        elif self.recent_mode:
             self.show_recent()
-        self.list.setVisible(self.list.count() > 0)
-        self.list.setFixedHeight(min(self.list.count(), 8) * ROW_H + 6)
+        if q:
+            self.recent_mode = False
         if self.list.count():
             self.list.setCurrentRow(0)
-        self.layout().activate()
-        self.resize(self.width(), self.sizeHint().height())
+        else:
+            self.hint.setText(T("Type to search · ↓ for recent · Esc to close"))
+        self.fit()
+
+    def wanted_height(self):
+        """The height the window needs right now: just the search bar when nothing matches, more for each result."""
+        n = self.list.count()
+        lay = self.box.layout()
+        m = lay.contentsMargins()
+        parts = [self.edit.sizeHint().height()]
+        if n:
+            parts.append(min(n, 8) * ROW_H + 6)
+        parts.append(self.hint.sizeHint().height())
+        return m.top() + m.bottom() + sum(parts) + lay.spacing() * (len(parts) - 1)
+
+    def fit(self, animate=True):
+        """Make the window exactly as tall as its contents, every time they change (grows and shrinks)."""
+        n = self.list.count()
+        self.list.setVisible(n > 0)
+        self.list.setFixedHeight(min(n, 8) * ROW_H + 6 if n else 0)
+        want = self.wanted_height()
+        self.height_anim.stop()
+        if animate and self.isVisible() and abs(self.height() - want) > 2:
+            self.height_anim.setStartValue(self.height())
+            self.height_anim.setEndValue(want)
+            self.height_anim.start()
+        else:
+            self.setFixedHeight(want)
 
     def activate(self):
         it = self.list.currentItem()

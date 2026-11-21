@@ -22,6 +22,7 @@
 - **Spotlight polish:** every result has a small label (App, Setting, File, Web, Answer...), the hint under the box says
   what Enter will do, the window fades in, and results are drawn cleaner. It remembers what you open: apps you use a
   lot rank higher, and an empty box shows your recent apps and commands.
+- **Spotlight always fits its contents:** the window grows and shrinks smoothly as you type, and when you delete your search it goes back to just the search bar (before, it could stay too tall after a search). Recent apps show when you press Down on an empty box.
 - **Spotlight keys:** Alt+1 to Alt+8 opens that result, Ctrl+N / Ctrl+P (or Ctrl+J / Ctrl+K) and PageUp / PageDown
   move through results, and Up on the first result goes to the last.
 - **Spotlight replaces KDE's built-in search (KRunner):** Alt+Space and Alt+F2 now open Spotlight as well as
