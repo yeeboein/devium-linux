@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# devium-glass: turn glass mode (see-through windows) off with one key, and back on with the same key.
+#   devium-glass          switch: if glass mode is on, turn it off; press again to bring it back
+#   devium-glass off      turn it off (only if it's on)
+#   devium-glass on       bring back what was on before
+# Meta+Shift+G does this. It works with the Customise page of Devium Configure: that page then shows glass mode off.
+tweaks=/usr/lib/devium/look_tweaks.py
+saved="${XDG_STATE_HOME:-$HOME/.local/state}/devium/glass-was"
+ids=(glass-all glass-always)
+
+say() { command -v notify-send >/dev/null && notify-send -a "Devium" -i preferences-desktop-theme "$1" "${2:-}"; echo "$1"; }
+
+# which of the glass modes are on right now
+on_now=()
+status=$(python3 "$tweaks" status 2>/dev/null)
+for id in "${ids[@]}"; do
+    [[ $status == *"\"$id\": true"* || $status == *"\"$id\":true"* ]] && on_now+=("$id")
+done
+
+turn_off() {
+    if (( ${#on_now[@]} == 0 )); then
+        say "Glass mode is already off" "Press Meta+Shift+G again to bring back the last one"
+        return 0
+    fi
+    mkdir -p "$(dirname "$saved")"
+    printf '%s\n' "${on_now[@]}" > "$saved"
+    python3 "$tweaks" set "${on_now[@]/%/=off}" >/dev/null 2>&1
+    say "Glass mode off" "Press Meta+Shift+G to bring it back"
+}
+
+turn_on() {
+    if [[ ! -s $saved ]]; then
+        say "Nothing to bring back" "Turn glass mode on in Devium Configure > Customise"
+        return 0
+    fi
+    mapfile -t back < "$saved"
+    python3 "$tweaks" set "${back[@]/%/=on}" >/dev/null 2>&1
+    rm -f "$saved"
+    say "Glass mode back on"
+}
+
+case "${1:-switch}" in
+    off) turn_off ;;
+    on) turn_on ;;
+    switch|toggle|"") (( ${#on_now[@]} )) && turn_off || turn_on ;;
+    -h|--help) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) echo "devium-glass: use off, on, or nothing to switch"; exit 1 ;;
+esac

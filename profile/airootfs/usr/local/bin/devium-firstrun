@@ -153,6 +153,21 @@ if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [
     touch "$STATE/shot-key"
 fi
 
+# --- 1.0: Meta+Shift+G turns glass mode off (and back on) (KDE; new users get it from /etc/skel)
+if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [[ ! -f $STATE/glass-key ]]; then
+    if ! grep -q "devium-glass.desktop" "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" 2>/dev/null; then
+        kwriteconfig6 --file kglobalshortcutsrc --group services --group devium-glass.desktop \
+            --key _launch "Meta+Shift+G"
+    fi
+    touch "$STATE/glass-key"
+fi
+# ... and on Hyprland, once
+hl="$HOME/.config/hypr/hyprland.conf"
+if [[ -f $hl && ! -f $STATE/glass-key-hypr ]]; then
+    grep -q 'devium-glass' "$hl" || printf '\n# Meta+Shift+G: glass mode off (and back on)\nbind = $mod SHIFT, G, exec, devium-glass\n' >> "$hl"
+    touch "$STATE/glass-key-hypr"
+fi
+
 # --- beta15: with ArchPill, brightness shows only in the pill (Plasma's own brightness popup off), once
 if [[ ! -f $STATE/archpill-osd ]] && command -v plasmashell >/dev/null && \
    [[ -f $STATE/archpill-wanted || -d ${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/archpill ]]; then

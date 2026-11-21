@@ -32,6 +32,7 @@ file_permissions=(
   ["/usr/lib/devium/fun/lyrics"]="0:0:755"
   ["/usr/local/bin/devium-wallpaper"]="0:0:755"
   ["/usr/local/bin/devium-shot"]="0:0:755"
+  ["/usr/local/bin/devium-glass"]="0:0:755"
   ["/usr/local/bin/note"]="0:0:755"
   ["/usr/lib/devium/fun/album-cover"]="0:0:755"
   ["/usr/lib/devium/unless-safe"]="0:0:755"

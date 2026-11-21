@@ -33,3 +33,4 @@
 - Devium Configure can't be closed the first time until Devium is fully set up: closing it shows "Sorry, you can't close Configure until Devium is fully set up." (Not on the live ISO, and not for Customise.)
 - Devium Spotlight replaces KDE's built-in search (KRunner): Alt+Space and Alt+F2 now open Spotlight as well as Meta+Space, and KRunner's own shortcuts are switched off. Log out and back in after updating.
 - Spotlight is also exempt from automatic tiling on KDE (it never joins the tiling or gets resized by it), like on Hyprland.
+- **Meta+Shift+G turns glass mode off** (the see-through windows), and pressing it again brings it back. It's the `devium-glass` command (`off` / `on` / no word to switch), works on KDE and Hyprland, and keeps Customise in step. Existing installs get the key the next time they log in.

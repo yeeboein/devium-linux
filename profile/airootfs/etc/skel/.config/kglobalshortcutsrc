@@ -17,5 +17,8 @@ _launch=Meta+Space	Alt+Space	Alt+F2
 [services][org.kde.krunner.desktop]
 _launch=none
 
+[services][devium-glass.desktop]
+_launch=Meta+Shift+G
+
 [services][devium-shot.desktop]
 _launch=Meta+Ctrl+S
