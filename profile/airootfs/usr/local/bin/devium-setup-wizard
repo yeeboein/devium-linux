@@ -1358,6 +1358,14 @@ class Wizard(QWidget):
             ev.ignore()
             self.cancel_install()
             return
+        # On an installed system, Configure can't be closed until Devium is fully set up (the setup-done mark is written
+        # at the end of the install). The live ISO, "Customise" and re-running it later are not locked.
+        if (not ui.is_live() and not os.path.exists(DONE_MARKER) and not getattr(self, "customise_only", False)
+                and not os.environ.get("DEVIUM_ALLOW_CLOSE")):
+            QMessageBox.information(self, "Devium Configure",
+                                    "Sorry, you can't close Configure until Devium is fully set up.")
+            ev.ignore()
+            return
         # Closing early still counts as "seen", so it doesn't pop up at every login.
         os.makedirs(CONFIG, exist_ok=True)
         open(os.path.join(CONFIG, "setup-seen"), "w").close()
@@ -1374,6 +1382,7 @@ def main():
     app.setDesktopFileName("devium-setup-wizard")
     ui.style_app(app)
     w = Wizard()
+    w.customise_only = "--customise" in sys.argv
     if "--customise" in sys.argv:
         for i in range(w.steps.count()):
             if w.steps.item(i).text() == "Customise":
