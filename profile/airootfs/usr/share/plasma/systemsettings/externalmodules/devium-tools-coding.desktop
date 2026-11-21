@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Coding tools
+Comment=Databases, secret guard, local HTTPS, sharing a site, language versions
+Icon=code-block
+Exec=devium-tools coding
+Keywords=code;database;postgres;mysql;redis;secret;https;env;snippets;mise;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=15

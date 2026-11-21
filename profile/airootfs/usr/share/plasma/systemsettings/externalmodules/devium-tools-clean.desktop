@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Clean up
+Comment=Find what takes space and free it safely
+Icon=edit-clear
+Exec=devium-tools clean
+Keywords=clean;junk;cache;free space;trash;duplicates;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=4

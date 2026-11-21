@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Health check
+Comment=Disk health, temperatures and battery wear
+Icon=heart
+Exec=devium-tools health
+Keywords=health;smart;disk;temperature;battery;wear;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=10

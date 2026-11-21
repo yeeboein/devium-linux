@@ -42,6 +42,31 @@ QListWidget#nav::item:selected {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {ACCENT}, stop:1 {ACCENT2});
     color: #1b2026;
 }}
+QPushButton:hover:!disabled {{ border: 1px solid {ACCENT}; }}
+QPushButton#tile2 {{
+    text-align: left; border-radius: 16px; border: 1px solid palette(mid); background: palette(base);
+}}
+QPushButton#tile2:hover {{ border: 1px solid {ACCENT}; background: palette(alternate-base); }}
+QPushButton#tile2:pressed {{ background: palette(button); }}
+QLabel#tiletitle {{ font-size: 11.5pt; font-weight: 600; }}
+QFrame#statcard {{ border: 1px solid palette(mid); border-radius: 16px; background: palette(base); }}
+QLabel#statvalue {{ font-size: 18pt; font-weight: 700; }}
+QLineEdit, QSpinBox, QComboBox {{
+    padding: 6px 10px; border-radius: 9px; border: 1px solid palette(mid); background: palette(base);
+}}
+QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{ border: 1px solid {ACCENT}; }}
+QTreeWidget, QListWidget#plain, QPlainTextEdit, QTextEdit {{
+    border: 1px solid palette(mid); border-radius: 12px; background: palette(base);
+}}
+QHeaderView::section {{ border: none; border-bottom: 1px solid palette(mid); padding: 6px 8px; background: transparent;
+    font-weight: 600; }}
+QScrollBar:vertical {{ width: 12px; background: transparent; margin: 2px; }}
+QScrollBar::handle:vertical {{ background: palette(mid); border-radius: 4px; min-height: 36px; margin: 0 2px; }}
+QScrollBar::handle:vertical:hover {{ background: {ACCENT}; }}
+QScrollBar:horizontal {{ height: 12px; background: transparent; margin: 2px; }}
+QScrollBar::handle:horizontal {{ background: palette(mid); border-radius: 4px; min-width: 36px; margin: 2px 0; }}
+QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page {{ width: 0; height: 0; background: none; }}
+QToolTip {{ border: 1px solid {ACCENT}; border-radius: 6px; padding: 4px 8px; }}
 QProgressBar {{ border-radius: 6px; height: 12px; text-align: center; }}
 QProgressBar::chunk {{
     border-radius: 6px;

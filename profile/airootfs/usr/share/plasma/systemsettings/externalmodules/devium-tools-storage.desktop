@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=System storage
+Comment=See where your disk space went: System, Apps, Games, Documents, Pictures and more
+Icon=drive-harddisk
+Exec=devium-tools storage
+Keywords=storage;disk;space;usage;full;drive;used;big;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=3

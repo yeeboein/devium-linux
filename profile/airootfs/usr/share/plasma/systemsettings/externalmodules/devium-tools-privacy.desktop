@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Privacy
+Comment=Firewall, Wi-Fi tracking, location and the guest account
+Icon=security-high
+Exec=devium-tools privacy
+Keywords=privacy;firewall;location;guest;tracking;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=12

@@ -19,7 +19,7 @@ import urllib.request
 
 sys.path.insert(0, "/usr/lib/devium")
 
-from PyQt6.QtCore import QProcess, Qt, QTimer
+from PyQt6.QtCore import QProcess, QSize, Qt, QTimer
 from PyQt6.QtGui import QFont, QGuiApplication, QIcon
 from PyQt6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QFormLayout, QFrame,
                              QGridLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
@@ -233,55 +233,129 @@ def root(parent, title, *args, done=None):
 
 
 # ---------------------------------------------------------------------------- Home (Devium Hub)
+class Tile(QPushButton):
+    """A big clickable card: icon, name, one line about it."""
+
+    def __init__(self, name, desc, icon, act):
+        super().__init__()
+        self.setObjectName("tile2")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setMinimumHeight(84)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self.setToolTip(desc)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(16, 12, 14, 12)
+        lay.setSpacing(14)
+        pic = QLabel()
+        pic.setFixedSize(44, 44)
+        pic.setPixmap(QIcon.fromTheme(icon, ui.app_icon()).pixmap(40, 40))
+        pic.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        lay.addWidget(pic)
+        col = QVBoxLayout()
+        col.setSpacing(2)
+        title = QLabel(name)
+        title.setObjectName("tiletitle")
+        text = QLabel(desc)
+        text.setObjectName("subtitle")
+        text.setWordWrap(True)
+        for w in (title, text):
+            w.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        col.addWidget(title)
+        col.addWidget(text)
+        lay.addLayout(col, 1)
+        self.clicked.connect(act)
+
+
+class StatCard(QFrame):
+    """A small card with a title, a big number and a bar (disk, memory, battery...)."""
+
+    def __init__(self, title):
+        super().__init__()
+        self.setObjectName("statcard")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(16, 12, 16, 14)
+        lay.setSpacing(4)
+        self.title = QLabel(title)
+        self.title.setObjectName("subtitle")
+        self.value = QLabel("-")
+        self.value.setObjectName("statvalue")
+        self.note = QLabel("")
+        self.note.setObjectName("subtitle")
+        self.bar = QProgressBar()
+        self.bar.setRange(0, 1000)
+        self.bar.setTextVisible(False)
+        self.bar.setFixedHeight(8)
+        for w in (self.title, self.value, self.bar, self.note):
+            lay.addWidget(w)
+
+    def set(self, value, frac, note=""):
+        self.value.setText(value)
+        self.bar.setValue(int(max(0.0, min(1.0, frac)) * 1000))
+        self.note.setText(note)
+        self.bar.setStyleSheet('' if frac >= 0 else 'QProgressBar { background: transparent; } QProgressBar::chunk { background: transparent; }')
+        self.note.setVisible(bool(note))
+
+
 class HomePage(Page):
     def __init__(self, win):
-        super().__init__(T("Devium Tools"), T("Everything to look after your computer, in one place."))
+        super().__init__("", "")
+        # replace the plain title with a header that has the logo
+        for _i in range(2):
+            w = self.col.takeAt(0).widget()
+            w.deleteLater()
         self.win = win
-        self.status = self.add(label("", rich=True))
-        grid = QGridLayout()
-        grid.setSpacing(10)
-        tiles = [
-            ("Devium Configure", "Add or remove apps and the look", "devium",
-             lambda: ui.launch("devium-setup-wizard")),
-            (T("App Manager"), "Size, RAM and remove apps", "view-list-details",
-             lambda: win.go("apps")),
-            (T("Updates"), "Install updates with a restore point first (Meta+U)", "system-software-update",
-             lambda: win.go("updates")),
-            ("Devium Updater", "Get new Devium versions", "devium",
-             lambda: ui.launch("devium-updater")),
-            (T("Make it faster"), "Safe tweaks for speed and memory", "speedometer", lambda: win.go("speed")),
-            (T("Look"), "Accent colour, and reset the desktop", "preferences-desktop-color", lambda: win.go("look")),
-            (T("Backup and move"), "Back up to USB, or move to a new PC", "document-save", lambda: win.go("backup")),
-            (T("Drivers"), "NVIDIA, Wi-Fi and other drivers", "preferences-system-hardware",
-             lambda: win.go("drivers")),
-            (T("Health check"), "Disks, temperatures and battery wear", "heart", lambda: win.go("health")),
-            (T("Phone link"), "Files, notifications and clipboard with your phone", "smartphone",
-             lambda: win.go("phone")),
-            (T("System storage"), "See where your disk space went", "drive-harddisk", lambda: win.go("storage")),
-            (T("Clean up"), "Find what takes space and free it", "edit-clear", lambda: win.go("clean")),
-            (T("Background and extras"), "Turn off background apps, remove extra apps", "preferences-system-startup",
-             lambda: win.go("background")),
-            (T("Coding tools"), "Databases, secret guard, HTTPS, sharing, versions", "code-block",
-             lambda: win.go("coding")),
-            (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
-            (T("Privacy"), "Firewall, Wi-Fi tracking, location", "security-high", lambda: win.go("privacy")),
-            (T("Report a problem"), "Tell the Devium team what went wrong", "tools-report-bug",
-             lambda: ReportDialog(win).exec()),
+        self.col.insertWidget(0, ui.header(T("Devium Tools"), T("Everything to look after your computer, in one place."), 56))
+        self.stats = QHBoxLayout()
+        self.stats.setSpacing(12)
+        self.disk, self.ram, self.power, self.ver = (StatCard(T("Storage")), StatCard(T("Memory")),
+                                                     StatCard(T("Battery")), StatCard("Devium"))
+        for c in (self.disk, self.ram, self.power, self.ver):
+            c.setMinimumHeight(112)
+            c.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+            self.stats.addWidget(c, 1)
+        self.col.addLayout(self.stats)
+        groups = [
+            (T("Look after your computer"), [
+                (T("Updates"), "Install updates with a restore point first (Meta+U)", "system-software-update",
+                 lambda: win.go("updates")),
+                (T("System storage"), "See where your disk space went", "drive-harddisk", lambda: win.go("storage")),
+                (T("Clean up"), "Find what takes space and free it", "edit-clear", lambda: win.go("clean")),
+                (T("Health check"), "Disks, temperatures and battery wear", "heart", lambda: win.go("health")),
+                (T("Make it faster"), "Safe tweaks for speed and memory", "speedometer", lambda: win.go("speed")),
+                (T("Drivers"), "NVIDIA, Wi-Fi and other drivers", "preferences-system-hardware",
+                 lambda: win.go("drivers")),
+            ]),
+            (T("Apps and setup"), [
+                ("Devium Configure", "Add or remove apps and the look", "devium", lambda: ui.launch("devium-setup-wizard")),
+                ("Devium Updater", "Get new Devium versions", "devium", lambda: ui.launch("devium-updater")),
+                (T("App Manager"), "Size, RAM and remove apps", "view-list-details", lambda: win.go("apps")),
+                (T("Background and extras"), "Turn off background apps, remove extra apps",
+                 "preferences-system-startup", lambda: win.go("background")),
+                (T("Backup and move"), "Back up to USB, or move to a new PC", "document-save", lambda: win.go("backup")),
+                (T("Coding tools"), "Databases, secret guard, HTTPS, sharing, versions", "code-block",
+                 lambda: win.go("coding")),
+            ]),
+            (T("Everyday"), [
+                (T("Look"), "Accent colour, and reset the desktop", "preferences-desktop-color", lambda: win.go("look")),
+                (T("Privacy"), "Firewall, Wi-Fi tracking, location", "security-high", lambda: win.go("privacy")),
+                (T("Phone link"), "Files, notifications and clipboard with your phone", "smartphone",
+                 lambda: win.go("phone")),
+                (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
+                (T("Report a problem"), "Tell the Devium team what went wrong", "tools-report-bug",
+                 lambda: ReportDialog(win).exec()),
+            ]),
         ]
-        for i, (name, desc, icon, act) in enumerate(tiles):
-            b = QPushButton(f"  {name}\n  {desc}")
-            b.setObjectName("tile")
-            b.setIcon(QIcon.fromTheme(icon, ui.app_icon()))
-            b.setIconSize(b.iconSize() * 2)
-            b.setMinimumHeight(64)
-            b.setToolTip(desc)
-            b.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-            b.clicked.connect(act)
-            grid.addWidget(b, i // 2, i % 2)
-        self.add(label("Devium Hub", "h2"))
-        w = QWidget()
-        w.setLayout(grid)
-        self.add(w)
+        for title, tiles in groups:
+            self.add(label(title, "h2"))
+            grid = QGridLayout()
+            grid.setSpacing(12)
+            for i, (name, desc, icon, act) in enumerate(tiles):
+                grid.addWidget(Tile(name, desc, icon, act), i // 3, i % 3)
+            for c in range(3):
+                grid.setColumnStretch(c, 1)
+            holder = QWidget()
+            holder.setLayout(grid)
+            self.add(holder)
         links = label(f"<a href='{REPO}/blob/main/docs/GUIDE.md'>Guide</a> &nbsp;·&nbsp; "
                       f"<a href='{REPO}/releases'>Releases</a> &nbsp;·&nbsp; "
                       f"<a href='{REPO}'>GitHub</a> &nbsp;·&nbsp; "
@@ -296,9 +370,16 @@ class HomePage(Page):
         m = meminfo()
         du = shutil.disk_usage("/")
         used_ram = m["MemTotal"] - m["MemAvailable"]
-        self.status.setText(
-            f"<b>Devium {ui.devium_version()}</b> &nbsp; · &nbsp; Disk: {human(du.free)} free of {human(du.total)}"
-            f" &nbsp; · &nbsp; Memory: {human(used_ram)} used of {human(m['MemTotal'])}")
+        self.disk.set(f"{human(du.free)} {T('free')}", du.used / du.total, f"{human(du.used)} {T('of')} {human(du.total)}")
+        self.ram.set(human(used_ram), used_ram / m["MemTotal"], f"{T('of')} {human(m['MemTotal'])}")
+        bat = next(iter(glob.glob("/sys/class/power_supply/BAT*")), None)
+        if bat:
+            cap = int(read(bat + "/capacity") or 0)
+            self.power.set(f"{cap}%", cap / 100, read(bat + "/status") or "")
+        else:
+            self.power.set(T("Plugged in"), -1, T("No battery"))
+        up = float((read("/proc/uptime") or "0").split()[0])
+        self.ver.set(ui.devium_version().replace("beta", "Beta "), -1, f"{T('Up for')} {int(up // 3600)} h {int(up % 3600 // 60)} min")
 
 
 # ---------------------------------------------------------------------------- App Manager
@@ -1204,6 +1285,19 @@ PAGES = [
 ]
 
 
+PAGE_WORDS = {
+    "apps": "uninstall remove programs size ram", "updates": "update upgrade undo restore point pacman",
+    "look": "accent colour color reset desktop widgets", "backup": "backup restore usb move export import",
+    "drivers": "nvidia wifi broadcom fingerprint graphics", "health": "smart disk temperature battery wear",
+    "phone": "android iphone kde connect qr", "storage": "disk space usage full drive used big",
+    "clean": "junk cache trash duplicates free space", "background": "startup autostart services bloat extras",
+    "speed": "faster memory ram slow low zram", "battery": "charge limit 80", "privacy": "firewall location guest tracking",
+    "printers": "printer scanner print", "developer": "git github ssh docker ports", "coding": "database postgres mysql redis secret https env snippets",
+    "windows": "windows switching coming from", "accessibility": "large text contrast screen reader", "language": "locale translate",
+    "help": "support fix doctor report bug",
+}
+
+
 class Tools(QWidget):
     def __init__(self, start="home"):
         super().__init__()
@@ -1214,7 +1308,18 @@ class Tools(QWidget):
         lay.setContentsMargins(8, 8, 8, 8)
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
-        self.nav.setFixedWidth(230)
+        self.nav.setIconSize(QSize(22, 22))
+        self.search = QLineEdit()
+        self.search.setPlaceholderText(T("Search tools") + "...")
+        self.search.setClearButtonEnabled(True)
+        self.search.textChanged.connect(self.filter_nav)
+        side = QWidget()
+        side.setFixedWidth(240)
+        sl = QVBoxLayout(side)
+        sl.setContentsMargins(0, 0, 0, 0)
+        sl.setSpacing(8)
+        sl.addWidget(self.search)
+        sl.addWidget(self.nav, 1)
         self.stack = QStackedWidget()
         self.pages = {}
         for key, name, icon, cls in PAGES:
@@ -1223,7 +1328,7 @@ class Tools(QWidget):
             self.pages[key] = page
             self.stack.addWidget(page)
         self.nav.currentRowChanged.connect(self.show_page)
-        lay.addWidget(self.nav)
+        lay.addWidget(side)
         lay.addWidget(self.stack, 1)
         if start == "report":
             self.go("help")
@@ -1236,7 +1341,21 @@ class Tools(QWidget):
             self.go(start if start in self.pages else "home")
 
     def go(self, key):
+        self.search.clear()
         self.nav.setCurrentRow(list(self.pages).index(key))
+
+    def filter_nav(self, text):
+        """Search box above the list: hide the pages that don't match, Enter-less (the first match is selected)."""
+        t = text.strip().lower()
+        first = None
+        for i in range(self.nav.count()):
+            it = self.nav.item(i)
+            show = not t or t in it.text().lower() or t in PAGE_WORDS.get(list(self.pages)[i], "")
+            it.setHidden(not show)
+            if show and first is None and t:
+                first = i
+        if first is not None:
+            self.nav.setCurrentRow(first)
 
     def show_page(self, i):
         self.stack.setCurrentIndex(i)

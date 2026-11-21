@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Background and extras
+Comment=Turn off background apps and remove extra apps
+Icon=preferences-system-startup
+Exec=devium-tools background
+Keywords=background;startup;autostart;services;bloat;extras;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=14

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Devium Tools
+Comment=Everything to look after your computer, in one place
+Icon=devium
+Exec=devium-tools
+Keywords=devium;tools;hub;home;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=1

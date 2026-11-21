@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Battery charge limit
+Comment=Stop charging at 80% to keep the battery healthy
+Icon=battery
+Exec=devium-tools battery
+Keywords=battery;charge limit;80;health;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=11

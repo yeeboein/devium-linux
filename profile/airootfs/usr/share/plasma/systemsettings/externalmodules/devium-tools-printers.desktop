@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Printers and scanners
+Comment=Set up printers and scanners
+Icon=printer
+Exec=devium-tools printers
+Keywords=printer;scanner;print;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=16

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Drivers
+Comment=NVIDIA, Broadcom Wi-Fi, fingerprint readers and other drivers
+Icon=preferences-system-hardware
+Exec=devium-tools drivers
+Keywords=drivers;nvidia;wifi;broadcom;fingerprint;graphics;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=9

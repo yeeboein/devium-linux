@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Phone link
+Comment=Files, notifications and clipboard with your phone (KDE Connect)
+Icon=smartphone
+Exec=devium-tools phone
+Keywords=phone;android;iphone;kde connect;qr;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=13

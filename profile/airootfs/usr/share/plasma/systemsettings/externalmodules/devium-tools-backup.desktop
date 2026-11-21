@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Backup and move
+Comment=Back up to a USB stick, or move your whole setup to a new PC
+Icon=document-save
+Exec=devium-tools backup
+Keywords=backup;restore;usb;move;new pc;export;import;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=8

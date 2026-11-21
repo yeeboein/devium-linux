@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=App Manager
+Comment=Size, memory use and removing apps
+Icon=view-list-details
+Exec=devium-tools apps
+Keywords=apps;uninstall;remove;programs;size;ram;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=5

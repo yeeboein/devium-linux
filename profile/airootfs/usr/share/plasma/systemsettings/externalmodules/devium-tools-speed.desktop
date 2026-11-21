@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Make it faster
+Comment=Safe tweaks for speed and memory
+Icon=speedometer
+Exec=devium-tools speed
+Keywords=faster;speed;memory;ram;slow;low ram;zram;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=6

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Look and desktop reset
+Comment=Accent colour, desktop widgets, and reset the desktop
+Icon=preferences-desktop-color
+Exec=devium-tools look
+Keywords=accent;colour;color;reset desktop;widgets;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=7

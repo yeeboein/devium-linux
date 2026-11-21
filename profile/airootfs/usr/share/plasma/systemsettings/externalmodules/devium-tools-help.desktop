@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Get help and report a problem
+Comment=Fix problems, find commands and send a bug report
+Icon=help-browser
+Exec=devium-tools help
+Keywords=help;support;fix;doctor;report;bug;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=17

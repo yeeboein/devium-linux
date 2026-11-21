@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Devium Configure
+Comment=Add or remove apps, change the look and customise Devium
+Icon=devium-setup
+Exec=devium-setup-wizard
+Keywords=configure;setup;apps;install;customise;
+X-KDE-System-Settings-Parent-Category=devium
+X-KDE-Weight=18
