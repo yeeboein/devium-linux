@@ -32,3 +32,4 @@
 - Spotlight keys: Alt+1 to Alt+8 opens that result, Ctrl+N / Ctrl+P (or Ctrl+J / Ctrl+K) and PageUp / PageDown move through results, and Up on the first result goes to the last.
 - Devium Configure can't be closed the first time until Devium is fully set up: closing it shows "Sorry, you can't close Configure until Devium is fully set up." (Not on the live ISO, and not for Customise.)
 - Devium Spotlight replaces KDE's built-in search (KRunner): Alt+Space and Alt+F2 now open Spotlight as well as Meta+Space, and KRunner's own shortcuts are switched off. Log out and back in after updating.
+- Spotlight is also exempt from automatic tiling on KDE (it never joins the tiling or gets resized by it), like on Hyprland.

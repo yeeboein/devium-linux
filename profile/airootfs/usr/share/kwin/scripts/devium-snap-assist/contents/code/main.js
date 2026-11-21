@@ -28,7 +28,8 @@ function snappedSide(win) {
 }
 
 function usable(win) {
-    return win && win.normalWindow && !win.skipTaskbar && !win.minimized;
+    return win && win.normalWindow && !win.skipTaskbar && !win.minimized &&
+        String(win.resourceClass || "").toLowerCase() !== "devium-spotlight";
 }
 
 function otherWindowsOpen(win) {

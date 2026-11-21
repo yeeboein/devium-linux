@@ -44,8 +44,19 @@ function onThisDesktop(w) {
     return false;
 }
 
+// Windows that must never be tiled: Devium Spotlight (and other pop-up helpers).
+var EXEMPT = ["devium-spotlight", "devium-shot-popup", "xwaylandvideobridge"];
+function exempt(w) {
+    var c = String(w.resourceClass || "").toLowerCase();
+    var n = String(w.resourceName || "").toLowerCase();
+    var cap = String(w.caption || "");
+    for (var i = 0; i < EXEMPT.length; i++)
+        if (c === EXEMPT[i] || n === EXEMPT[i]) return true;
+    return cap === "Devium Spotlight";
+}
+
 function tileable(w) {
-    return w && w.normalWindow && !w.transient && !w.specialWindow && !w.minimized && !w.fullScreen &&
+    return w && !exempt(w) && w.normalWindow && !w.transient && !w.specialWindow && !w.minimized && !w.fullScreen &&
         !w.skipTaskbar && w.resizeable && w.moveable && !floating[key(w)] && onThisDesktop(w);
 }
 
