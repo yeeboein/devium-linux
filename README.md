@@ -89,11 +89,11 @@ More in [docs/screenshots/real](docs/screenshots/real).
 
 ## Download
 
-**Latest: beta18.5** ([what's new](https://github.com/yeeboein/devium-linux/releases/tag/beta18.5))
+**Latest: beta19** ([what's new](https://github.com/yeeboein/devium-linux/releases/tag/beta19))
 
-- **[Devium KDE Plasma (beta18.5)](https://github.com/yeeboein/devium-linux/releases/download/beta18.5/devium-kdeplasma-beta18.5-x86_64.iso)**: the main one, for most computers (1.9 GB)
-- **[Devium Xfce (beta18.5)](https://github.com/yeeboein/devium-linux/releases/download/beta18.5/devium-xfce-beta18.5-x86_64.iso)**: lighter, for old laptops (1.6 GB)
-- **[Devium Hyprland (beta18.5)](https://github.com/yeeboein/devium-linux/releases/download/beta18.5/devium-hyprland-beta18.5-x86_64.iso)**: new, a tiling desktop for keyboard lovers (1.7 GB)
+- **[Devium KDE Plasma (beta19)](https://github.com/yeeboein/devium-linux/releases/download/beta19/devium-kdeplasma-beta19-x86_64.iso)**: the main one, for most computers (1.9 GB)
+- **[Devium Xfce (beta19)](https://github.com/yeeboein/devium-linux/releases/download/beta19/devium-xfce-beta19-x86_64.iso)**: lighter, for old laptops (1.6 GB)
+- **[Devium Hyprland (beta19)](https://github.com/yeeboein/devium-linux/releases/download/beta19/devium-hyprland-beta19-x86_64.iso)**: new, a tiling desktop for keyboard lovers (1.7 GB)
 
 First time? The [guide](docs/GUIDE.md) walks you through putting it on a USB stick or in a VM.
 
