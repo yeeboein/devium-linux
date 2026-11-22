@@ -172,6 +172,11 @@ PAGES = [
             {"id": "docker", "name": "Docker", "desc": "Run apps in containers (starts only when used)", "mb": 450,
              "pacman": ["docker", "docker-compose", "docker-buildx"], "services": ["docker.socket"],
              "group": "docker"},
+            {"id": "profound", "name": "Profound (offline AI coding buddy)",
+             "desc": "By Yeeboein: chat with an AI that writes, edits and styles your code, 100% on this computer, "
+                     "no internet or account. Downloads the app from GitHub (about 60 MB); then add an AI model "
+                     "(2 to 7 GB, the first start tells you how)", "mb": 70,
+             "helper": "profound", "detect": "/opt/profound/Profound", "remove_helper": "profound-remove"},
             {"id": "continue", "name": "AI coding helper", "desc": "Continue extension for VSCodium/VS Code (connect it to the AI you use)",
              "mb": 20, "ext": ["continue.continue"]},
             {"id": "sqlite", "name": "DB Browser for SQLite", "desc": "Look inside databases", "mb": 30,

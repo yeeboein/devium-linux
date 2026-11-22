@@ -10,6 +10,8 @@
 #   devium-helper install-local FILE.pkg.tar.zst...   install packages built from the AUR
 #   devium-helper refresh TAG       update Devium's own files to release TAG (Devium Updater)
 #   devium-helper brave-origin      install or update Brave Origin (official build from Brave)
+#   devium-helper profound          install or update Profound (offline AI coding buddy, from github.com/yeeboein/profound)
+#   devium-helper profound-remove   remove Profound (your AI models are kept)
 #   devium-helper cancel            stop a running Devium Configure install cleanly
 #   devium-helper archpill-deps     install what ArchPill needs (Quickshell and friends)
 #   devium-helper remove PKG... | remove-flatpak APP    (App Manager)
@@ -66,6 +68,105 @@ snapshot() {
     fi
 }
 
+
+PROFOUND_REPO="yeeboein/profound"
+
+profound_install() {
+    # Profound is Yeeboein's offline AI coding app. The Linux download on its GitHub releases page is one folder:
+    # the app, the llama.cpp engine, and an empty models/ folder (the AI models are big, so you add them yourself).
+    step "Installing Tk (Profound's window toolkit)"
+    if command -v pacman >/dev/null && ! pacman -Qq tk >/dev/null 2>&1; then
+        pacman_unlock || return 1
+        pacman -S --needed --noconfirm tk || { echo "Could not install Tk."; return 1; }
+    fi
+    step "Looking for the latest Profound"
+    local url tag
+    # the "latest" download link redirects to .../releases/download/<tag>/<file>: read the tag from that
+    url="$(curl -fsSI "https://github.com/$PROFOUND_REPO/releases/latest/download/Profound-Linux-x64.tar.gz" \
+           | awk 'tolower($1)=="location:" {print $2}' | tr -d '\r')" || true
+    tag="${url%/*}"; tag="${tag##*/}"
+    [[ $tag =~ ^v?[0-9][0-9A-Za-z._-]*$ ]] || { echo "Could not find Profound's latest release."; return 1; }
+    if [[ -f /opt/profound/.version && $(cat /opt/profound/.version) == "$tag" && -x /opt/profound/Profound ]]; then
+        echo "Profound $tag is already up to date."
+    else
+        step "Downloading Profound $tag"
+        local tmp; tmp="$(mktemp -d)"
+        curl -fsSL --retry 3 -o "$tmp/profound.tar.gz" \
+            "https://github.com/$PROFOUND_REPO/releases/download/$tag/Profound-Linux-x64.tar.gz" \
+            || { rm -rf "$tmp"; echo "Download failed."; return 1; }
+        tar -xzf "$tmp/profound.tar.gz" -C "$tmp" || { rm -rf "$tmp"; echo "Could not unpack Profound."; return 1; }
+        [[ -x $tmp/Profound/Profound ]] || { rm -rf "$tmp"; echo "The download did not contain the Profound app."; return 1; }
+        step "Installing Profound"
+        # keep any AI models that were already added
+        mkdir -p "$tmp/Profound/models"
+        if compgen -G "/opt/profound/models/*" >/dev/null; then
+            mv /opt/profound/models/* "$tmp/Profound/models/" 2>/dev/null || true
+        fi
+        rm -rf /opt/profound
+        mv "$tmp/Profound" /opt/profound && rm -rf "$tmp"
+        echo "$tag" > /opt/profound/.version
+        chmod 755 /opt/profound/Profound
+        chmod -R a+rX /opt/profound/engine 2>/dev/null; chmod 755 /opt/profound/engine/* 2>/dev/null || true
+    fi
+    # the models folder: everyone in the "users" group (Devium accounts) can add AI models without a password
+    mkdir -p /opt/profound/models
+    if getent group users >/dev/null; then chgrp users /opt/profound/models; chmod 2775 /opt/profound/models
+    else chmod 1777 /opt/profound/models; fi
+    # launcher: tells you what to do when there is no AI model yet
+    cat > /usr/local/bin/profound <<'LAUNCH'
+#!/usr/bin/env bash
+# Profound: your offline AI coding buddy (github.com/yeeboein/profound)
+dir=/opt/profound
+if ! compgen -G "$dir/models/*.gguf" >/dev/null; then
+    msg="Profound needs an AI model before it can answer.
+
+1. Download a .gguf model (for example Ministral 3 3B, about 2 GB, runs in 4 GB of RAM).
+   The list is on github.com/yeeboein/profound under \"Get a model\".
+2. Put the file in this folder, which is opening now:
+   $dir/models
+
+Then start Profound again."
+    (xdg-open "$dir/models" >/dev/null 2>&1 &)
+    if command -v kdialog >/dev/null; then kdialog --title "Profound" --msgbox "$msg"
+    elif command -v zenity >/dev/null; then zenity --info --title "Profound" --text "$msg"
+    else echo "$msg"; fi
+fi
+exec "$dir/Profound" "$@"
+LAUNCH
+    chmod 755 /usr/local/bin/profound
+    # icon from the project (small), then the menu entry
+    local icon=applications-development
+    if curl -fsSL -m 30 -o /usr/share/icons/hicolor/256x256/apps/profound.png --create-dirs \
+        "https://raw.githubusercontent.com/$PROFOUND_REPO/main/logo.png" 2>/dev/null; then icon=profound; fi
+    cat > /usr/share/applications/profound.desktop <<DESK
+[Desktop Entry]
+Type=Application
+Name=Profound
+GenericName=Offline AI coding buddy
+Comment=Chat with an AI that writes, edits and styles your code, with no internet and no account
+Exec=/usr/local/bin/profound
+Icon=$icon
+Terminal=false
+Categories=Development;IDE;
+Keywords=ai;code;coding;llm;offline;assistant;gemma;llama;
+StartupWMClass=Profound
+DESK
+    command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null
+    echo "Profound $tag installed. Add an AI model to /opt/profound/models, then open Profound from the menu."
+}
+
+profound_remove() {
+    step "Removing Profound"
+    # everything goes except the AI models (they are big and you may want them again)
+    find /opt/profound -mindepth 1 -maxdepth 1 ! -name models -exec rm -rf {} + 2>/dev/null
+    rm -f /usr/local/bin/profound /usr/share/applications/profound.desktop /usr/share/icons/hicolor/256x256/apps/profound.png
+    if compgen -G "/opt/profound/models/*" >/dev/null; then
+        echo "Your AI models are still in /opt/profound/models (delete that folder to get the space back)."
+    else
+        rmdir /opt/profound/models /opt/profound 2>/dev/null
+    fi
+    echo "Profound removed."
+}
 
 brave_origin() {
     # Official Brave Origin build: brave-origin-<version>-linux-amd64.zip on Brave's GitHub releases.
@@ -253,6 +354,12 @@ PY
         ;;
     brave-origin)
         brave_origin
+        ;;
+    profound)
+        profound_install
+        ;;
+    profound-remove)
+        profound_remove
         ;;
     archpill-deps)
         pacman_unlock || exit 1

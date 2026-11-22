@@ -434,6 +434,8 @@ class Wizard(QWidget):
                        and all(flatpak_installed(x) for x in it.get("flatpak", [])))
             if it.get("link"):     # a Devium command that's on the PATH only when chosen (lyrics, album-cover)
                 already = all(os.path.exists("/usr/local/bin/" + n) for n in it["link"])
+            if it.get("detect"):   # something downloaded by a helper (Profound): installed if this file exists
+                already = os.path.exists(it["detect"])
             if already:
                 # Running Devium Configure again: installed things start ticked; untick to remove them
                 self.was_installed.add(it["id"])
@@ -829,11 +831,13 @@ class Wizard(QWidget):
         # Unticked things that were installed: remove them (never Devium's base packages,
         # never packages another ticked item still needs)
         keep = base_packages() | {x for it in items for x in it.get("pacman", [])}
-        rm_pac, rm_fl, freed, unlink = [], [], 0, []
+        rm_pac, rm_fl, freed, unlink, unhelper = [], [], 0, [], []
         for iid in self.was_installed:
             if not self.checked(iid):
                 it = self.items[iid]
                 unlink += it.get("link", [])
+                if it.get("remove_helper"):
+                    unhelper.append(it["remove_helper"])
                 rm_pac += [x for x in it.get("pacman", []) if x not in keep]
                 rm_fl += it.get("flatpak", [])
                 freed += it.get("mb", 0)
@@ -849,7 +853,7 @@ class Wizard(QWidget):
                 "remove": dedupe(rm_pac), "remove_flatpak": dedupe(rm_fl), "freed": freed,
                 "removed_items": [self.items[i]["name"] for i in self.was_installed if not self.checked(i)]
                                  + (["Linux Magnify"] if magnify_gone else []),
-                "magnify_gone": magnify_gone, "unlink": unlink,
+                "magnify_gone": magnify_gone, "unlink": unlink, "unhelper": unhelper,
                 "services": dedupe(svcs), "groups": dedupe(groups), "ext": dedupe(ext),
                 "shell": shell, "mb": mb}
 
@@ -930,6 +934,8 @@ class Wizard(QWidget):
             if it.get("link") and not all(os.path.exists("/usr/local/bin/" + n) for n in it["link"]):
                 steps.append((f"Adding {it['name']}…", "pkexec",
                               ["/usr/lib/devium/devium-helper", "fun-link", *it["link"]], 5, "pacman"))
+        for h in p.get("unhelper", []):
+            steps.append(("Removing an app…", "pkexec", ["/usr/lib/devium/devium-helper", h], 10, "pacman"))
         if p.get("unlink"):
             steps.append(("Removing terminal commands…", "pkexec",
                           ["/usr/lib/devium/devium-helper", "fun-unlink", *p["unlink"]], 5, "pacman"))
