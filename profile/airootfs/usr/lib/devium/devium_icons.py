@@ -3,14 +3,16 @@
 
   devium_icons.py all        both of the below (what Devium runs after you change the accent colour, and at login)
   devium_icons.py accent     the Devium app icons use your accent colour (Devium Tools > Look) instead of the blue
-  devium_icons.py webapps    websites installed as apps (Brave, Chrome, Chromium... "Install as app") get their
-                             favicon on the Devium gradient, like every other app icon
+  devium_icons.py webapps [-v]  websites installed as apps (Brave, Chrome, Chromium... "Install as app") get their
+                             favicon on the Devium gradient (or just the favicon, or left alone: Devium Tools > Look).
+                             -v says what it found and wrote
 
-Everything is written to your own folder (~/.local/share/icons/Devium and Devium-Dark), never to the system, and the
-first line of each function says how to undo it: pick the Devium blue again, or delete those two folders.
+Everything is written to your own folders (~/.local/share/icons), never to the system. Undo: pick the Devium blue again;
+for website icons choose "Leave as the browser made them" (the browser's own pictures are kept and put back).
 """
 import glob
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -26,7 +28,7 @@ SYS_ICONS = os.environ.get("DEVIUM_SYS_ICONS", "/usr/share/icons")
 THEMES = ("Devium", "Devium-Dark")
 DEFAULT = ("#8fb4d8", "#b4b8e0")
 MARK = ".devium-managed"          # in a folder we created: it is safe for us to rebuild it
-WEB_DIR = "256x256/apps"
+WEB_DIR = "256x256/apps"     # beta19.5 only: cleaned up by web_icons()
 
 
 def accent():
@@ -43,8 +45,8 @@ def user_theme(name):
     return os.path.join(DATA, "icons", name)
 
 
-def write_index(name, with_web):
-    """Our own index.theme (the system one, plus the folder of website icons when there are any)."""
+def write_index(name, with_web=False):
+    """Our own index.theme (a copy of the system one)."""
     src = os.path.join(SYS_ICONS, name, "index.theme")
     try:
         text = open(src, encoding="utf-8").read()
@@ -122,25 +124,42 @@ def web_apps():
     return apps
 
 
-def find_source(name):
-    """The biggest picture the browser saved for this app, or None."""
-    best, best_size = None, 0
-    pats = [os.path.join(DATA, "icons", "hicolor", "*", "apps", name + ".*"),
-            os.path.join(DATA, "icons", name + ".*"),
-            os.path.join(HOME, ".local/share/flatpak/exports/share/icons/hicolor", "*", "apps", name + ".*")]
-    for pat in pats:
-        for p in glob.glob(pat):
-            if not p.lower().endswith((".png", ".ico", ".webp", ".jpg", ".jpeg")):
-                continue      # SVG sources are skipped (PIL can't draw them); the PNG sizes are enough
-            try:
-                size = os.path.getsize(p)
-            except OSError:
-                continue
-            m = re.search(r"/(\d+)x\d+/", p)
-            score = int(m.group(1)) * 1000000 + size if m else size
-            if score > best_size:
-                best, best_size = p, score
-    return best
+WEB_MODE_FILE = os.path.join(CONFIG, "devium", "webapp-icons")
+ORIG_DIR = os.path.join(DATA, "devium", "webapp-icons", "orig")
+STATE_FILE = os.path.join(DATA, "devium", "webapp-icons", "state.json")
+HICOLOR = os.path.join(DATA, "icons", "hicolor")
+
+
+def web_mode():
+    """tile (the favicon on the Devium tile, the default), favicon (just the favicon), or off (leave the browser's icon)."""
+    try:
+        m = open(WEB_MODE_FILE).read().strip().lower()
+    except OSError:
+        return "tile"
+    return m if m in ("tile", "favicon", "off") else "tile"
+
+
+def set_web_mode(mode):
+    os.makedirs(os.path.dirname(WEB_MODE_FILE), exist_ok=True)
+    with open(WEB_MODE_FILE, "w") as f:
+        f.write(mode + "\n")
+
+
+def sha(path):
+    try:
+        return hashlib.sha1(open(path, "rb").read()).hexdigest()
+    except OSError:
+        return ""
+
+
+def browser_icons(name):
+    """{size: path} of the icon the browser saved for this app, in your own icon folder (where the menu finds it)."""
+    found = {}
+    for p in glob.glob(os.path.join(HICOLOR, "*", "apps", name + ".png")):
+        m = re.search(r"/(\d+)x\d+/apps/", p)
+        if m:
+            found[int(m.group(1))] = p
+    return found
 
 
 def fetch_favicon(url):
@@ -162,6 +181,20 @@ def fetch_favicon(url):
     return path
 
 
+def open_favicon(path):
+    """The biggest picture in a favicon file (an .ico holds several), with the empty border cut off, as RGBA."""
+    from PIL import Image
+    fav = Image.open(path)
+    try:
+        if getattr(fav, "ico", None):
+            fav = fav.ico.getimage(max(fav.ico.sizes()))
+    except Exception:
+        pass
+    fav = fav.convert("RGBA")
+    box = fav.getbbox()
+    return fav.crop(box) if box else fav
+
+
 def tile(favicon_path, a, b):
     """The Devium tile (accent gradient, rounded square) with the favicon in the middle, 256 x 256."""
     from PIL import Image, ImageDraw, ImageFilter
@@ -179,16 +212,7 @@ def tile(favicon_path, a, b):
     out = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     out.paste(grad, (0, 0), mask)
     ImageDraw.Draw(out).rounded_rectangle((18, 18, 238, 238), 54, outline=(255, 255, 255, 64), width=2)
-    fav = Image.open(favicon_path)
-    try:                       # .ico files hold several sizes: take the biggest
-        if getattr(fav, "ico", None):
-            fav = fav.ico.getimage(max(fav.ico.sizes()))
-    except Exception:
-        pass
-    fav = fav.convert("RGBA")
-    box = fav.getbbox()
-    if box:
-        fav = fav.crop(box)
+    fav = open_favicon(favicon_path)
     k = 124 / max(fav.size)
     fav = fav.resize((max(1, int(fav.width * k)), max(1, int(fav.height * k))), Image.LANCZOS)
     pos = ((S - fav.width) // 2, (S - fav.height) // 2)
@@ -199,42 +223,102 @@ def tile(favicon_path, a, b):
     return out
 
 
-def web_icons():
-    """Give every installed website-app a Devium-style icon (undo: delete ~/.local/share/icons/Devium*/256x256)."""
+def plain(favicon_path):
+    """Just the favicon, centred in a transparent square (256 x 256)."""
+    from PIL import Image
+    S = 256
+    fav = open_favicon(favicon_path)
+    k = 232 / max(fav.size)
+    fav = fav.resize((max(1, int(fav.width * k)), max(1, int(fav.height * k))), Image.LANCZOS)
+    out = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    out.alpha_composite(fav, ((S - fav.width) // 2, (S - fav.height) // 2))
+    return out
+
+
+def web_icons(verbose=False):
+    """Websites installed as apps: put the favicon on the Devium tile (or just the favicon) in the icon the browser made,
+    so the menu, dock and Spotlight all show it. The browser's own picture is kept and put back by "off"."""
+    say = print if verbose else (lambda *_a: None)
+    # beta19.5 put these in a Devium theme folder, which not every desktop reads: remove that, use the browser's icons
+    for theme in THEMES:
+        base = user_theme(theme)
+        if os.path.isfile(os.path.join(base, MARK)):
+            shutil.rmtree(os.path.join(base, "256x256"), ignore_errors=True)
+            if os.path.isdir(os.path.join(base, "scalable")):
+                write_index(theme, False)
+            else:
+                shutil.rmtree(base, ignore_errors=True)
+    mode = web_mode()
     try:
         import PIL  # noqa: F401
     except ImportError:
+        say("The Pillow picture library is missing, so no icons were made.")
         return
+    try:
+        state = json.load(open(STATE_FILE))
+    except (OSError, ValueError):
+        state = {}
     a, b = accent()
     apps = web_apps()
-    for theme in THEMES:
-        if not os.path.isdir(os.path.join(SYS_ICONS, theme)):
+    say(f"Mode: {mode}. Websites installed as apps found: {len(apps)}")
+    names = set()
+    for name, url in apps:
+        names.add(name)
+        mine = state.setdefault(name, {})
+        icons = browser_icons(name)
+        os.makedirs(ORIG_DIR, exist_ok=True)
+        # what is in the icon folder: ours (we know its checksum) or the browser's (keep a copy as the original)
+        for size, path in icons.items():
+            if mine.get(str(size)) != sha(path):
+                shutil.copy2(path, os.path.join(ORIG_DIR, f"{name}-{size}.png"))
+                mine.pop(str(size), None)
+        origs = {}
+        for f in glob.glob(os.path.join(ORIG_DIR, f"{name}-*.png")):
+            m = re.search(r"-(\d+)\.png$", f)
+            if m:
+                origs[int(m.group(1))] = f
+        targets = sorted(origs) if origs else []
+        if not origs and url and mode != "off":
+            fav = fetch_favicon(url)
+            if fav:
+                targets = [256]
+                origs = {256: fav}
+        say(f"  {name}: browser icon sizes {sorted(icons) or 'none'}, using {sorted(origs) or 'nothing'}")
+        if not origs:
+            say("    no picture found for this app (no icon saved by the browser, no address to fetch a favicon from)")
             continue
-        base = user_theme(theme)
-        if os.path.isdir(base) and not os.path.isfile(os.path.join(base, MARK)):
-            continue          # not our folder
-        webdir = os.path.join(base, WEB_DIR)
-        shutil.rmtree(webdir, ignore_errors=True)
-        made = 0
-        for name, url in apps:
-            src = find_source(name) or (fetch_favicon(url) if url else None)
-            if not src:
+        source = origs[max(origs)]
+        for size in targets:
+            dest = os.path.join(HICOLOR, f"{size}x{size}", "apps", name + ".png")
+            if mode == "off":
+                if os.path.isfile(origs.get(size, "")) and mine.get(str(size)) == sha(dest):
+                    shutil.copy2(origs[size], dest)
+                mine.pop(str(size), None)
                 continue
             try:
-                img = tile(src, a, b)
-            except Exception:
-                continue
-            os.makedirs(webdir, exist_ok=True)
-            img.save(os.path.join(webdir, name + ".png"))
-            made += 1
-        if made or os.path.isdir(base):
-            os.makedirs(base, exist_ok=True)
-            open(os.path.join(base, MARK), "w").close()
-            write_index(theme, made > 0)
-        if not made:
-            shutil.rmtree(webdir, ignore_errors=True)
-            if os.path.isdir(base) and sorted(os.listdir(base)) in ([MARK, "index.theme"], [MARK]):
-                shutil.rmtree(base, ignore_errors=True)       # nothing of ours left in it
+                img = tile(source, a, b) if mode == "tile" else plain(source)
+                if size != 256:
+                    from PIL import Image
+                    img = img.resize((size, size), Image.LANCZOS)
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                img.save(dest)
+                mine[str(size)] = sha(dest)
+                say(f"    wrote {dest}")
+            except Exception as e:
+                say(f"    could not make the {size} px icon: {e}")
+    # apps that are gone: take our icons away (the browser removes its own)
+    for name in [n for n in state if n not in names]:
+        for size, h in state[name].items():
+            dest = os.path.join(HICOLOR, f"{size}x{size}", "apps", name + ".png")
+            if sha(dest) == h:
+                try:
+                    os.remove(dest)
+                except OSError:
+                    pass
+        state.pop(name)
+    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
 
 
 def tell_desktop():
@@ -252,7 +336,7 @@ def main():
     if what in ("all", "accent"):
         recolour_themes()
     if what in ("all", "webapps"):
-        web_icons()
+        web_icons("-v" in sys.argv or "--verbose" in sys.argv)
     if what in ("all", "accent", "webapps"):
         try:
             tell_desktop()

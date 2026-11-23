@@ -21,6 +21,12 @@
   then type your password). On the lock screen, a Space on an empty password box now only wakes the screen. (The login
   screen already did this.) Passwords that start with a space can't be typed on the lock screen any more; spaces in the
   middle or at the end still work.
+- **Websites installed as apps: icon fix and a choice.** In beta19.5 the favicon-on-Devium-tile icon could fail to
+  show, because it was saved in a place not every desktop reads. Devium now puts the picture straight into the icon the
+  browser made for the app (the browser's own picture is kept), so the menu, dock and Spotlight all show it. New in
+  **Devium Tools > Look > Websites installed as apps:** choose **the site's icon on a Devium tile**, **just the site's
+  icon** (the favicon on its own), or **leave them as the browser made them**, and press Refresh now. It also says how
+  many website apps it found.
 
 ## Planned
 - **Devium updates through normal system updates:** Devium's own files come from a signed online package repo, so

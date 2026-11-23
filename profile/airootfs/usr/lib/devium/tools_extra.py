@@ -355,6 +355,43 @@ def wallpapers_card(page):
                   login_box, note))
 
 
+def web_icons_card(page):
+    """Websites installed as apps ("Install as app" in Brave, Chrome...): how their icon looks."""
+    modes = [("tile", "The site's icon on a Devium tile"), ("favicon", "Just the site's icon"),
+             ("off", "Leave them as the browser made them")]
+    box = QComboBox()
+    for key, name in modes:
+        box.addItem(name, key)
+    mode_file = os.path.join(CONFIG, "webapp-icons")
+    try:
+        cur = open(mode_file).read().strip()
+    except OSError:
+        cur = "tile"
+    box.setCurrentIndex(max(0, [k for k, _n in modes].index(cur) if cur in [k for k, _n in modes] else 0))
+    report = label("", "subtitle")
+
+    def run_icons(*_a):
+        os.makedirs(CONFIG, exist_ok=True)
+        with open(mode_file, "w") as f:
+            f.write(box.currentData() + "\n")
+        out = subprocess.run(["python3", "/usr/lib/devium/devium_icons.py", "webapps", "-v"], capture_output=True,
+                             text=True, timeout=120).stdout
+        found = re.search(r"found: (\d+)", out)
+        n = int(found.group(1)) if found else 0
+        wrote = out.count("wrote ")
+        report.setText(T("No websites installed as apps yet. Open a site in Brave or Chrome, then Install as app.")
+                       if not n else f"{n} " + T("website app(s) found") + f", {wrote} " + T("icons made") +
+                       ("" if wrote or box.currentData() == "off" else " - " + T("no picture found; details: ") +
+                        "devium_icons.py webapps -v"))
+
+    box.currentIndexChanged.connect(run_icons)
+    page.add(card(label(T("Websites installed as apps"), "h2"),
+                  label("When you use Install as app on a site in Brave, Chrome or Chromium, Devium gives it a proper "
+                        "icon: the site's own icon on a Devium tile in your accent colour (or just the site's icon). "
+                        "It is done a few seconds after you install the app.", "subtitle"),
+                  row(QLabel(T("Icons:")), box, button(T("Refresh now"), run_icons, icon="view-refresh")), report))
+
+
 def make_look_page(win):
     page = Page(T("Look"), T("Pick your accent colour, or put the desktop back to how Devium starts."))
     a, b = current_accent()
@@ -400,6 +437,7 @@ def make_look_page(win):
                   page.done_note))
     if shutil.which("devium-wallpaper"):
         wallpapers_card(page)
+    web_icons_card(page)
     engines = [("browser", "Your browser and its search engine"), ("duckduckgo", "DuckDuckGo"),
                ("brave", "Brave Search"), ("google", "Google"),
                ("startpage", "Startpage"), ("bing", "Bing"), ("ecosia", "Ecosia")]
