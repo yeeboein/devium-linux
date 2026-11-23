@@ -318,8 +318,10 @@ class HomePage(Page):
         self.col.addLayout(self.stats)
         groups = [
             (T("Look after your computer"), [
-                (T("Updates"), "Install updates with undo (Meta+U)", "system-software-update",
+                (T("Update Arch"), "Update the system, with undo (Meta+U)", "system-software-update",
                  lambda: win.go("updates")),
+                (T("Devium updates"), "New Devium versions and features", "devium",
+                 lambda: win.go("devium-updates")),
                 (T("System storage"), "See where your disk space went", "drive-harddisk", lambda: win.go("storage")),
                 (T("Clean up"), "Find what takes space and free it", "edit-clear", lambda: win.go("clean")),
                 (T("Health check"), "Disks, temperatures and battery wear", "heart", lambda: win.go("health")),
@@ -329,7 +331,6 @@ class HomePage(Page):
             ]),
             (T("Apps and setup"), [
                 ("Devium Configure", "Add or remove apps and the look", "devium", lambda: ui.launch("devium-setup-wizard")),
-                ("Devium Updater", "Get new Devium versions", "devium", lambda: ui.launch("devium-updater")),
                 (T("App Manager"), "Size, RAM and remove apps", "view-list-details", lambda: win.go("apps")),
                 (T("Background apps"), "Turn off apps that run quietly",
                  "preferences-system-startup", lambda: win.go("background")),
@@ -525,25 +526,51 @@ class AppsPage(Page):
 
 
 # ---------------------------------------------------------------------------- Updates (Safe Updates)
+def load_script(path, cls):
+    """A Devium app that lives in a script (devium-update-manager, devium-updater): load its window class so it can be
+    a page of Devium Tools instead of a separate program."""
+    import importlib.machinery
+    import importlib.util
+    name = "embedded_" + os.path.basename(path).replace("-", "_")
+    loader = importlib.machinery.SourceFileLoader(name, path)
+    spec = importlib.util.spec_from_loader(name, loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return getattr(mod, cls)
+
+
+def embed(page, path, cls, min_height):
+    """Put one of those windows inside a page (its own big title is hidden: the page has one)."""
+    w = load_script(path, cls)()
+    w.setWindowFlags(Qt.WindowType.Widget)
+    first = w.layout().itemAt(0)
+    if first is not None and first.widget() is not None:
+        first.widget().hide()
+    w.layout().setContentsMargins(0, 0, 0, 0)
+    w.setMinimumHeight(min_height)
+    return w
+
+
 class UpdatesPage(Page):
+    """Update Arch: updates for the whole system (Arch Linux), with a restore point, undo and Arch news."""
+
     def __init__(self, win):
-        super().__init__(T("Updates"),
-                         "Safe Updates: Devium makes a restore point before every update (when Timeshift is set "
-                         "up), remembers the old versions so you can undo, and shows Arch Linux news first - "
-                         "sometimes an update needs you to do something by hand.")
+        super().__init__(T("Update Arch"),
+                         "Update the whole system (Arch Linux: the desktop, apps and drivers). Safe Updates: Devium "
+                         "makes a restore point before every update (when Timeshift is set up), remembers the old "
+                         "versions so you can undo, and shows Arch Linux news first - sometimes an update needs you "
+                         "to do something by hand. Devium's own new versions are on the Devium updates page.")
+        self.win = win
+        self.manager_box = QVBoxLayout()
+        holder = QWidget()
+        holder.setLayout(self.manager_box)
+        self.add(card(label(T("Check and install updates"), "h2"), holder))
+        self.manager = None
         self.news = self.add(label(T("Arch Linux news") + "...", rich=True))
-        self.add(row(button(T("Install updates"), lambda: ui.launch("devium-update-manager"), True,
-                            "system-software-update"),
-                     button(T("Undo last update"), self.undo, icon="edit-undo"),
+        self.add(row(button(T("Undo last update"), self.undo, icon="edit-undo"),
                      button("Make a restore point", lambda: root(self, "Restore point", "snapshot"),
-                            icon="document-save")))
-        ver = ui.devium_version()
-        m = re.match(r"^(.*?)(\d+)$", ver or "")
-        nxt = f"{m.group(1)}{int(m.group(2)) + 1}" if m and not re.match(r"^\d{4}\.", ver) else "the next version"
-        self.add(card(label(f"Next Devium update: {nxt}", "h2"),
-                      label(f"You have Devium {ver}. See everything coming in {nxt}, or install it when it's out.",
-                            "subtitle"),
-                      row(button(f"See what's in {nxt}", lambda: ui.launch("devium-updater"), True, "devium"))))
+                            icon="document-save"),
+                     button("Devium updates", lambda: win.go("devium-updates"), icon="devium")))
         self.auto = QCheckBox(T("Automatic updates") + " (daily, on mains power, restore point first)")
         self.auto.setChecked(run(["systemctl", "is-enabled", "devium-autoupdate.timer"]).strip() == "enabled")
         self.auto.toggled.connect(self.toggle_auto)
@@ -557,6 +584,13 @@ class UpdatesPage(Page):
         if self.loaded:
             return
         self.loaded = True
+        try:   # the updater itself, right here (it checks for updates as soon as it appears)
+            self.manager = embed(self, "/usr/local/bin/devium-update-manager", "UpdateManager", 380)
+            self.manager_box.addWidget(self.manager)
+        except Exception as e:   # never leave the page empty: fall back to the separate window
+            self.manager_box.addWidget(button(T("Install updates"), lambda: ui.launch("devium-update-manager"), True,
+                                              "system-software-update"))
+            self.manager_box.addWidget(label(f"({e})", "subtitle"))
         self.proc = QProcess(self)
         self.proc.finished.connect(self.got_news)
         self.proc.start("curl", ["-fsL", "--max-time", "15", "https://archlinux.org/feeds/news/"])
@@ -617,6 +651,35 @@ class UpdatesPage(Page):
             self.auto.blockSignals(True)
             self.auto.setChecked(not on)
             self.auto.blockSignals(False)
+
+
+# ---------------------------------------------------------------------------- Devium updates
+class DeviumUpdatesPage(Page):
+    """Devium updates: Devium's own new versions (apps, looks and features), stable or beta, and the new ISO."""
+
+    def __init__(self, win):
+        super().__init__(T("Devium updates"),
+                         "New versions of Devium itself: new apps, looks and features, with what changed. "
+                         "Your files and apps stay. Normal software updates (the system) are on the Update Arch page.")
+        self.win = win
+        self.box = QVBoxLayout()
+        holder = QWidget()
+        holder.setLayout(self.box)
+        self.add(card(holder))
+        self.updater = None
+        self.add(row(button("Update Arch", lambda: win.go("updates"), icon="system-software-update")))
+        self.finish()
+
+    def on_show(self):
+        if self.loaded:
+            return
+        self.loaded = True
+        try:
+            self.updater = embed(self, "/usr/local/bin/devium-updater", "Updater", 460)
+            self.box.addWidget(self.updater)
+        except Exception as e:
+            self.box.addWidget(button("Open Devium Updater", lambda: ui.launch("devium-updater"), True, "devium"))
+            self.box.addWidget(label(f"({e})", "subtitle"))
 
 
 # ---------------------------------------------------------------------------- Speed and memory
@@ -921,7 +984,7 @@ WINDOWS_APPS = [
     ("Microsoft Office", "LibreOffice (Devium Configure > Packages)", ""),
     ("Photos", "Gwenview", ""),
     ("Paint", "KolourPaint, or Krita / GIMP", ""),
-    ("Windows Update", "Update Manager", "Meta+U"),
+    ("Windows Update", "Update Arch (Devium Tools)", "Meta+U"),
     ("Lock the screen (Win+L)", "Lock the screen", "Meta+L"),
     ("Show the desktop (Win+D)", "Peek at the desktop", "Meta+D"),
     ("Close a window (Alt+F4)", "Close a window", "Alt+F4"),
@@ -1292,7 +1355,8 @@ extra.setup(Page=Page, card=card, row=row, button=button, label=label, root=root
 PAGES = [
     ("home", T("Home"), "go-home", HomePage),
     ("apps", T("App Manager"), "view-list-details", AppsPage),
-    ("updates", T("Updates"), "system-software-update", UpdatesPage),
+    ("updates", T("Update Arch"), "system-software-update", UpdatesPage),
+    ("devium-updates", T("Devium updates"), "devium", DeviumUpdatesPage),
     ("look", T("Look"), "preferences-desktop-color", extra.make_look_page),
     ("backup", T("Backup and move"), "document-save", extra.make_backup_page),
     ("drivers", T("Drivers"), "preferences-system-hardware", extra.make_drivers_page),
@@ -1315,7 +1379,8 @@ PAGES = [
 
 
 PAGE_WORDS = {
-    "apps": "uninstall remove programs size ram", "updates": "update upgrade undo restore point pacman",
+    "apps": "uninstall remove programs size ram", "updates": "update upgrade undo restore point pacman arch system",
+    "devium-updates": "devium version beta stable release new features iso updater",
     "look": "accent colour color reset desktop widgets", "backup": "backup restore usb move export import",
     "drivers": "nvidia wifi broadcom fingerprint graphics", "health": "smart disk temperature battery wear",
     "phone": "android iphone kde connect qr", "storage": "disk space usage full drive used big",

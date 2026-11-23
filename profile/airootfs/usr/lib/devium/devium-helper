@@ -350,6 +350,8 @@ PY
         [[ -f /tmp/devium-refresh/docs/releases/$tag.md ]] && \
             install -Dm644 "/tmp/devium-refresh/docs/releases/$tag.md" /usr/share/devium/whats-new.md
         rm -rf /tmp/devium-refresh
+        # a Space pressed to wake the lock screen stays out of the password (safe if KDE's files look different)
+        python3 /usr/lib/devium/patch-lockscreen || true
         step "Done"
         ;;
     brave-origin)

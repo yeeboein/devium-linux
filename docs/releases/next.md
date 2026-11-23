@@ -12,6 +12,15 @@
   icons start fresh without you having to remember to log out. Do nothing and it restarts; press **Not now** to stay.
   Tick or untick **Restart automatically after updates** in that window to turn it on or off (when it's off it only
   asks). "What's new" then shows at your next login. The Update Manager does the same after a Linux kernel update.
+- **Updates are two pages inside Devium Tools: "Update Arch" and "Devium updates".** **Update Arch** is the whole
+  system (the Update Manager, Arch news, undo, restore point and automatic updates) right in the page, and **Devium
+  updates** is Devium's own new versions (what changed, stable or beta, the update button and the ISO), also right in
+  the page. There is no separate Devium Updater or Update Manager window to open any more; Spotlight, System Settings >
+  Devium and the shortcuts (Meta+U) all go to these pages.
+- **Space pressed to wake the lock screen no longer ends up in your password** (after sleep, when you press Space and
+  then type your password). On the lock screen, a Space on an empty password box now only wakes the screen. (The login
+  screen already did this.) Passwords that start with a space can't be typed on the lock screen any more; spaces in the
+  middle or at the end still work.
 
 ## Planned
 - **Devium updates through normal system updates:** Devium's own files come from a signed online package repo, so

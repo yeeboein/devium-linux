@@ -1,10 +1,10 @@
 [Desktop Entry]
 NoDisplay=true
 Type=Application
-Name=Devium Updater
+Name=Devium updates
 GenericName=New Devium versions
 Comment=Get new Devium versions: new apps, looks and features
-Exec=devium-updater
+Exec=devium-tools devium-updates
 Icon=devium
 Terminal=false
 Categories=System;Settings;

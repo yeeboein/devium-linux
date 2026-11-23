@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Updates
-Comment=Install updates with a restore point first, and undo the last one
+Name=Update Arch
+Comment=Update the whole system with a restore point first, and undo the last one
 Icon=system-software-update
 Exec=devium-tools updates
 Keywords=update;upgrade;undo;pacman;restore point;

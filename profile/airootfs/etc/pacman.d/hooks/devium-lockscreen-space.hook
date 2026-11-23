@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = plasma-desktop
+
+[Action]
+Description = Devium: a Space pressed to wake the lock screen stays out of the password
+When = PostTransaction
+Exec = /usr/lib/devium/patch-lockscreen

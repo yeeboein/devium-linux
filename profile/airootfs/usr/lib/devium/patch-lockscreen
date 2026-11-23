@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""Devium: pressing Space to wake the lock screen must not end up in your password.
+
+KDE's lock screen types the key you press to wake it into the password box. This makes a Space on an empty password box
+only wake the screen. It changes two files of KDE's lock screen with three small, exact edits. If KDE has changed those
+files so the edits don't fit any more, it changes nothing (and the lock screen keeps working as KDE made it).
+Run as root: after Devium is installed or updated, and by a pacman hook whenever plasma-desktop is updated.
+"""
+import os
+import shutil
+import sys
+
+DIR = os.environ.get("DEVIUM_LOCKSCREEN_DIR", "/usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen")
+MAIN, UI = os.path.join(DIR, "MainBlock.qml"), os.path.join(DIR, "LockScreenUi.qml")
+MARK = "devium: a Space"
+
+EDITS = [
+    (MAIN, "    signal passwordResult(string password)\n",
+     "    signal passwordResult(string password)\n"
+     "    // devium: a Space on an empty password box only wakes the screen (see patch-lockscreen)\n"
+     "    signal wakeRequested()\n"),
+    (MAIN, "            Keys.onPressed: event => {\n                if (event.key === Qt.Key_Left && !text) {",
+     "            Keys.onPressed: event => {\n"
+     "                // devium: a Space on an empty password box only wakes the screen, it is not part of the password\n"
+     "                if (event.key === Qt.Key_Space && !text) {\n"
+     "                    sessionManager.wakeRequested()\n"
+     "                    event.accepted = true\n"
+     "                    return\n"
+     "                }\n"
+     "                if (event.key === Qt.Key_Left && !text) {"),
+    (UI, "                lockScreenUiVisible: lockScreenRoot.uiVisible\n",
+     "                lockScreenUiVisible: lockScreenRoot.uiVisible\n"
+     "                onWakeRequested: lockScreenRoot.uiVisible = true   // devium\n"),
+]
+
+
+def main():
+    try:
+        texts = {p: open(p, encoding="utf-8").read() for p in (MAIN, UI)}
+    except OSError:
+        print("patch-lockscreen: KDE's lock screen files aren't here, nothing to do.")
+        return 0
+    if MARK in texts[MAIN]:
+        print("patch-lockscreen: already done.")
+        return 0
+    new = dict(texts)
+    for path, old, repl in EDITS:
+        if new[path].count(old) != 1:
+            print("patch-lockscreen: this KDE version's lock screen looks different, changing nothing.")
+            return 0
+        new[path] = new[path].replace(old, repl, 1)
+    for path in (MAIN, UI):
+        if not os.path.exists(path + ".devium-orig"):
+            shutil.copy2(path, path + ".devium-orig")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(new[path])
+    print("patch-lockscreen: Space on an empty password box now only wakes the lock screen.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

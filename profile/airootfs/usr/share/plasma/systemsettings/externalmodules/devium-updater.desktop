@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=Devium Updater
-Comment=Get new Devium versions (stable or beta)
+Name=Devium updates
+Comment=New Devium versions, features and what changed (stable or beta)
 Icon=devium-updater
-Exec=devium-updater
+Exec=devium-tools devium-updates
 Keywords=updater;version;beta;stable;release;
 X-KDE-System-Settings-Parent-Category=devium
 X-KDE-Weight=19
