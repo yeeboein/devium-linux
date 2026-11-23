@@ -18,6 +18,12 @@
 - **Devium Configure moves into Devium Tools after your first setup.** On a brand-new install it is its own app so you
   can find it; once the first setup has finished, its separate menu entry goes away and you open it from Devium
   Tools (or Spotlight, or System Settings > Devium).
+- **App icons follow your accent colour.** When you pick a new accent colour in Devium Tools > Look, the Devium app
+  icons (the gradient tiles for every app, folder and file type) change to that colour too, not just the windows.
+  Pick the Devium blue (or Reset desktop) to go back. It only changes your own copy in ~/.local/share/icons.
+- **Websites installed as apps get a proper Devium icon.** When you "Install as app" a site in Brave, Chrome, Chromium
+  and other Chromium-based browsers, its favicon is put on the Devium gradient tile like every other app, in your accent
+  colour. It happens a few seconds after you install the app, and again when you change the accent colour.
 
 ## Planned
 - **Devium updates through normal system updates:** Devium's own files come from a signed online package repo, so

@@ -1,0 +1,9 @@
+[Unit]
+Description=Devium icons for websites installed as apps
+
+[Service]
+Type=oneshot
+# the browser writes the icon a moment after the shortcut
+ExecStartPre=/bin/sleep 5
+ExecStart=/usr/bin/python3 /usr/lib/devium/devium_icons.py webapps
+Nice=15

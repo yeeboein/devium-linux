@@ -153,6 +153,12 @@ if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [
     touch "$STATE/shot-key"
 fi
 
+# --- 1.0: websites installed as apps get their favicon on the Devium icon, and the icons follow your accent colour
+if command -v systemctl >/dev/null && [[ ! -f $STATE/webapp-icons ]]; then
+    systemctl --user enable --now devium-webapp-icons.path >/dev/null 2>&1 && touch "$STATE/webapp-icons"
+fi
+(python3 /usr/lib/devium/devium_icons.py all >/dev/null 2>&1 &)
+
 # --- 1.0: once the first setup is done, Devium Configure lives in Devium Tools (hidden from the menu); every login, cheap
 sh /usr/lib/devium/hide-configure 2>/dev/null
 

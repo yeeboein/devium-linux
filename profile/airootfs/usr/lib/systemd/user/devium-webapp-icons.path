@@ -1,0 +1,9 @@
+[Unit]
+Description=Give websites installed as apps a Devium icon (watches your app shortcuts)
+
+[Path]
+PathChanged=%h/.local/share/applications
+Unit=devium-webapp-icons.service
+
+[Install]
+WantedBy=default.target

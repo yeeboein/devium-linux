@@ -68,6 +68,12 @@ def apply_accent(a, b, login_screen=True, parent=None):
     os.makedirs(CONFIG, exist_ok=True)
     with open(os.path.join(CONFIG, "accent"), "w") as f:
         f.write(f"{a} {b}\n")
+    # the Devium app icons (and the icons of websites installed as apps) take the new colours too
+    try:
+        subprocess.run(["python3", "/usr/lib/devium/devium_icons.py", "all"], timeout=90,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
     if KDE and shutil.which("plasma-apply-colorscheme"):
         subprocess.run(["plasma-apply-colorscheme", "--accent-color", a],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -155,6 +161,11 @@ def reset_desktop(parent):
                          start_new_session=True)
     elif XFCE:
         QMessageBox.information(parent, T("Reset desktop"), "Done. Log out and back in to see the default desktop.")
+    try:   # the app icons go back to the Devium blue (the accent file was just put away)
+        subprocess.run(["python3", "/usr/lib/devium/devium_icons.py", "all"], timeout=90,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
     if os.path.exists("/etc/sddm.conf.d") and os.path.exists("/usr/share/sddm/themes/devium/theme.conf.user"):
         subprocess.run(["pkexec", "/usr/lib/devium/devium-helper", "sddm-accent", ui.ACCENT, ui.ACCENT2],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
