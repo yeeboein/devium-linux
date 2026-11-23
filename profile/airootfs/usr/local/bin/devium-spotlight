@@ -60,7 +60,11 @@ SETTINGS = [
     ("battery charge limit health", "Battery (Devium Tools)", ["devium-tools", "battery"]),
     ("update updates upgrade", "Updates (Devium Tools)", ["devium-tools", "updates"]),
     ("apps uninstall remove programs", "App Manager (Devium Tools)", ["devium-tools", "apps"]),
-    ("install add apps configure", "Devium Configure", ["devium-setup-wizard"]),
+    ("install add apps configure setup", "Configure (Devium Tools)", ["devium-setup-wizard"]),
+    ("updater new version beta stable release features", "Updater (Devium Tools)", ["devium-updater"]),
+    ("screenshot screen capture snip crop annotate arrow blur", "Screenshot Editor (Devium Tools)", ["devium-shot"]),
+    ("whats new changes release notes", "What's new (Devium Tools)", ["devium-whats-new"]),
+    ("about version licence credits", "About (Devium Tools)", ["devium-about"]),
     ("printer scanner print", "Printers and scanners", ["devium-tools", "printers"]),
     ("privacy firewall location", "Privacy (Devium Tools)", ["devium-tools", "privacy"]),
     ("faster speed memory ram slow", "Speed and memory (Devium Tools)", ["devium-tools", "speed"]),
@@ -72,7 +76,7 @@ SETTINGS = [
     ("tiling tile hyprland split windows", "Automatic tiling (Devium Configure > Customise)", ["devium-setup-wizard", "--customise"]),
     ("customise customize tweaks transparent see-through blur wobbly mac buttons hot corners", "Customise the look (Devium Configure)",
      ["devium-setup-wizard", "--customise"]),
-    ("widgets desktop weather sea clock focus pomodoro", "Devium widgets (Devium Tools > Look)", ["devium-tools", "look"]),
+    ("widgets desktop weather sea clock focus pomodoro", "Desktop widgets (Devium Tools > Look)", ["devium-tools", "look"]),
     ("git github ssh docker ports developer", "Developer (Devium Tools)", ["devium-tools", "developer"]),
     ("database postgres mysql redis mongo https env secret snippets share mise coding", "Coding tools (Devium Tools)",
      ["devium-tools", "coding"]),
@@ -305,7 +309,7 @@ def load_apps():
     for d in dirs:
         for f in sorted(glob.glob(os.path.join(d, "*.desktop"))):
             base = os.path.basename(f)
-            if base in seen:
+            if base in seen or base == "devium-spotlight.desktop":   # Spotlight doesn't list itself
                 continue
             seen.add(base)
             cp = configparser.ConfigParser(interpolation=None, strict=False)
@@ -701,7 +705,7 @@ class Spotlight(QWidget):
                 for s, a in [x for x in apps if x[0]][:7]:
                     self.add(a["name"], a["desc"], a["icon"], ("app", a["file"]), T("App"))
                 for words, title, cmd in SETTINGS:
-                    if any(w.startswith(q) for w in words.split()) or q in title.lower():
+                    if any(w.startswith(q) for w in words.split()) or q in title.split(" (")[0].lower():
                         if shutil.which(cmd[0]):
                             self.add(title, T("Settings"), "preferences-system", ("cmd", cmd), T("Setting"))
                 for f in find_files(q):

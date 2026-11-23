@@ -1,0 +1,10 @@
+#!/bin/sh
+# After the first full setup, Devium Configure moves into Devium Tools: its separate menu entry is hidden (for this user).
+# On a brand-new install it stays a normal app until the setup is done. Safe to run again and again.
+f="${XDG_DATA_HOME:-$HOME/.local/share}/applications/devium-setup-wizard.desktop"
+[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/devium/setup-done" ] || exit 0
+[ -f "$f" ] && exit 0
+src=/usr/share/applications/devium-setup-wizard.desktop
+[ -f "$src" ] || exit 0
+mkdir -p "$(dirname "$f")"
+sed '/^NoDisplay=/d' "$src" | sed '0,/^\[Desktop Entry\]/s//[Desktop Entry]\nNoDisplay=true/' > "$f"

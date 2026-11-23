@@ -153,6 +153,9 @@ if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [
     touch "$STATE/shot-key"
 fi
 
+# --- 1.0: once the first setup is done, Devium Configure lives in Devium Tools (hidden from the menu); every login, cheap
+sh /usr/lib/devium/hide-configure 2>/dev/null
+
 # --- 1.0: Meta+Shift+G turns glass mode off (and back on) (KDE; new users get it from /etc/skel)
 if command -v plasmashell >/dev/null && command -v kwriteconfig6 >/dev/null && [[ ! -f $STATE/glass-key ]]; then
     if ! grep -q "devium-glass.desktop" "${XDG_CONFIG_HOME:-$HOME/.config}/kglobalshortcutsrc" 2>/dev/null; then

@@ -339,12 +339,18 @@ class HomePage(Page):
             ]),
             (T("Everyday"), [
                 (T("Look"), "Accent colour, and reset the desktop", "preferences-desktop-color", lambda: win.go("look")),
+                (T("Wallpapers"), "Desktop and lock screen pictures", "preferences-desktop-wallpaper",
+                 lambda: ui.launch("devium-wallpaper", "gui")),
+                (T("Screenshot Editor"), "Capture, crop and mark up (Meta+Ctrl+S)",
+                 "applets-screenshooter", lambda: ui.launch("devium-shot")),
                 (T("Privacy"), "Firewall, Wi-Fi tracking, location", "security-high", lambda: win.go("privacy")),
                 (T("Phone link"), "Files and notifications on your PC", "smartphone",
                  lambda: win.go("phone")),
                 (T("Get help"), "Fix problems, commands, and report a bug", "help-browser", lambda: win.go("help")),
                 (T("Report a problem"), "Tell the Devium team what went wrong", "tools-report-bug",
                  lambda: ReportDialog(win).exec()),
+                (T("What's new"), "What changed in this version of Devium", "help-about", lambda: ui.launch("devium-whats-new")),
+                (T("About Devium"), "Version, licence and credits", "devium", lambda: ui.launch("devium-about")),
             ]),
         ]
         self.grids = []       # [(grid, [tiles])]: laid out in 3, 2 or 1 columns depending on the window width

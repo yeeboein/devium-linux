@@ -1195,6 +1195,7 @@ class Wizard(QWidget):
                              "(setsid kstart plasmashell >/dev/null 2>&1 &)")
                 lines.append("qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1; true")
         lines.append(f"mkdir -p {q(CONFIG)} && touch {q(DONE_MARKER)}")
+        lines.append("sh /usr/lib/devium/hide-configure")   # Configure now lives in Devium Tools
         return "\n".join(lines)
 
     def cancel_install(self):
