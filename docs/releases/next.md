@@ -6,6 +6,12 @@
 
 **Devium 1.0**, the first full release.
 
+## New since beta19 (in beta19.5)
+- **fastfetch no longer breaks in a narrow or oddly sized window.** In beta19, `fastfetch` could print "Unsupported
+  module option: --cpu-format" and then fail every time at that window size, because the newer fastfetch no longer
+  accepts that kind of option. The short CPU, GPU, Memory, Disk and Packages lines now live in their own config
+  files, and if fastfetch ever fails for any reason, Devium runs the normal layout instead of showing an error.
+
 ## Planned
 - **Devium updates through normal system updates:** Devium's own files come from a signed online package repo, so
   updating your system updates Devium too, and old files are cleaned up properly.

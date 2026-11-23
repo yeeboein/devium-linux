@@ -15,32 +15,36 @@ fi
 
 dir=/etc/xdg/fastfetch
 # Always the same layout: the Devium logo on the left with your info right next to it, whatever the window size.
-# Lines longer than the window are cut (colours kept) so they never wrap back under the logo.
+# In a narrow window the config with short CPU / GPU / Memory / Disk / Packages lines is used (it is just another
+# config file: fastfetch no longer accepts per-module command-line options). Lines still longer than the window are
+# cut (colours kept) so they never wrap back under the logo. If anything in that goes wrong, plain fastfetch runs.
+cfg="$dir/config$suffix.jsonc"
 if [[ -t 1 ]] && command -v python3 >/dev/null; then
     cols=$(tput cols 2>/dev/null || echo 0)
     if (( cols >= 20 )); then
-        # A narrow (e.g. tall, half-screen) window has no room for the long CPU/GPU/Memory/Disk lines next to the
-        # 40-column logo, so use short versions there instead of letting them run into the logo.
-        short=()
-        (( cols < 92 )) && short=(--cpu-format '{name}' --gpu-format '{name}' --memory-format '{used} / {total}'
-                                  --disk-format '{size-used} / {size-total}' --packages-format '{all}')
-        "$real" --pipe false -c "$dir/config$suffix.jsonc" "${short[@]}" "$@" | python3 -c '
+        (( cols < 92 )) && [[ -f $dir/config-narrow$suffix.jsonc ]] && cfg="$dir/config-narrow$suffix.jsonc"
+        out=$(mktemp) || out=""
+        if [[ -n $out ]] && "$real" --pipe false -c "$cfg" "$@" > "$out" 2>/dev/null && [[ -s $out ]]; then
+            python3 -c '
 import re, sys
 cols = int(sys.argv[1])
 esc = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
-for line in sys.stdin:
+for line in open(sys.argv[2], encoding="utf-8", errors="replace"):
     line = line.rstrip("\n")
-    out, vis, i = [], 0, 0
+    res, vis, i = [], 0, 0
     while i < len(line):
         m = esc.match(line, i)
         if m:
-            out.append(m.group()); i = m.end(); continue
+            res.append(m.group()); i = m.end(); continue
         if vis >= cols - 1:
             break
-        out.append(line[i]); vis += 1; i += 1
-    sys.stdout.write("".join(out) + ("\x1b[0m" if "\x1b" in line else "") + "\n")
-' "$cols"
-        exit "${PIPESTATUS[0]}"
+        res.append(line[i]); vis += 1; i += 1
+    sys.stdout.write("".join(res) + ("\x1b[0m" if "\x1b" in line else "") + "\n")
+' "$cols" "$out"
+            rm -f "$out"
+            exit 0
+        fi
+        [[ -n $out ]] && rm -f "$out"
     fi
 fi
 exec "$real" -c "$dir/config$suffix.jsonc" "$@"
