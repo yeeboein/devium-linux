@@ -349,3 +349,95 @@ def open_link(url, parent=None):
     row.addWidget(close)
     lay.addLayout(row)
     dlg.exec()
+
+
+# ---------------------------------------------------------------------------- restart after an update
+AUTO_RESTART_FILE = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "devium",
+                                 "auto-restart")
+
+
+def auto_restart_on():
+    """Restart after updates by itself (after a countdown you can cancel). On unless you turned it off."""
+    try:
+        return open(AUTO_RESTART_FILE).read().strip().lower() != "off"
+    except OSError:
+        return True
+
+
+def set_auto_restart(on):
+    os.makedirs(os.path.dirname(AUTO_RESTART_FILE), exist_ok=True)
+    with open(AUTO_RESTART_FILE, "w") as f:
+        f.write("on\n" if on else "off\n")
+
+
+def restart_now():
+    """Restart through KDE so it saves the desktop (dock, pinned apps) first; a plain reboot as the fallback."""
+    subprocess.Popen(["sh", "-c", "qdbus6 org.kde.Shutdown /Shutdown org.kde.Shutdown.logoutAndReboot "
+                      "|| qdbus6 org.kde.ksmserver /KSMServer logout 0 1 2 || systemctl reboot"],
+                     start_new_session=True)
+
+
+def restart_after_update(parent, reason, seconds=30):
+    """After an update: "Restarting in 30 seconds" with Restart now / Not now. Doing nothing restarts; Not now cancels.
+    If you turned automatic restarts off, it only asks. Returns True if the computer is restarting."""
+    from PyQt6.QtCore import QTimer
+    from PyQt6.QtWidgets import QCheckBox, QDialog, QLabel, QPushButton, QVBoxLayout
+
+    auto = auto_restart_on()
+    dlg = QDialog(parent)
+    dlg.setWindowTitle("Restart to finish")
+    dlg.setWindowIcon(app_icon())
+    dlg.setMinimumWidth(440)
+    lay = QVBoxLayout(dlg)
+    head = QLabel(f"<b>{reason}</b>")
+    head.setWordWrap(True)
+    lay.addWidget(head)
+    info = QLabel()
+    info.setWordWrap(True)
+    info.setObjectName("subtitle")
+    lay.addWidget(info)
+    box = QCheckBox("Restart automatically after updates")
+    box.setChecked(auto)
+    lay.addWidget(box)
+    now = QPushButton("Restart now")
+    now.setObjectName("primary")
+    later = QPushButton("Not now")
+    lay.addWidget(now)
+    lay.addWidget(later)
+    left = {"n": seconds}
+    result = {"go": False}
+
+    def text():
+        if box.isChecked():
+            info.setText(f"Restarting in {left['n']} seconds. Save your work, or press Not now to stay.")
+        else:
+            info.setText("Restart when you are ready. New apps, shortcuts and icons start fresh after a restart.")
+
+    def tick():
+        if not box.isChecked():
+            text()
+            return
+        left["n"] -= 1
+        if left["n"] <= 0:
+            result["go"] = True
+            dlg.accept()
+        else:
+            text()
+
+    def changed():
+        left["n"] = seconds
+        text()
+
+    now.clicked.connect(lambda: (result.update(go=True), dlg.accept()))
+    later.clicked.connect(dlg.reject)
+    box.toggled.connect(changed)
+    timer = QTimer(dlg)
+    timer.timeout.connect(tick)
+    timer.start(1000)
+    text()
+    dlg.exec()
+    timer.stop()
+    set_auto_restart(box.isChecked())
+    if result["go"]:
+        restart_now()
+    return result["go"]

@@ -227,10 +227,7 @@ class UpdateManager(QWidget):
         self.tree.clear()
         self.status.setText("✓ Updates installed")
         if not os.path.isdir(f"/usr/lib/modules/{self.kernel_before}"):
-            r = QMessageBox.question(self, "Restart needed",
-                                     "The Linux kernel was updated. Restart now to finish?")
-            if r == QMessageBox.StandardButton.Yes:
-                ui.launch("systemctl", "reboot")
+            ui.restart_after_update(self, "The Linux kernel was updated.")
 
     # ------------------------------------------------------------------ clean
     def clean(self):

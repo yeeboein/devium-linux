@@ -6,6 +6,13 @@
 
 **Devium 1.0**, the first full release.
 
+## New since beta19.5 (in the next beta)
+- **Devium restarts by itself after an update.** When Devium Updater finishes, it says "Devium is updated" and
+  restarts the computer after a 30-second countdown, with **Restart now** and **Not now** buttons, so new apps, keys and
+  icons start fresh without you having to remember to log out. Do nothing and it restarts; press **Not now** to stay.
+  Tick or untick **Restart automatically after updates** in that window to turn it on or off (when it's off it only
+  asks). "What's new" then shows at your next login. The Update Manager does the same after a Linux kernel update.
+
 ## Planned
 - **Devium updates through normal system updates:** Devium's own files come from a signed online package repo, so
   updating your system updates Devium too, and old files are cleaned up properly.
