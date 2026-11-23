@@ -1,48 +1,85 @@
-#!/usr/bin/env bash
-# devium-glass: turn glass mode (see-through windows) off with one key, and back on with the same key.
-#   devium-glass          switch: if glass mode is on, turn it off; press again to bring it back
-#   devium-glass off      turn it off (only if it's on)
-#   devium-glass on       bring back what was on before
-# Meta+Shift+G does this. It works with the Customise page of Devium Configure: that page then shows glass mode off.
-tweaks=/usr/lib/devium/look_tweaks.py
-saved="${XDG_STATE_HOME:-$HOME/.local/state}/devium/glass-was"
-ids=(glass-all glass-always)
+#!/usr/bin/env python3
+"""devium-glass: turn everything see-through off with one key, and back on with the same key.
 
-say() { command -v notify-send >/dev/null && notify-send -a "Devium" -i preferences-desktop-theme "$1" "${2:-}"; echo "$1"; }
+  devium-glass          switch: if anything see-through is on, turn it all off; press again to bring it back
+  devium-glass off      turn it all off (only what is on)
+  devium-glass on       bring back what was on before
+  devium-glass status   say what is on
 
-# which of the glass modes are on right now
-on_now=()
-status=$(python3 "$tweaks" status 2>/dev/null)
-for id in "${ids[@]}"; do
-    [[ $status == *"\"$id\": true"* || $status == *"\"$id\":true"* ]] && on_now+=("$id")
-done
+Meta+Shift+G does this (Super+Shift+G on Hyprland). "Everything see-through" means glass mode, see-through all the
+time, see-through background and moving windows, menus, title bars, the blur behind them, the dock, the top bar and
+the terminal. It uses the same switches as Devium Configure > Customise, so that page shows them off afterwards.
+"""
+import json
+import os
+import subprocess
+import sys
 
-turn_off() {
-    if (( ${#on_now[@]} == 0 )); then
-        say "Glass mode is already off" "Press Meta+Shift+G again to bring back the last one"
+sys.path.insert(0, "/usr/lib/devium")
+STATE = os.path.join(os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state")), "devium", "glass-was")
+NOT_GLASS = {"glass-images", "solid-dock", "xfce-no-compositor"}    # options that aren't see-through themselves
+
+
+def say(title, text=""):
+    print(title)
+    try:
+        subprocess.run(["notify-send", "-a", "Devium", "-i", "preferences-desktop-theme", title, text],
+                       timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def glass_ids(lt):
+    """Every see-through tweak this desktop has."""
+    return [t["id"] for t in lt.TWEAKS
+            if ((t["cat"] == "glass" and t["id"] not in NOT_GLASS) or t["id"] == "term-glass") and lt.available(t)]
+
+
+def switch(lt, ids, on):
+    lt.set_many({i: on for i in ids})
+
+
+def main(lt=None):
+    if lt is None:
+        import look_tweaks as lt
+    arg = (sys.argv[1] if len(sys.argv) > 1 else "switch").lower()
+    if arg in ("-h", "--help"):
+        print(__doc__.strip())
         return 0
-    fi
-    mkdir -p "$(dirname "$saved")"
-    printf '%s\n' "${on_now[@]}" > "$saved"
-    python3 "$tweaks" set "${on_now[@]/%/=off}" >/dev/null 2>&1
-    say "Glass mode off" "Press Meta+Shift+G to bring it back"
-}
-
-turn_on() {
-    if [[ ! -s $saved ]]; then
-        say "Nothing to bring back" "Turn glass mode on in Devium Configure > Customise"
+    state = lt.load_state()
+    mine = glass_ids(lt)
+    on_now = [i for i in mine if state.get(i)]
+    if arg == "status":
+        print("On: " + (", ".join(on_now) if on_now else "nothing see-through"))
         return 0
-    fi
-    mapfile -t back < "$saved"
-    python3 "$tweaks" set "${back[@]/%/=on}" >/dev/null 2>&1
-    rm -f "$saved"
-    say "Glass mode back on"
-}
+    if arg not in ("switch", "toggle", "off", "on"):
+        print("devium-glass: use off, on, status, or nothing to switch")
+        return 1
+    if arg == "off" or (arg in ("switch", "toggle") and on_now):
+        if not on_now:
+            say("Everything is already solid", "Press Meta+Shift+G again to bring back the last see-through set")
+            return 0
+        os.makedirs(os.path.dirname(STATE), exist_ok=True)
+        with open(STATE, "w") as f:
+            json.dump(on_now, f)
+        switch(lt, on_now, False)
+        say("See-through off", "Press Meta+Shift+G to bring it back")
+        return 0
+    try:
+        back = [i for i in json.load(open(STATE)) if i in mine]
+    except (OSError, ValueError):
+        back = []
+    if not back:
+        say("Nothing to bring back", "Turn see-through on in Devium Configure > Customise")
+        return 0
+    switch(lt, back, True)
+    try:
+        os.remove(STATE)
+    except OSError:
+        pass
+    say("See-through is back")
+    return 0
 
-case "${1:-switch}" in
-    off) turn_off ;;
-    on) turn_on ;;
-    switch|toggle|"") (( ${#on_now[@]} )) && turn_off || turn_on ;;
-    -h|--help) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' ;;
-    *) echo "devium-glass: use off, on, or nothing to switch"; exit 1 ;;
-esac
+
+if __name__ == "__main__":
+    sys.exit(main())

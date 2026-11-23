@@ -2,7 +2,7 @@
 Type=Application
 Name=Glass mode on/off
 GenericName=Turn see-through windows off or on
-Comment=Switch glass mode (see-through windows) off, and back on again (Meta+Shift+G)
+Comment=Turn everything see-through off, and back on again (Meta+Shift+G)
 Icon=preferences-desktop-theme
 Exec=devium-glass
 Terminal=false

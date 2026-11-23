@@ -57,7 +57,7 @@ cmd "snip / snip <name>"              "Your saved code snippets (snip add <name>
 cmd "note \"text\""                   "Quick notes: note, note done 2, note rm 3, note search word"
 cmd "devium-shot"                     "Take a screenshot, then crop, draw arrows, add text and hide private details (Meta+Ctrl+S)"
 cmd "profound"                       "Your offline AI coding buddy (add it in Devium Configure > Developer tools; you add the AI model yourself)"
-cmd "devium-glass"                   "Turn glass mode (see-through windows) off, and back on with the same key (Meta+Shift+G)"
+cmd "devium-glass"                   "Turn everything see-through off (glass mode, menus, title bars, blur, dock, terminal) and back on (Meta+Shift+G)"
 cmd "devium-wallpaper"                "Pick the desktop and lock screen pictures separately (or use Devium Tools > Look)"
 command -v lyrics >/dev/null && cmd "lyrics"                          "Lyrics one BIG word at a time (--lines for the classic view, --once to print them)"
 command -v album-cover >/dev/null && cmd "album-cover"                     "The playing song's cover as a picture, updating by itself (--once for one go)"

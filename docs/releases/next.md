@@ -24,6 +24,9 @@
 - **Websites installed as apps get a proper Devium icon.** When you "Install as app" a site in Brave, Chrome, Chromium
   and other Chromium-based browsers, its favicon is put on the Devium gradient tile like every other app, in your accent
   colour. It happens a few seconds after you install the app, and again when you change the accent colour.
+- **Meta+Shift+G turns off everything see-through,** not just glass mode: glass mode, see-through all the time,
+  see-through background and moving windows, menus, title bars, the blur behind them, the dock, the top bar and the
+  terminal. Press it again to bring back exactly what was on. (Pictures and Solid dock options are left alone.)
 
 ## Planned
 - **Devium updates through normal system updates:** Devium's own files come from a signed online package repo, so
